@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT and ICT in Our Lives — Sentence Ordering Activity</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #000000;
+    font-family: Georgia, 'Times New Roman', serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  p.instructions {
+    text-align: center;
+    font-size: 14px;
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-size: 17px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4px;
+    margin-top: 32px;
+    margin-bottom: 12px;
+  }
+  .pool {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 10px;
+  }
+  .block {
+    display: flex;
+    align-items: stretch;
+    border: 1.5px solid #000;
+    background: #fff;
+    user-select: none;
+  }
+  .block-text {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: 15px;
+    touch-action: auto;
+  }
+  .handle {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    color: #fff;
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .block.dragging {
+    opacity: 0.35;
+  }
+  .block.drag-ghost {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    width: var(--ghost-width);
+  }
+  .placeholder {
+    border: 1.5px dashed #999;
+    background: #f2f2f2;
+    height: 44px;
+  }
+  .btn-row {
+    text-align: center;
+    margin-top: 32px;
+  }
+  button {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    padding: 10px 26px;
+    background: #000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin: 0 6px 10px;
+  }
+  button:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+  button:active:not(:disabled) {
+    background: #333;
+  }
+  .feedback {
+    text-align: center;
+    font-size: 15px;
+    margin-top: 14px;
+    min-height: 20px;
+    font-style: italic;
+  }
+  .section { display: none; }
+  .section.active { display: block; }
+  .timer-bar {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border-bottom: 2px solid #000;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 50;
+    margin-bottom: 10px;
+  }
+  .timer-bar.warn { color: #b30000; }
+  #result .essay-p {
+    font-size: 15px;
+    margin-bottom: 16px;
+    text-align: justify;
+  }
+  .meta-box {
+    border-top: 2px solid #000;
+    margin-top: 28px;
+    padding-top: 14px;
+    font-size: 15px;
+  }
+  .meta-box div { margin-bottom: 6px; }
+  .trial-label {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 16px;
+  }
+  #blockOverlay {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 16px;
+  }
+  #blockOverlay strong {
+    display: block;
+    font-size: 19px;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>IT and ICT in Our Lives</h1>
+
+<div id="blockOverlay">
+  <strong>This activity requires Google Chrome on Android.</strong>
+  Please open this page in Google Chrome and try again.
+</div>
+
+<!-- PRACTICE INTRO -->
+<div class="section active" id="section-practice">
+  <p class="instructions">Before the real activity, let's practice. Drag blocks using the handle (right side) to put each short paragraph in logical order.</p>
+  <div class="trial-label" id="trialLabel">Practice Trial 1 of 3</div>
+  <div class="pool" id="practicePool"></div>
+  <div class="feedback" id="practiceFeedback"></div>
+  <div class="btn-row">
+    <button id="checkBtn">Check</button>
+    <button id="retryBtn" disabled>Retry</button>
+    <button id="nextTrialBtn" disabled>Next</button>
+  </div>
+</div>
+
+<!-- MAIN INTRO -->
+<div class="section" id="section-main-intro">
+  <p class="instructions" style="margin-top:20px;">
+    Practice is done. Now the real activity: 5 paragraphs, 5 sentences each.<br>
+    You will have <strong>30 minutes</strong>. Once you press Finish (or time runs out), your arrangement is <strong>final</strong> — no redo.
+  </p>
+  <div class="btn-row">
+    <button id="startMainBtn">Start Activity</button>
+  </div>
+</div>
+
+<!-- MAIN ACTIVITY -->
+<div class="section" id="section-main">
+  <div class="timer-bar" id="timerBar">Time Remaining: 30:00</div>
+  <p class="instructions">Drag each paragraph's sentences into the order that makes sense.</p>
+  <div id="mainPools"></div>
+  <div class="btn-row">
+    <button id="finishBtn">Finish</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="section" id="section-result">
+  <h2>Your Essay</h2>
+  <div id="essayOutput"></div>
+  <div class="meta-box">
+    <div id="timeStartLine"></div>
+    <div id="timeEndLine"></div>
+    <div id="scoreLine"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- DATA ---------- */
+
+const practiceTrials = [
+  [
+    "First, boil water in a kettle until it reaches a rolling boil.",
+    "Next, add one to two tablespoons of ground coffee into a cup or French press.",
+    "Then, slowly pour the hot water over the coffee grounds and let it steep for four minutes.",
+    "Finally, strain or filter the coffee before enjoying it hot."
+  ],
+  [
+    "Wake up early and stretch to shake off morning grogginess.",
+    "Take a quick shower and get dressed in your school uniform.",
+    "Eat a light breakfast to keep your energy up for the day.",
+    "Grab your bag and head out the door to catch your ride to school."
+  ],
+  [
+    "Locate your phone charger and a nearby power outlet.",
+    "Plug the charging cable into the outlet first.",
+    "Connect the other end of the cable to your phone.",
+    "Wait until the battery icon shows a full charge before unplugging."
+  ]
+];
+
+const essayParagraphs = [
+  [
+    "Imagine waking up and, within the first ten minutes of your day, already using at least three different pieces of technology without even realizing it.",
+    "This is the quiet reality of Information Technology, or IT, and Information and Communication Technology, or ICT, in modern life.",
+    "IT refers to the use of computers and software to manage, process, and store information, while ICT extends this by adding communication tools such as networks, the internet, and mobile devices.",
+    "Together, these two fields form the invisible infrastructure behind nearly every digital interaction we have.",
+    "Understanding how they work, and how they differ, is the first step toward using them wisely."
+  ],
+  [
+    "In the Philippines, ICT has expanded rapidly over the past decade, driven largely by affordable smartphones and mobile data.",
+    "Even in provincial cities like Surigao City, students and professionals alike now depend on stable internet access for school, work, and daily errands.",
+    "Government platforms, banking apps, and e-commerce services have also shifted much of public life onto digital systems.",
+    "This rapid adoption has narrowed the gap between urban and rural access to information.",
+    "However, it has also exposed communities to new challenges, such as unequal internet infrastructure and rising cases of online fraud."
+  ],
+  [
+    "Every day, people rely on IT and ICT for communication, learning, work, and entertainment.",
+    "Students use online platforms and messaging apps to attend classes, submit requirements, and collaborate with classmates.",
+    "Workers use cloud-based tools and video conferencing to complete tasks and meet with colleagues remotely.",
+    "Even routine tasks like paying bills, sending money, or ordering food now depend on ICT-powered applications.",
+    "Because of this, digital literacy has become as essential as reading and writing."
+  ],
+  [
+    "Beyond personal convenience, IT and ICT play a critical role in engineering and industrial applications.",
+    "Computer-aided design software allows engineers to model structures, machines, and circuits with precision before construction begins.",
+    "Sensor networks and embedded systems now monitor everything from bridge stability to electrical grid performance in real time.",
+    "In fields like electronics and computer engineering, ICT enables remote diagnostics, automation, and data-driven decision-making.",
+    "These tools have transformed engineering from a purely manual discipline into one shaped by simulation, connectivity, and computation."
+  ],
+  [
+    "While IT and ICT bring undeniable convenience, they also come with responsibilities that users must understand.",
+    "Protecting personal information and recognizing online scams are now basic survival skills in the digital world.",
+    "Responsible use of technology helps prevent misinformation, cyberbullying, and data privacy violations.",
+    "Schools and institutions, such as SEC, now integrate ICT literacy into their curricula to prepare students for this reality.",
+    "Ultimately, mastering IT and ICT responsibly empowers individuals not just to survive, but to thrive in an increasingly connected world."
+  ]
+];
+
+/* ---------- UTIL ---------- */
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function feedbackComment(pct) {
+  if (pct === 100) return "Perfect! You nailed the order.";
+  if (pct >= 75) return "Great job — very close to the correct order.";
+  if (pct >= 50) return "Good attempt — a few sentences are out of place.";
+  if (pct >= 25) return "Getting there — review how each sentence connects to the next.";
+  return "Try again — look at the logical flow from one idea to the next.";
+}
+
+function computeScore(pool, correctSentences) {
+  const n = correctSentences.length;
+  const placed = [...pool.querySelectorAll('.block')].map(b => b.dataset.text);
+  let score = 0;
+  placed.forEach((text, pos) => {
+    const correctIdx = correctSentences.indexOf(text);
+    const distance = Math.abs(pos - correctIdx);
+    score += Math.max(0, n - distance);
+  });
+  return { score, max: n * n };
+}
+
+/* ---------- DRAG ENGINE ---------- */
+
+function buildPool(poolEl, sentences) {
+  poolEl.innerHTML = '';
+  const shuffled = shuffle(sentences);
+  shuffled.forEach(text => {
+    const block = document.createElement('div');
+    block.className = 'block';
+    block.dataset.text = text;
+    block.innerHTML = `<div class="block-text">${text}</div><div class="handle">⋮⋮</div>`;
+    poolEl.appendChild(block);
+    attachDrag(block, poolEl);
+  });
+}
+
+function attachDrag(block, poolEl) {
+  const handle = block.querySelector('.handle');
+  let ghost = null;
+  let placeholder = null;
+  let offsetY = 0;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+
+    const rect = block.getBoundingClientRect();
+    offsetY = e.clientY - rect.top;
+
+    ghost = block.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.setProperty('--ghost-width', rect.width + 'px');
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    document.body.appendChild(ghost);
+
+    placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.style.height = rect.height + 'px';
+    block.parentNode.insertBefore(placeholder, block);
+    block.classList.add('dragging');
+    block.style.display = 'none';
+
+    function onMove(ev) {
+      ghost.style.top = (ev.clientY - offsetY) + 'px';
+      const els = [...poolEl.querySelectorAll('.block:not(.dragging)')];
+      let inserted = false;
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        const mid = r.top + r.height / 2;
+        if (ev.clientY < mid) {
+          poolEl.insertBefore(placeholder, el);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) poolEl.appendChild(placeholder);
+    }
+
+    function onUp(ev) {
+      handle.releasePointerCapture(ev.pointerId);
+      poolEl.insertBefore(block, placeholder);
+      placeholder.remove();
+      block.classList.remove('dragging');
+      block.style.display = '';
+      ghost.remove();
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    }
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  });
+}
+
+/* ---------- PRACTICE FLOW ---------- */
+
+let trialIndex = 0;
+const practicePool = document.getElementById('practicePool');
+const trialLabel = document.getElementById('trialLabel');
+const practiceFeedback = document.getElementById('practiceFeedback');
+const checkBtn = document.getElementById('checkBtn');
+const retryBtn = document.getElementById('retryBtn');
+const nextTrialBtn = document.getElementById('nextTrialBtn');
+
+function loadTrial(idx) {
+  trialLabel.textContent = `Practice Trial ${idx + 1} of 3`;
+  buildPool(practicePool, practiceTrials[idx]);
+  practiceFeedback.textContent = '';
+  retryBtn.disabled = true;
+  nextTrialBtn.disabled = true;
+  nextTrialBtn.textContent = idx === practiceTrials.length - 1 ? 'Start Real Activity' : 'Next';
+  checkBtn.disabled = false;
+}
+
+checkBtn.addEventListener('click', () => {
+  const { score, max } = computeScore(practicePool, practiceTrials[trialIndex]);
+  const pct = Math.round((score / max) * 100);
+  practiceFeedback.textContent = `Score: ${score}/${max} — ${feedbackComment(pct)}`;
+  retryBtn.disabled = false;
+  nextTrialBtn.disabled = false;
+});
+
+retryBtn.addEventListener('click', () => {
+  loadTrial(trialIndex);
+});
+
+nextTrialBtn.addEventListener('click', () => {
+  trialIndex++;
+  if (trialIndex >= practiceTrials.length) {
+    showSection('section-main-intro');
+  } else {
+    loadTrial(trialIndex);
+  }
+});
+
+/* ---------- BROWSER GATE (Android: Chrome only, iOS: any browser) ---------- */
+
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+function isChrome() {
+  const ua = navigator.userAgent;
+  return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
+}
+
+const browserBlocked = isAndroid() && !isChrome();
+
+if (browserBlocked) {
+  document.getElementById('blockOverlay').style.display = 'block';
+} else {
+  loadTrial(0);
+}
+
+/* ---------- MAIN ACTIVITY FLOW ---------- */
+
+const mainPools = document.getElementById('mainPools');
+const timerBar = document.getElementById('timerBar');
+let mainPoolEls = [];
+let timerInterval = null;
+let timeLeft = 30 * 60;
+let startTime = null;
+let finished = false;
+
+function buildMainActivity() {
+  mainPools.innerHTML = '';
+  mainPoolEls = [];
+  essayParagraphs.forEach((sentences, idx) => {
+    const h = document.createElement('h2');
+    h.textContent = `Paragraph ${idx + 1}`;
+    mainPools.appendChild(h);
+    const pool = document.createElement('div');
+    pool.className = 'pool';
+    mainPools.appendChild(pool);
+    buildPool(pool, sentences);
+    mainPoolEls.push(pool);
+  });
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60).toString().padStart(2, '0');
+  const s = (sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerBar.textContent = `Time Remaining: ${formatTime(timeLeft)}`;
+    if (timeLeft <= 300) timerBar.classList.add('warn');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      finishActivity();
+    }
+  }, 1000);
+}
+
+document.getElementById('startMainBtn').addEventListener('click', () => {
+  buildMainActivity();
+  startTime = new Date();
+  timeLeft = 30 * 60;
+  timerBar.textContent = `Time Remaining: ${formatTime(timeLeft)}`;
+  showSection('section-main');
+  startTimer();
+});
+
+document.getElementById('finishBtn').addEventListener('click', () => {
+  finishActivity();
+});
+
+const STORAGE_KEY = 'itict_essay_result';
+const COOKIE_NAME = 'itict_essay_result';
+const IDB_NAME = 'itict_db';
+const IDB_STORE = 'results';
+const IDB_KEY = 'result';
+
+/* --- Cookie helpers --- */
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/* --- IndexedDB helpers --- */
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { console.error('IndexedDB set failed:', e); }
+}
+async function idbGet(key) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) { console.error('IndexedDB get failed:', e); return null; }
+}
+
+/* --- Unified triple-storage save/load --- */
+function saveResultEverywhere(record) {
+  const json = JSON.stringify(record);
+  try { localStorage.setItem(STORAGE_KEY, json); } catch (e) { console.error('localStorage save failed:', e); }
+  try { setCookie(COOKIE_NAME, json, 365); } catch (e) { console.error('Cookie save failed:', e); }
+  idbSet(IDB_KEY, record);
+}
+
+async function loadResultFromAnywhere() {
+  let record = null;
+
+  const lsRaw = localStorage.getItem(STORAGE_KEY);
+  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
+
+  if (!record) {
+    const cookieRaw = getCookie(COOKIE_NAME);
+    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
+  }
+
+  if (!record) {
+    record = await idbGet(IDB_KEY);
+  }
+
+  if (record) saveResultEverywhere(record); // backfill any missing storage
+  return record;
+}
+
+function finishActivity() {
+  if (finished) return;
+  finished = true;
+  clearInterval(timerInterval);
+  const endTime = new Date();
+
+  let totalScore = 0;
+  let totalMax = 0;
+  const paragraphTexts = [];
+
+  mainPoolEls.forEach((pool, idx) => {
+    const correct = essayParagraphs[idx];
+    const { score, max } = computeScore(pool, correct);
+    totalScore += score;
+    totalMax += max;
+
+    const texts = [...pool.querySelectorAll('.block')].map(b => b.dataset.text);
+    paragraphTexts.push(texts.join(' '));
+  });
+
+  const record = {
+    paragraphs: paragraphTexts,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    totalScore,
+    totalMax
+  };
+
+  saveResultEverywhere(record);
+  renderResult(record);
+}
+
+function renderResult(record) {
+  const essayOutput = document.getElementById('essayOutput');
+  essayOutput.innerHTML = '';
+  record.paragraphs.forEach(text => {
+    const p = document.createElement('div');
+    p.className = 'essay-p';
+    p.textContent = text;
+    essayOutput.appendChild(p);
+  });
+
+  const pct = Math.round((record.totalScore / record.totalMax) * 100);
+  const startDate = new Date(record.startTime);
+  const endDate = new Date(record.endTime);
+  document.getElementById('timeStartLine').textContent = `Time Start: ${startDate.toLocaleTimeString()}`;
+  document.getElementById('timeEndLine').textContent = `Time End: ${endDate.toLocaleTimeString()}`;
+  document.getElementById('scoreLine').textContent = `Score (Arrangement): ${record.totalScore}/${record.totalMax} (${pct}%)`;
+
+  showSection('section-result');
+}
+
+/* On load: if a result already exists in any of the 3 storages, skip straight to it */
+(async function checkExistingResult() {
+  if (browserBlocked) return;
+  const saved = await loadResultFromAnywhere();
+  if (saved) {
+    finished = true;
+    renderResult(saved);
+  }
+})();
+</script>
+
+</body>
+</html>
