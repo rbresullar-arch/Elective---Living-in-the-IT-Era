@@ -632,16 +632,44 @@ function finishActivity() {
   renderResult(record);
 }
 
+function reconstructOldParagraph(joinedStr, correctSentences) {
+  // Old records only stored the joined text, no per-sentence order/correctness.
+  // Recover placed order by locating each known sentence's position in the string.
+  const found = correctSentences.map(sentence => ({
+    text: sentence,
+    pos: joinedStr.indexOf(sentence)
+  }));
+  if (found.some(f => f.pos === -1)) return null; // can't reliably reconstruct
+
+  found.sort((a, b) => a.pos - b.pos);
+  return found.map((f, placedIdx) => ({
+    text: f.text,
+    correct: correctSentences.indexOf(f.text) === placedIdx
+  }));
+}
+
 function renderResult(record) {
   const essayOutput = document.getElementById('essayOutput');
   essayOutput.innerHTML = '';
-  record.paragraphs.forEach(paragraph => {
+  record.paragraphs.forEach((paragraph, idx) => {
     const p = document.createElement('div');
     p.className = 'essay-p';
 
     if (typeof paragraph === 'string') {
-      // Old-format record (saved before highlighting was added): plain text, no colors.
-      p.textContent = paragraph;
+      // Old-format record: try to reconstruct correctness from the known essay text.
+      const correctSentences = essayParagraphs[idx];
+      const reconstructed = correctSentences ? reconstructOldParagraph(paragraph, correctSentences) : null;
+      if (reconstructed) {
+        reconstructed.forEach((s, i) => {
+          const span = document.createElement('span');
+          span.className = s.correct ? 'sentence-correct' : 'sentence-incorrect';
+          span.textContent = s.text;
+          p.appendChild(span);
+          if (i < reconstructed.length - 1) p.appendChild(document.createTextNode(' '));
+        });
+      } else {
+        p.textContent = paragraph; // fallback: plain text, no highlighting
+      }
     } else {
       paragraph.forEach((s, i) => {
         const span = document.createElement('span');
