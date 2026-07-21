@@ -328,6 +328,32 @@ function computeScore(pool, correctSentences) {
   return { score, max: n * n, detail };
 }
 
+/* Paragraph role bucket: position 0 = premise (fixed), last position = conclusion (fixed),
+   middle positions = body/detail sentences, mutually interchangeable with full credit. */
+function getBucket(n, idx) {
+  if (idx === 0) return [0];
+  if (idx === n - 1) return [n - 1];
+  const mid = [];
+  for (let i = 1; i < n - 1; i++) mid.push(i);
+  return mid;
+}
+
+function computeScoreBucketed(pool, correctSentences) {
+  const n = correctSentences.length;
+  const placed = [...pool.querySelectorAll('.block')].map(b => b.dataset.text);
+  let score = 0;
+  const detail = [];
+  placed.forEach((text, pos) => {
+    const correctIdx = correctSentences.indexOf(text);
+    const bucket = getBucket(n, correctIdx);
+    let minDist = Infinity;
+    bucket.forEach(b => { minDist = Math.min(minDist, Math.abs(pos - b)); });
+    score += Math.max(0, n - minDist);
+    detail.push({ text, correct: bucket.includes(pos) });
+  });
+  return { score, max: n * n, detail };
+}
+
 /* ---------- DRAG ENGINE ---------- */
 
 function buildPool(poolEl, sentences) {
@@ -614,7 +640,7 @@ function finishActivity() {
 
   mainPoolEls.forEach((pool, idx) => {
     const correct = essayParagraphs[idx];
-    const { score, max, detail } = computeScore(pool, correct);
+    const { score, max, detail } = computeScoreBucketed(pool, correct);
     totalScore += score;
     totalMax += max;
     paragraphDetails.push(detail);
@@ -642,10 +668,12 @@ function reconstructOldParagraph(joinedStr, correctSentences) {
   if (found.some(f => f.pos === -1)) return null; // can't reliably reconstruct
 
   found.sort((a, b) => a.pos - b.pos);
-  return found.map((f, placedIdx) => ({
-    text: f.text,
-    correct: correctSentences.indexOf(f.text) === placedIdx
-  }));
+  const n = correctSentences.length;
+  return found.map((f, placedIdx) => {
+    const correctIdx = correctSentences.indexOf(f.text);
+    const bucket = getBucket(n, correctIdx);
+    return { text: f.text, correct: bucket.includes(placedIdx) };
+  });
 }
 
 function renderResult(record) {
