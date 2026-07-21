@@ -128,6 +128,12 @@
     margin-bottom: 16px;
     text-align: justify;
   }
+  .sentence-correct {
+    background: #c8f0c8;
+  }
+  .sentence-incorrect {
+    background: #f7c8c8;
+  }
   .meta-box {
     border-top: 2px solid #000;
     margin-top: 28px;
@@ -151,10 +157,24 @@
     display: block;
     font-size: 19px;
     margin-bottom: 12px;
+  }  #homeBtn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    background: #000;
+    color: #fff;
+    font-family: Georgia, serif;
+    font-size: 13px;
+    padding: 6px 14px;
+    text-decoration: none;
+    border: 1.5px solid #000;
   }
 </style>
 </head>
 <body>
+
+<a id="homeBtn" href="index.html">Home</a>
 
 <h1>IT and ICT in Our Lives</h1>
 
@@ -298,12 +318,14 @@ function computeScore(pool, correctSentences) {
   const n = correctSentences.length;
   const placed = [...pool.querySelectorAll('.block')].map(b => b.dataset.text);
   let score = 0;
+  const detail = [];
   placed.forEach((text, pos) => {
     const correctIdx = correctSentences.indexOf(text);
     const distance = Math.abs(pos - correctIdx);
     score += Math.max(0, n - distance);
+    detail.push({ text, correct: distance === 0 });
   });
-  return { score, max: n * n };
+  return { score, max: n * n, detail };
 }
 
 /* ---------- DRAG ENGINE ---------- */
@@ -578,20 +600,18 @@ function finishActivity() {
 
   let totalScore = 0;
   let totalMax = 0;
-  const paragraphTexts = [];
+  const paragraphDetails = [];
 
   mainPoolEls.forEach((pool, idx) => {
     const correct = essayParagraphs[idx];
-    const { score, max } = computeScore(pool, correct);
+    const { score, max, detail } = computeScore(pool, correct);
     totalScore += score;
     totalMax += max;
-
-    const texts = [...pool.querySelectorAll('.block')].map(b => b.dataset.text);
-    paragraphTexts.push(texts.join(' '));
+    paragraphDetails.push(detail);
   });
 
   const record = {
-    paragraphs: paragraphTexts,
+    paragraphs: paragraphDetails,
     startTime: startTime.toISOString(),
     endTime: endTime.toISOString(),
     totalScore,
@@ -605,10 +625,16 @@ function finishActivity() {
 function renderResult(record) {
   const essayOutput = document.getElementById('essayOutput');
   essayOutput.innerHTML = '';
-  record.paragraphs.forEach(text => {
+  record.paragraphs.forEach(sentences => {
     const p = document.createElement('div');
     p.className = 'essay-p';
-    p.textContent = text;
+    sentences.forEach((s, i) => {
+      const span = document.createElement('span');
+      span.className = s.correct ? 'sentence-correct' : 'sentence-incorrect';
+      span.textContent = s.text;
+      p.appendChild(span);
+      if (i < sentences.length - 1) p.appendChild(document.createTextNode(' '));
+    });
     essayOutput.appendChild(p);
   });
 
