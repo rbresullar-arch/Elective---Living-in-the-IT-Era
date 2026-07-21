@@ -82,11 +82,27 @@
   }
   .status.done { color: #000; }
   .status.pending { color: #777; }
+  #blockOverlay {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 16px;
+  }
+  #blockOverlay strong {
+    display: block;
+    font-size: 19px;
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
 
 <h1>IT and ICT Activities</h1>
+
+<div id="blockOverlay">
+  <strong>This activity requires Google Chrome on Android.</strong>
+  Please open this page in Google Chrome and try again.
+</div>
 
 <!-- NAME CAPTURE -->
 <div class="section active" id="section-name">
@@ -193,8 +209,22 @@ document.getElementById('nameForm').addEventListener('submit', (e) => {
   enterActivities(name);
 });
 
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+function isChrome() {
+  const ua = navigator.userAgent;
+  return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
+}
+const browserBlocked = isAndroid() && !isChrome();
+
 /* On load: if name already saved, skip the name form */
 (function init() {
+  if (browserBlocked) {
+    document.getElementById('blockOverlay').style.display = 'block';
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    return;
+  }
   const savedName = localStorage.getItem(NAME_KEY);
   if (savedName) {
     enterActivities(savedName);
