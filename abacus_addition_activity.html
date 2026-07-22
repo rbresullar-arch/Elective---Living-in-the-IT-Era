@@ -279,7 +279,8 @@
     font-size:15px;
     color:#555;
   }
-  #lockedOverlay a.activity-btn{
+  #lockedOverlay a.activity-btn,
+  #doneOverlay a.activity-btn{
     font-family: Arial, sans-serif;
     font-size:13px;
     letter-spacing:.08em;
@@ -306,6 +307,7 @@
   <div id="doneOverlay">
     <strong>Activity already completed on this device.</strong>
     <div class="score" id="doneScoreText"></div>
+    <a class="activity-btn" href="index.html">Back to Home</a>
   </div>
 
   <!-- LOCKED: ACTIVITY 1 NOT DONE -->
@@ -663,10 +665,20 @@
   let runningTarget = 0;
   let awaitingAdvance = false;
 
+  // per-round term ranges [min, max], indexed by round-1
+  const ROUND_RANGES = [
+    [1, 5],
+    [6, 10],
+    [11, 15],
+    [16, 20],
+    [30, 40]
+  ];
+
   function generateTerms(){
+    const [min, max] = ROUND_RANGES[Math.min(round, ROUND_RANGES.length) - 1];
     terms = [];
     for(let i=0;i<TERMS_PER_ROUND;i++){
-      terms.push(Math.floor(Math.random()*15)+1); // 1–15
+      terms.push(Math.floor(Math.random()*(max - min + 1)) + min);
     }
     currentSum = terms.reduce((a,b)=>a+b, 0);
   }
