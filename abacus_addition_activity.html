@@ -14,18 +14,32 @@
   }
   html,body{
     height:100%;
-    background:#ffffff;
+    margin:0;
+    background:#e8e8e8;
     color:#000000;
     font-family:Georgia, 'Times New Roman', serif;
     overscroll-behavior:none;
   }
   body{
     display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    padding:0;
+  }
+  /* ---------- 9:16 portrait stage (standard activity layout) ---------- */
+  #stage{
+    position:relative;
+    width:min(100vw, calc(100vh * 9 / 16));
+    height:min(100vh, calc(100vw * 16 / 9));
+    background:#ffffff;
+    overflow:hidden;
+    display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:space-between;
-    height:100vh;
     padding:18px;
+    box-shadow:0 0 0 1px #ccc;
   }
 
   /* ---------- top: round label + 5-segment progress ---------- */
@@ -108,7 +122,7 @@
 
   /* ---------- start overlay ---------- */
   .overlay{
-    position:fixed;
+    position:absolute;
     inset:0;
     background:#fff;
     display:flex;
@@ -265,7 +279,7 @@
   }
 
   #homeLink{
-    position:fixed;
+    position:absolute;
     top:14px;
     left:14px;
     font-family: Arial, sans-serif;
@@ -280,7 +294,7 @@
   #homeLink:active{ background:#eee; }
 
   #blockOverlay, #doneOverlay{
-    position:fixed;
+    position:absolute;
     inset:0;
     background:#fff;
     display:none;
@@ -362,6 +376,8 @@
 </head>
 <body>
 
+<div id="stage">
+
   <a href="index.html" id="homeLink">Home</a>
 
   <!-- BROWSER GATE -->
@@ -389,7 +405,7 @@
   </div>
 
   <!-- LOCKED: ACTIVITY 1 NOT DONE -->
-  <div id="lockedOverlay" style="position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
+  <div id="lockedOverlay" style="position:absolute;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
     <strong style="display:block;font-size:19px;">Complete Activity 1 first.</strong>
     <a class="activity-btn" href="it_ict_sentence_order_v2.html">Go to Activity 1</a>
   </div>
@@ -461,6 +477,8 @@
       <div class="value-hint">Top bead (5): swipe down or tap · Lower beads (1): swipe up or tap</div>
     </div>
   </div>
+
+</div><!-- /stage -->
 
 <script>
   const RESULT_KEY = 'itict_abacus_result';
