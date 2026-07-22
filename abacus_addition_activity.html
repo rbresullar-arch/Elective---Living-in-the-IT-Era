@@ -320,8 +320,9 @@
     <p class="instructions">
       Numbers appear one at a time. Add each one to your running total on the
       abacus — swipe up on a rod to add, down to subtract. The blue bead is
-      the next one that will move. When a rod is full, watch the next rod
-      over light up orange. The next number only appears once your total is
+      the next one that will move. Rods are independent — a full rod (9)
+      carries over to the next rod when you swipe up again, and the rod
+      above lights up orange. The next number only appears once your total is
       correct. Once all 5 numbers are done, type the total and check. This
       repeats for 5 rounds.
     </p>
@@ -519,7 +520,8 @@
 
   function buildRod(rodEl){
     let digit = 0; // 0–9, this rod's current value
-    let onIncrementCallback = null;
+    let onOverflowCallback = null;
+    let onUnderflowCallback = null;
 
     const heaven = document.createElement('div');
     heaven.className = 'bead';
@@ -584,14 +586,25 @@
       const dy = startY - e.clientY; // positive = swiped up
       const THRESHOLD = 14;
       if(dy > THRESHOLD){
-        digit = Math.min(9, digit + 1);
-        render();
-        if(onIncrementCallback) onIncrementCallback();
+        if(digit === 9){
+          digit = 0;
+          render();
+          if(onOverflowCallback) onOverflowCallback();
+        } else {
+          digit += 1;
+          render();
+        }
         refreshAllHighlights();
         checkProgress();
       } else if(dy < -THRESHOLD){
-        digit = Math.max(0, digit - 1);
-        render();
+        if(digit === 0){
+          digit = 9;
+          render();
+          if(onUnderflowCallback) onUnderflowCallback();
+        } else {
+          digit -= 1;
+          render();
+        }
         refreshAllHighlights();
         checkProgress();
       }
@@ -604,7 +617,14 @@
     return {
       getValue(){ return digit; },
       setHighlight,
-      setOnIncrement(fn){ onIncrementCallback = fn; },
+      setOnOverflow(fn){ onOverflowCallback = fn; },
+      setOnUnderflow(fn){ onUnderflowCallback = fn; },
+      bump(delta){
+        const next = digit + delta;
+        if(next > 9){ digit = next - 10; render(); if(onOverflowCallback) onOverflowCallback(); }
+        else if(next < 0){ digit = next + 10; render(); if(onUnderflowCallback) onUnderflowCallback(); }
+        else { digit = next; render(); }
+      },
       reset(){ digit = 0; render(); }
     };
   }
@@ -615,9 +635,11 @@
 
   const rodOrder = [onesRod, tensRod, hundredsRod];
 
-  // once a higher-place bead is placed, the place(s) below it reset to zero
-  tensRod.setOnIncrement(() => { onesRod.reset(); });
-  hundredsRod.setOnIncrement(() => { tensRod.reset(); onesRod.reset(); });
+  // rods are independent; overflow carries up, underflow borrows down
+  onesRod.setOnOverflow(() => { tensRod.bump(1); });
+  tensRod.setOnOverflow(() => { hundredsRod.bump(1); });
+  onesRod.setOnUnderflow(() => { tensRod.bump(-1); });
+  tensRod.setOnUnderflow(() => { hundredsRod.bump(-1); });
 
   function refreshAllHighlights(){
     for(let i=0;i<rodOrder.length;i++){
