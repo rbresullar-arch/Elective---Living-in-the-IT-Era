@@ -279,6 +279,17 @@
     font-size:15px;
     color:#555;
   }
+  #lockedOverlay a.activity-btn{
+    font-family: Arial, sans-serif;
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    background:#000;
+    color:#fff;
+    text-decoration:none;
+    padding:13px 32px;
+    display:inline-block;
+  }
 </style>
 </head>
 <body>
@@ -295,6 +306,12 @@
   <div id="doneOverlay">
     <strong>Activity already completed on this device.</strong>
     <div class="score" id="doneScoreText"></div>
+  </div>
+
+  <!-- LOCKED: ACTIVITY 1 NOT DONE -->
+  <div id="lockedOverlay" style="position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
+    <strong style="display:block;font-size:19px;">Complete Activity 1 first.</strong>
+    <a class="activity-btn" href="it_ict_sentence_order_v2.html">Go to Activity 1</a>
   </div>
 
   <!-- START OVERLAY -->
@@ -369,6 +386,10 @@
   const IDB_STORE = 'results';
   const IDB_KEY = 'abacus_result';
 
+  const ACT1_RESULT_KEY = 'itict_essay_result';
+  const ACT1_RESULT_COOKIE = 'itict_essay_result';
+  const ACT1_IDB_KEY = 'result';
+
   function setCookie(name, value, days){
     const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
     document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
@@ -413,6 +434,20 @@
     } catch(e){ return null; }
   }
 
+  async function loadActivity1Result(){
+    let record = null;
+    const lsRaw = localStorage.getItem(ACT1_RESULT_KEY);
+    if(lsRaw){ try{ record = JSON.parse(lsRaw); } catch(e){} }
+    if(!record){
+      const cookieRaw = getCookie(ACT1_RESULT_COOKIE);
+      if(cookieRaw){ try{ record = JSON.parse(cookieRaw); } catch(e){} }
+    }
+    if(!record){
+      record = await idbGet(ACT1_IDB_KEY);
+    }
+    return record;
+  }
+
   async function loadAbacusResult(){
     let record = null;
     const lsRaw = localStorage.getItem(RESULT_KEY);
@@ -453,7 +488,10 @@
   let round = 1;
   let terms = [];
   let currentSum = 0;
-  let correctRounds = 0;
+  let roundWrongAttempts = 0;
+  let roundScores = [];
+  let startTime = null;
+  const POINTS_PER_ROUND = 5;
 
   function showPanel(panel){
     [panelQuestion, panelAnswer, panelResult].forEach(p => p.classList.remove('active'));
@@ -619,6 +657,7 @@
     currentTermIndex = 0;
     runningTarget = terms[0];
     awaitingAdvance = false;
+    roundWrongAttempts = 0;
     answerInput.value = '';
     showPanel(panelQuestion);
     showTerm(0);
@@ -653,19 +692,38 @@
   submitBtn.addEventListener('click', () => {
     const guess = parseInt(answerInput.value, 10);
     const isCorrect = guess === currentSum;
-    if(isCorrect) correctRounds += 1;
-    resultText.textContent = isCorrect ? 'CORRECT' : 'INCORRECT';
-    resultText.className = 'result-text ' + (isCorrect ? '' : 'incorrect');
-    nextBtn.textContent = round >= TOTAL_ROUNDS ? 'Finish' : 'Next Round';
+    if(isCorrect){
+      roundScores.push(Math.max(0, POINTS_PER_ROUND - roundWrongAttempts));
+      resultText.textContent = 'CORRECT';
+      resultText.className = 'result-text';
+      nextBtn.textContent = round >= TOTAL_ROUNDS ? 'Finish' : 'Next Round';
+      nextBtn.dataset.mode = 'advance';
+    } else {
+      roundWrongAttempts += 1;
+      resultText.textContent = 'INCORRECT';
+      resultText.className = 'result-text incorrect';
+      nextBtn.textContent = 'Try Again';
+      nextBtn.dataset.mode = 'retry';
+    }
     showPanel(panelResult);
   });
 
   nextBtn.addEventListener('click', async () => {
+    if(nextBtn.dataset.mode === 'retry'){
+      answerInput.value = '';
+      showPanel(panelAnswer);
+      answerInput.focus();
+      return;
+    }
     if(round >= TOTAL_ROUNDS){
+      const totalScore = roundScores.reduce((a,b) => a+b, 0);
+      const maxScore = TOTAL_ROUNDS * POINTS_PER_ROUND;
       const record = {
-        correctRounds: correctRounds,
-        totalRounds: TOTAL_ROUNDS,
-        completedAt: new Date().toISOString()
+        score: totalScore,
+        maxScore: maxScore,
+        percentage: Math.round((totalScore / maxScore) * 100),
+        startTime: startTime,
+        endTime: new Date().toISOString()
       };
       await saveAbacusResult(record);
       showCompleted(record);
@@ -678,20 +736,32 @@
   document.getElementById('startBtn').addEventListener('click', () => {
     startOverlay.classList.add('hidden');
     round = 1;
-    correctRounds = 0;
+    roundScores = [];
+    startTime = new Date().toISOString();
     startRound();
   });
 
+  function formatDateTime(iso){
+    if(!iso) return '';
+    const d = new Date(iso);
+    const datePart = d.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+    const timePart = d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+    return { datePart, timePart };
+  }
+
   function showCompleted(record){
-    document.querySelectorAll('.section, .overlay').forEach(el => {});
     startOverlay.classList.add('hidden');
     document.querySelector('.topbar').style.display = 'none';
     document.querySelector('.stage-wrap').style.display = 'none';
     document.querySelector('.abacus-wrap').style.display = 'none';
-    document.querySelector('.value-hint') && (document.querySelector('.value-hint').style.display = 'none');
     const doneOverlay = document.getElementById('doneOverlay');
-    document.getElementById('doneScoreText').textContent =
-      'Score: ' + record.correctRounds + '/' + record.totalRounds + ' rounds correct';
+    const started = formatDateTime(record.startTime);
+    const ended = formatDateTime(record.endTime);
+    document.getElementById('doneScoreText').innerHTML =
+      'Score: ' + record.score + '/' + record.maxScore + ' (' + record.percentage + '%)<br>' +
+      'Date: ' + (started.datePart || '') + '<br>' +
+      'Started: ' + (started.timePart || '') + '<br>' +
+      'Ended: ' + (ended.timePart || '');
     doneOverlay.style.display = 'flex';
   }
 
@@ -711,6 +781,15 @@
   (async function init(){
     if(browserBlocked){
       document.getElementById('blockOverlay').style.display = 'flex';
+      startOverlay.classList.add('hidden');
+      document.querySelector('.topbar').style.display = 'none';
+      document.querySelector('.stage-wrap').style.display = 'none';
+      document.querySelector('.abacus-wrap').style.display = 'none';
+      return;
+    }
+    const act1Done = await loadActivity1Result();
+    if(!act1Done){
+      document.getElementById('lockedOverlay').style.display = 'flex';
       startOverlay.classList.add('hidden');
       document.querySelector('.topbar').style.display = 'none';
       document.querySelector('.stage-wrap').style.display = 'none';
