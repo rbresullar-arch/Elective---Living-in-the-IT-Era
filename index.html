@@ -123,6 +123,11 @@
     <a class="activity-btn" href="it_ict_sentence_order_v2.html">Activity 1</a>
     <span class="status" id="activity1Status">Checking...</span>
   </div>
+
+  <div class="activity-row">
+    <a class="activity-btn" href="abacus_addition_activity.html">Activity 2</a>
+    <span class="status" id="activity2Status">Checking...</span>
+  </div>
 </div>
 
 <script>
@@ -134,6 +139,10 @@ const RESULT_COOKIE = 'itict_essay_result';
 const IDB_NAME = 'itict_db';
 const IDB_STORE = 'results';
 const IDB_KEY = 'result';
+
+const RESULT2_KEY = 'itict_abacus_result';
+const RESULT2_COOKIE = 'itict_abacus_result';
+const IDB_KEY2 = 'abacus_result';
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
@@ -174,6 +183,20 @@ async function loadActivity1Result() {
   return record;
 }
 
+async function loadActivity2Result() {
+  let record = null;
+  const lsRaw = localStorage.getItem(RESULT2_KEY);
+  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
+  if (!record) {
+    const cookieRaw = getCookie(RESULT2_COOKIE);
+    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
+  }
+  if (!record) {
+    record = await idbGet(IDB_KEY2);
+  }
+  return record;
+}
+
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -192,10 +215,23 @@ async function refreshActivity1Status() {
   }
 }
 
+async function refreshActivity2Status() {
+  const statusEl = document.getElementById('activity2Status');
+  const record = await loadActivity2Result();
+  if (record) {
+    statusEl.textContent = `Score: ${record.correctRounds}/${record.totalRounds} rounds`;
+    statusEl.className = 'status done';
+  } else {
+    statusEl.textContent = 'Not yet attempted';
+    statusEl.className = 'status pending';
+  }
+}
+
 function enterActivities(name) {
   document.getElementById('greeting').textContent = `Hello, ${name}!`;
   showSection('section-activities');
   refreshActivity1Status();
+  refreshActivity2Status();
 }
 
 document.getElementById('nameForm').addEventListener('submit', (e) => {
