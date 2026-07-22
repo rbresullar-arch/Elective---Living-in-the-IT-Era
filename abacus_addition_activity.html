@@ -321,7 +321,9 @@
     <h1>Abacus Addition Activity</h1>
     <p class="instructions">
       Numbers appear one at a time. Add each one to your running total on the
-      abacus — swipe up on a rod to add, down to subtract. The blue bead is
+      abacus. The top bead is worth 5 — swipe it <strong>down</strong> toward
+      the bar to add 5, up to remove it. The lower beads are worth 1 each —
+      swipe <strong>up</strong> to add, down to subtract. The blue bead is
       the next one that will move. Rods are independent — a full rod (9)
       carries over to the next rod when you swipe up again, and the rod
       above lights up orange. The next number only appears once your total is
@@ -378,7 +380,7 @@
           </div>
         </div>
       </div>
-      <div class="value-hint">Swipe a rod up to add, down to subtract</div>
+      <div class="value-hint">Top bead (5): swipe down to add · Lower beads (1): swipe up to add</div>
     </div>
   </div>
 
@@ -559,27 +561,30 @@
       heaven.classList.remove('next','urgent');
       earthBeads.forEach(b => b.classList.remove('next','urgent'));
 
-      if(digit >= 9) return; // this rod is full, nothing local to highlight
+      // heaven bead is independently available whenever it can still be engaged
+      if(digit < 5) heaven.classList.add('next');
 
-      // the bead that the NEXT upward swipe will move
-      let nextEl;
-      if(digit === 4){
-        nextEl = heaven; // next swipe engages the heaven (5) bead
-      } else {
-        const earthIdx = digit >= 5 ? digit - 5 : digit;
-        nextEl = earthBeads[earthIdx];
+      if(digit >= 9) return; // earth column full; only carry remains
+
+      // the earth bead that the NEXT upward swipe will move
+      const earthIdx = digit >= 5 ? digit - 5 : digit;
+      if(earthIdx < 4){
+        earthBeads[earthIdx].classList.add('next');
+        if(urgent) earthBeads[earthIdx].classList.add('urgent');
       }
-      nextEl.classList.add('next');
-      if(urgent) nextEl.classList.add('urgent');
     }
 
     render();
 
     let startY = null;
+    let startZone = null; // 'heaven' (above bar) or 'earth' (below bar)
 
     rodEl.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       startY = e.clientY;
+      const rect = rodEl.getBoundingClientRect();
+      const localY = e.clientY - rect.top;
+      startZone = localY < BAR_TOP ? 'heaven' : 'earth';
       rodEl.setPointerCapture(e.pointerId);
     });
 
@@ -587,34 +592,52 @@
       if(startY === null) return;
       const dy = startY - e.clientY; // positive = swiped up
       const THRESHOLD = 14;
-      if(dy > THRESHOLD){
-        if(digit === 9){
-          digit = 0;
+
+      if(startZone === 'heaven'){
+        // heaven bead: swipe DOWN engages (+5), swipe UP disengages (-5)
+        if(dy < -THRESHOLD && digit < 5){
+          digit += 5;
           render();
-          if(onOverflowCallback) onOverflowCallback();
-        } else {
-          digit += 1;
+          refreshAllHighlights();
+          checkProgress();
+        } else if(dy > THRESHOLD && digit >= 5){
+          digit -= 5;
           render();
+          refreshAllHighlights();
+          checkProgress();
         }
-        refreshAllHighlights();
-        checkProgress();
-      } else if(dy < -THRESHOLD){
-        if(digit === 0){
-          digit = 9;
-          render();
-          if(onUnderflowCallback) onUnderflowCallback();
-        } else {
-          digit -= 1;
-          render();
+      } else {
+        // earth beads: swipe UP adds 1, swipe DOWN subtracts 1, with carry/borrow
+        if(dy > THRESHOLD){
+          if(digit === 9){
+            digit = 0;
+            render();
+            if(onOverflowCallback) onOverflowCallback();
+          } else {
+            digit += 1;
+            render();
+          }
+          refreshAllHighlights();
+          checkProgress();
+        } else if(dy < -THRESHOLD){
+          if(digit === 0){
+            digit = 9;
+            render();
+            if(onUnderflowCallback) onUnderflowCallback();
+          } else {
+            digit -= 1;
+            render();
+          }
+          refreshAllHighlights();
+          checkProgress();
         }
-        refreshAllHighlights();
-        checkProgress();
       }
       startY = null;
+      startZone = null;
     };
 
     rodEl.addEventListener('pointerup', finishSwipe);
-    rodEl.addEventListener('pointercancel', () => { startY = null; });
+    rodEl.addEventListener('pointercancel', () => { startY = null; startZone = null; });
 
     return {
       getValue(){ return digit; },
