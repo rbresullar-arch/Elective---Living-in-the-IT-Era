@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Abacus Addition Activity</title>
+<style>
+  *{
+    box-sizing:border-box; margin:0; padding:0;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
+  html,body{
+    height:100%;
+    background:#ffffff;
+    color:#000000;
+    font-family:Georgia, 'Times New Roman', serif;
+    overscroll-behavior:none;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    height:100vh;
+    padding:18px;
+  }
+
+  /* ---------- top: round label + 5-segment progress ---------- */
+  .topbar{
+    width:100%;
+    max-width:520px;
+  }
+  .round-label{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#555;
+    margin-bottom:10px;
+    text-align:center;
+  }
+  .segments{
+    display:flex;
+    gap:5px;
+  }
+  .segment{
+    flex:1;
+    height:4px;
+    background:#e6e6e6;
+  }
+  .segment.done{
+    background:#000;
+  }
+
+  /* ---------- question / answer / result stage (all share the same slot) ---------- */
+  .stage-wrap{
+    width:100%;
+    max-width:520px;
+    min-height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px 0;
+  }
+  .stage-panel{ display:none; flex-direction:column; align-items:center; gap:16px; width:100%; }
+  .stage-panel.active{ display:flex; }
+
+  .question{
+    font-family: Georgia, serif;
+    font-size:clamp(56px, 16vw, 96px);
+    font-weight:normal;
+    text-align:center;
+    opacity:1;
+    transition:opacity .15s ease;
+  }
+  .question.fade{ opacity:0; }
+
+  .prompt-label{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#555;
+  }
+  .answer-input{
+    font-family: Georgia, serif;
+    font-size:36px;
+    text-align:center;
+    width:160px;
+    border:none;
+    border-bottom:2px solid #000;
+    background:transparent;
+    padding:6px 0;
+    -webkit-appearance:none;
+  }
+  .answer-input:focus{ outline:none; }
+
+  .result-text{
+    font-family: Arial, sans-serif;
+    font-weight:bold;
+    font-size:38px;
+    letter-spacing:.04em;
+  }
+  .result-text.incorrect{ border-bottom:3px solid #000; padding-bottom:6px; }
+
+  /* ---------- start overlay ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    z-index:20;
+    padding:24px;
+    text-align:center;
+  }
+  .overlay.hidden{ display:none; }
+
+  h1{
+    font-size:22px;
+    font-weight:normal;
+    text-align:center;
+    max-width:340px;
+    line-height:1.5;
+  }
+  p.instructions{
+    font-family: Arial, sans-serif;
+    font-size:13px;
+    color:#555;
+    text-align:center;
+    max-width:320px;
+    line-height:1.6;
+  }
+  button{
+    font-family: Arial, sans-serif;
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    background:#000;
+    color:#fff;
+    border:none;
+    padding:13px 32px;
+    cursor:pointer;
+  }
+  button:active{ background:#333; }
+
+  /* ---------- abacus ---------- */
+  .abacus-wrap{
+    width:100%;
+    max-width:520px;
+    display:flex;
+    justify-content:center;
+    padding:10px 0 6px;
+  }
+  .abacus{
+    display:flex;
+    gap:26px;
+    border:1.5px solid #000;
+    padding:16px 20px 12px;
+    background:#fff;
+  }
+  .rod-group{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .rod-name{
+    font-family: Arial, sans-serif;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:#888;
+    margin-bottom:8px;
+  }
+  .rod{
+    position:relative;
+    width:52px;
+    height:220px;
+    touch-action:none;
+  }
+  .rod-line{
+    position:absolute;
+    left:50%;
+    top:0;
+    bottom:0;
+    width:2px;
+    background:#000;
+    transform:translateX(-50%);
+    pointer-events:none;
+  }
+  .bar{
+    position:absolute;
+    left:-12px;
+    right:-12px;
+    height:2px;
+    background:#000;
+    pointer-events:none;
+  }
+
+  /* oblate bead: wider than tall, elliptical — visual only, moved by swipe */
+  .bead{
+    position:absolute;
+    left:50%;
+    width:46px;
+    height:24px;
+    border-radius:50%;
+    background:#0a0a0a;
+    transform:translate(-50%, -50%);
+    transition: top .16s ease-out, background .15s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+    pointer-events:none;
+  }
+  .bead.next{ background:#2f6fed; }
+  .bead.next.urgent{
+    background:#e2632c;
+    animation: beadPulse 0.9s ease-in-out infinite;
+  }
+  @keyframes beadPulse{
+    0%, 100% { transform:translate(-50%, -50%) scale(1); }
+    50%      { transform:translate(-50%, -50%) scale(1.18); }
+  }
+
+  .value-hint{
+    font-family: Arial, sans-serif;
+    font-size:10px;
+    color:#aaa;
+    text-align:center;
+    margin-top:10px;
+    letter-spacing:.06em;
+  }
+
+  @media (max-width:400px){
+    .abacus{ gap:16px; padding:14px 14px 10px; }
+    .rod{ width:46px; }
+    .bead{ width:40px; height:22px; }
+  }
+
+  #homeLink{
+    position:fixed;
+    top:14px;
+    left:14px;
+    font-family: Arial, sans-serif;
+    font-size:13px;
+    color:#000;
+    text-decoration:none;
+    border:1.5px solid #000;
+    padding:6px 12px;
+    z-index:15;
+    background:#fff;
+  }
+  #homeLink:active{ background:#eee; }
+
+  #blockOverlay, #doneOverlay{
+    position:fixed;
+    inset:0;
+    background:#fff;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    z-index:30;
+    padding:24px;
+    text-align:center;
+  }
+  #blockOverlay strong, #doneOverlay strong{
+    display:block;
+    font-size:19px;
+    margin-bottom:4px;
+  }
+  #doneOverlay .score{
+    font-family: Arial, sans-serif;
+    font-size:15px;
+    color:#555;
+  }
+</style>
+</head>
+<body>
+
+  <a href="index.html" id="homeLink">Home</a>
+
+  <!-- BROWSER GATE -->
+  <div id="blockOverlay">
+    <strong>This activity requires Google Chrome on Android.</strong>
+    Please open this page in Google Chrome and try again.
+  </div>
+
+  <!-- ALREADY COMPLETED -->
+  <div id="doneOverlay">
+    <strong>Activity already completed on this device.</strong>
+    <div class="score" id="doneScoreText"></div>
+  </div>
+
+  <!-- START OVERLAY -->
+  <div class="overlay" id="startOverlay">
+    <h1>Abacus Addition Activity</h1>
+    <p class="instructions">
+      Numbers appear one at a time. Add each one to your running total on the
+      abacus — swipe up on a rod to add, down to subtract. The blue bead is
+      the next one that will move. When a rod is full, watch the next rod
+      over light up orange. The next number only appears once your total is
+      correct. Once all 5 numbers are done, type the total and check. This
+      repeats for 5 rounds.
+    </p>
+    <button id="startBtn">Start</button>
+  </div>
+
+  <div class="topbar">
+    <div class="round-label" id="roundLabel">Round 1 of 5</div>
+    <div class="segments" id="segments"></div>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="stage-panel active" id="panelQuestion">
+      <div class="question" id="question"></div>
+    </div>
+
+    <div class="stage-panel" id="panelAnswer">
+      <div class="prompt-label">Type your total, then check</div>
+      <input type="number" inputmode="numeric" class="answer-input" id="answerInput" autocomplete="off">
+      <button id="submitBtn">Check</button>
+    </div>
+
+    <div class="stage-panel" id="panelResult">
+      <div class="result-text" id="resultText">CORRECT</div>
+      <button id="nextBtn">Next Round</button>
+    </div>
+  </div>
+
+  <div class="abacus-wrap">
+    <div>
+      <div class="abacus">
+        <div class="rod-group">
+          <div class="rod-name">Hundreds</div>
+          <div class="rod" id="rodHundreds">
+            <div class="rod-line"></div>
+            <div class="bar" style="top:66px;"></div>
+          </div>
+        </div>
+        <div class="rod-group">
+          <div class="rod-name">Tens</div>
+          <div class="rod" id="rodTens">
+            <div class="rod-line"></div>
+            <div class="bar" style="top:66px;"></div>
+          </div>
+        </div>
+        <div class="rod-group">
+          <div class="rod-name">Ones</div>
+          <div class="rod" id="rodOnes">
+            <div class="rod-line"></div>
+            <div class="bar" style="top:66px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="value-hint">Swipe a rod up to add, down to subtract</div>
+    </div>
+  </div>
+
+<script>
+  const RESULT_KEY = 'itict_abacus_result';
+  const RESULT_COOKIE = 'itict_abacus_result';
+  const IDB_NAME = 'itict_db';
+  const IDB_STORE = 'results';
+  const IDB_KEY = 'abacus_result';
+
+  function setCookie(name, value, days){
+    const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+  }
+  function getCookie(name){
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function idbOpen(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if(!req.result.objectStoreNames.contains(IDB_STORE)){
+          req.result.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, value){
+    try{
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(value, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch(e){ return false; }
+  }
+  async function idbGet(key){
+    try{
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    } catch(e){ return null; }
+  }
+
+  async function loadAbacusResult(){
+    let record = null;
+    const lsRaw = localStorage.getItem(RESULT_KEY);
+    if(lsRaw){ try{ record = JSON.parse(lsRaw); } catch(e){} }
+    if(!record){
+      const cookieRaw = getCookie(RESULT_COOKIE);
+      if(cookieRaw){ try{ record = JSON.parse(cookieRaw); } catch(e){} }
+    }
+    if(!record){
+      record = await idbGet(IDB_KEY);
+    }
+    return record;
+  }
+
+  async function saveAbacusResult(record){
+    const json = JSON.stringify(record);
+    try{ localStorage.setItem(RESULT_KEY, json); } catch(e){}
+    setCookie(RESULT_COOKIE, json, 365);
+    await idbSet(IDB_KEY, record);
+  }
+
+  const TERMS_PER_ROUND = 5;
+  const TOTAL_ROUNDS = 5;
+
+  const roundLabel = document.getElementById('roundLabel');
+  const segmentsWrap = document.getElementById('segments');
+  const questionEl = document.getElementById('question');
+  const startOverlay = document.getElementById('startOverlay');
+
+  const panelQuestion = document.getElementById('panelQuestion');
+  const panelAnswer = document.getElementById('panelAnswer');
+  const panelResult = document.getElementById('panelResult');
+  const answerInput = document.getElementById('answerInput');
+  const submitBtn = document.getElementById('submitBtn');
+  const resultText = document.getElementById('resultText');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let round = 1;
+  let terms = [];
+  let currentSum = 0;
+  let correctRounds = 0;
+
+  function showPanel(panel){
+    [panelQuestion, panelAnswer, panelResult].forEach(p => p.classList.remove('active'));
+    panel.classList.add('active');
+  }
+
+  // ---------- build 5 progress segments ----------
+  const segmentEls = [];
+  for(let i=0;i<TERMS_PER_ROUND;i++){
+    const seg = document.createElement('div');
+    seg.className = 'segment';
+    segmentsWrap.appendChild(seg);
+    segmentEls.push(seg);
+  }
+  function resetSegments(){
+    segmentEls.forEach(s => s.classList.remove('done'));
+  }
+
+  // ---------- abacus: heaven bead is dragged, earth beads are swiped ----------
+  const BAR_TOP = 66;
+  const ROD_HEIGHT = 220;
+  const EARTH_GAP = 26;
+  const HEAVEN_REST_TOP = 18;
+  const HEAVEN_ACTIVE_TOP = BAR_TOP - 18;
+
+  function buildRod(rodEl){
+    let digit = 0; // 0–9, this rod's current value
+    let onIncrementCallback = null;
+
+    const heaven = document.createElement('div');
+    heaven.className = 'bead';
+    rodEl.appendChild(heaven);
+
+    const earthBeads = [];
+    for(let i=0;i<4;i++){
+      const b = document.createElement('div');
+      b.className = 'bead';
+      rodEl.appendChild(b);
+      earthBeads.push(b);
+    }
+
+    function render(){
+      const heavenOn = digit >= 5;
+      const earthCount = digit - (heavenOn ? 5 : 0);
+
+      heaven.style.top = (heavenOn ? HEAVEN_ACTIVE_TOP : HEAVEN_REST_TOP) + 'px';
+
+      const activeTop = i => BAR_TOP + 12 + i*EARTH_GAP;
+      const inactiveBottomTop = j => ROD_HEIGHT - 14 - j*EARTH_GAP;
+      for(let i=0;i<4;i++){
+        if(i < earthCount){
+          earthBeads[i].style.top = activeTop(i) + 'px';
+        } else {
+          const jFromBottom = 3 - i;
+          earthBeads[i].style.top = inactiveBottomTop(jFromBottom) + 'px';
+        }
+      }
+    }
+
+    function setHighlight(urgent){
+      heaven.classList.remove('next','urgent');
+      earthBeads.forEach(b => b.classList.remove('next','urgent'));
+
+      if(digit >= 9) return; // this rod is full, nothing local to highlight
+
+      // the bead that the NEXT upward swipe will move
+      let nextEl;
+      if(digit === 4){
+        nextEl = heaven; // next swipe engages the heaven (5) bead
+      } else {
+        const earthIdx = digit >= 5 ? digit - 5 : digit;
+        nextEl = earthBeads[earthIdx];
+      }
+      nextEl.classList.add('next');
+      if(urgent) nextEl.classList.add('urgent');
+    }
+
+    render();
+
+    let startY = null;
+
+    rodEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      rodEl.setPointerCapture(e.pointerId);
+    });
+
+    const finishSwipe = (e) => {
+      if(startY === null) return;
+      const dy = startY - e.clientY; // positive = swiped up
+      const THRESHOLD = 14;
+      if(dy > THRESHOLD){
+        digit = Math.min(9, digit + 1);
+        render();
+        if(onIncrementCallback) onIncrementCallback();
+        refreshAllHighlights();
+        checkProgress();
+      } else if(dy < -THRESHOLD){
+        digit = Math.max(0, digit - 1);
+        render();
+        refreshAllHighlights();
+        checkProgress();
+      }
+      startY = null;
+    };
+
+    rodEl.addEventListener('pointerup', finishSwipe);
+    rodEl.addEventListener('pointercancel', () => { startY = null; });
+
+    return {
+      getValue(){ return digit; },
+      setHighlight,
+      setOnIncrement(fn){ onIncrementCallback = fn; },
+      reset(){ digit = 0; render(); }
+    };
+  }
+
+  const hundredsRod = buildRod(document.getElementById('rodHundreds'));
+  const tensRod = buildRod(document.getElementById('rodTens'));
+  const onesRod = buildRod(document.getElementById('rodOnes'));
+
+  const rodOrder = [onesRod, tensRod, hundredsRod];
+
+  // once a higher-place bead is placed, the place(s) below it reset to zero
+  tensRod.setOnIncrement(() => { onesRod.reset(); });
+  hundredsRod.setOnIncrement(() => { tensRod.reset(); onesRod.reset(); });
+
+  function refreshAllHighlights(){
+    for(let i=0;i<rodOrder.length;i++){
+      const belowIsMaxed = (i > 0) && rodOrder[i-1].getValue() === 9;
+      rodOrder[i].setHighlight(belowIsMaxed);
+    }
+  }
+
+  function getAbacusValue(){
+    return hundredsRod.getValue()*100 + tensRod.getValue()*10 + onesRod.getValue();
+  }
+  function resetAbacus(){
+    hundredsRod.reset();
+    tensRod.reset();
+    onesRod.reset();
+    refreshAllHighlights();
+  }
+
+  // ---------- round / term logic (advance only on correct match) ----------
+  let currentTermIndex = 0;
+  let runningTarget = 0;
+  let awaitingAdvance = false;
+
+  function generateTerms(){
+    terms = [];
+    for(let i=0;i<TERMS_PER_ROUND;i++){
+      terms.push(Math.floor(Math.random()*30)+1); // 1–30
+    }
+    currentSum = terms.reduce((a,b)=>a+b, 0);
+  }
+
+  function startRound(){
+    roundLabel.textContent = 'Round ' + round + ' of ' + TOTAL_ROUNDS;
+    resetSegments();
+    resetAbacus();
+    generateTerms();
+    currentTermIndex = 0;
+    runningTarget = terms[0];
+    awaitingAdvance = false;
+    answerInput.value = '';
+    showPanel(panelQuestion);
+    showTerm(0);
+  }
+
+  function showTerm(i){
+    questionEl.classList.remove('fade');
+    questionEl.textContent = terms[i];
+  }
+
+  function checkProgress(){
+    if(awaitingAdvance) return;
+    if(getAbacusValue() !== runningTarget) return;
+
+    awaitingAdvance = true;
+    segmentEls[currentTermIndex].classList.add('done');
+    questionEl.classList.add('fade');
+
+    setTimeout(() => {
+      if(currentTermIndex >= TERMS_PER_ROUND - 1){
+        showPanel(panelAnswer);
+        answerInput.focus();
+        return;
+      }
+      currentTermIndex += 1;
+      runningTarget += terms[currentTermIndex];
+      showTerm(currentTermIndex);
+      awaitingAdvance = false;
+    }, 550);
+  }
+
+  submitBtn.addEventListener('click', () => {
+    const guess = parseInt(answerInput.value, 10);
+    const isCorrect = guess === currentSum;
+    if(isCorrect) correctRounds += 1;
+    resultText.textContent = isCorrect ? 'CORRECT' : 'INCORRECT';
+    resultText.className = 'result-text ' + (isCorrect ? '' : 'incorrect');
+    nextBtn.textContent = round >= TOTAL_ROUNDS ? 'Finish' : 'Next Round';
+    showPanel(panelResult);
+  });
+
+  nextBtn.addEventListener('click', async () => {
+    if(round >= TOTAL_ROUNDS){
+      const record = {
+        correctRounds: correctRounds,
+        totalRounds: TOTAL_ROUNDS,
+        completedAt: new Date().toISOString()
+      };
+      await saveAbacusResult(record);
+      showCompleted(record);
+      return;
+    }
+    round += 1;
+    startRound();
+  });
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    startOverlay.classList.add('hidden');
+    round = 1;
+    correctRounds = 0;
+    startRound();
+  });
+
+  function showCompleted(record){
+    document.querySelectorAll('.section, .overlay').forEach(el => {});
+    startOverlay.classList.add('hidden');
+    document.querySelector('.topbar').style.display = 'none';
+    document.querySelector('.stage-wrap').style.display = 'none';
+    document.querySelector('.abacus-wrap').style.display = 'none';
+    document.querySelector('.value-hint') && (document.querySelector('.value-hint').style.display = 'none');
+    const doneOverlay = document.getElementById('doneOverlay');
+    document.getElementById('doneScoreText').textContent =
+      'Score: ' + record.correctRounds + '/' + record.totalRounds + ' rounds correct';
+    doneOverlay.style.display = 'flex';
+  }
+
+  function isAndroid(){
+    return /Android/i.test(navigator.userAgent);
+  }
+  function isInAppBrowser(){
+    const ua = navigator.userAgent || '';
+    return /(FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Twitter)/i.test(ua);
+  }
+  function isChrome(){
+    const ua = navigator.userAgent;
+    return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
+  }
+  const browserBlocked = isInAppBrowser() || (isAndroid() && !isChrome());
+
+  (async function init(){
+    if(browserBlocked){
+      document.getElementById('blockOverlay').style.display = 'flex';
+      startOverlay.classList.add('hidden');
+      document.querySelector('.topbar').style.display = 'none';
+      document.querySelector('.stage-wrap').style.display = 'none';
+      document.querySelector('.abacus-wrap').style.display = 'none';
+      return;
+    }
+    const existing = await loadAbacusResult();
+    if(existing){
+      showCompleted(existing);
+    }
+  })();
+</script>
+
+</body>
+</html>
