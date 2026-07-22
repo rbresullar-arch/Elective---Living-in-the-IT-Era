@@ -160,7 +160,7 @@
   }
   .abacus{
     display:flex;
-    gap:26px;
+    gap:0;
     border:1.5px solid #000;
     padding:16px 20px 12px;
     background:#fff;
@@ -203,6 +203,27 @@
     pointer-events:none;
   }
 
+  /* enlarged gesture hitboxes — wider than the rod, so swipes are easy to land */
+  .zone{
+    position:absolute;
+    left:-13px;
+    right:-13px;
+    touch-action:none;
+    cursor:pointer;
+    background:transparent;
+    z-index:5;
+  }
+  .zone-heaven{ top:0; height:64px; }
+  .zone-earth{ top:68px; bottom:0; }
+  .zone:active{ background:rgba(0,0,0,0.05); }
+
+  /* vertical separators between place-value rods */
+  .rod-group + .rod-group{
+    border-left:1px solid #ccc;
+    padding-left:13px;
+    margin-left:13px;
+  }
+
   /* oblate bead: wider than tall, elliptical — visual only, moved by swipe */
   .bead{
     position:absolute;
@@ -236,9 +257,11 @@
   }
 
   @media (max-width:400px){
-    .abacus{ gap:16px; padding:14px 14px 10px; }
+    .abacus{ gap:0; padding:14px 10px 10px; }
     .rod{ width:46px; }
     .bead{ width:40px; height:22px; }
+    .rod-group + .rod-group{ padding-left:9px; margin-left:9px; }
+    .zone{ left:-9px; right:-9px; }
   }
 
   #homeLink{
@@ -291,6 +314,50 @@
     padding:13px 32px;
     display:inline-block;
   }
+
+  /* ---------- free play ---------- */
+  #freePlayBtn{
+    background:#fff;
+    color:#000;
+    border:1.5px solid #000;
+  }
+  #freePlayBtn:active{ background:#eee; }
+
+  #freePlayBar{
+    display:none;
+    width:100%;
+    max-width:520px;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    padding:10px 0 4px;
+  }
+  #freePlayBar.active{ display:flex; }
+  #freePlayBar .fp-label{
+    font-family: Arial, sans-serif;
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#555;
+  }
+  #freePlayBar .fp-value{
+    font-family: Georgia, serif;
+    font-size:clamp(48px, 14vw, 80px);
+    line-height:1;
+  }
+  #freePlayBar .fp-actions{
+    display:flex;
+    gap:10px;
+  }
+  #freePlayBar .fp-actions button{
+    padding:11px 26px;
+  }
+  #fpExitBtn{
+    background:#fff;
+    color:#000;
+    border:1.5px solid #000;
+  }
+  #fpExitBtn:active{ background:#eee; }
 </style>
 </head>
 <body>
@@ -307,7 +374,18 @@
   <div id="doneOverlay">
     <strong>Activity already completed on this device.</strong>
     <div class="score" id="doneScoreText"></div>
+    <button id="freePlayBtn">Free Play</button>
     <a class="activity-btn" href="index.html">Back to Home</a>
+  </div>
+
+  <!-- FREE PLAY BAR (shown only in free play mode) -->
+  <div id="freePlayBar">
+    <div class="fp-label">Free Play — no scoring</div>
+    <div class="fp-value" id="fpValue">0</div>
+    <div class="fp-actions">
+      <button id="fpResetBtn">Reset</button>
+      <button id="fpExitBtn">Exit</button>
+    </div>
   </div>
 
   <!-- LOCKED: ACTIVITY 1 NOT DONE -->
@@ -380,7 +458,7 @@
           </div>
         </div>
       </div>
-      <div class="value-hint">Top bead (5): swipe down to add · Lower beads (1): swipe up to add</div>
+      <div class="value-hint">Top bead (5): swipe down or tap · Lower beads (1): swipe up or tap</div>
     </div>
   </div>
 
@@ -490,12 +568,17 @@
   const resultText = document.getElementById('resultText');
   const nextBtn = document.getElementById('nextBtn');
 
+  const freePlayBar = document.getElementById('freePlayBar');
+  const fpValue = document.getElementById('fpValue');
+
   let round = 1;
   let terms = [];
   let currentSum = 0;
   let roundWrongAttempts = 0;
   let roundScores = [];
   let startTime = null;
+  let freePlayMode = false;   // when true: no scoring, no round advance
+  let lastRecord = null;      // cached saved result, for returning from free play
   const POINTS_PER_ROUND = 5;
 
   function showPanel(panel){
@@ -539,6 +622,15 @@
       earthBeads.push(b);
     }
 
+    // gesture hitboxes sit above the beads and receive all pointer events
+    const heavenZone = document.createElement('div');
+    heavenZone.className = 'zone zone-heaven';
+    rodEl.appendChild(heavenZone);
+
+    const earthZone = document.createElement('div');
+    earthZone.className = 'zone zone-earth';
+    rodEl.appendChild(earthZone);
+
     function render(){
       const heavenOn = digit >= 5;
       const earthCount = digit - (heavenOn ? 5 : 0);
@@ -576,68 +668,56 @@
 
     render();
 
-    let startY = null;
-    let startZone = null; // 'heaven' (above bar) or 'earth' (below bar)
+    const THRESHOLD = 10;
 
-    rodEl.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      startY = e.clientY;
-      const rect = rodEl.getBoundingClientRect();
-      const localY = e.clientY - rect.top;
-      startZone = localY < BAR_TOP ? 'heaven' : 'earth';
-      rodEl.setPointerCapture(e.pointerId);
-    });
+    function applyHeaven(dir){
+      // swipe DOWN (or tap) engages +5; swipe UP disengages -5
+      if(dir === 'down' && digit < 5){ digit += 5; }
+      else if(dir === 'up' && digit >= 5){ digit -= 5; }
+      else return;
+      render();
+      refreshAllHighlights();
+      checkProgress();
+    }
 
-    const finishSwipe = (e) => {
-      if(startY === null) return;
-      const dy = startY - e.clientY; // positive = swiped up
-      const THRESHOLD = 14;
-
-      if(startZone === 'heaven'){
-        // heaven bead: swipe DOWN engages (+5), swipe UP disengages (-5)
-        if(dy < -THRESHOLD && digit < 5){
-          digit += 5;
-          render();
-          refreshAllHighlights();
-          checkProgress();
-        } else if(dy > THRESHOLD && digit >= 5){
-          digit -= 5;
-          render();
-          refreshAllHighlights();
-          checkProgress();
-        }
+    function applyEarth(dir){
+      // swipe UP adds 1 (carry at 9); swipe DOWN subtracts 1 (borrow at 0)
+      if(dir === 'up'){
+        if(digit === 9){ digit = 0; render(); if(onOverflowCallback) onOverflowCallback(); }
+        else { digit += 1; render(); }
       } else {
-        // earth beads: swipe UP adds 1, swipe DOWN subtracts 1, with carry/borrow
-        if(dy > THRESHOLD){
-          if(digit === 9){
-            digit = 0;
-            render();
-            if(onOverflowCallback) onOverflowCallback();
-          } else {
-            digit += 1;
-            render();
-          }
-          refreshAllHighlights();
-          checkProgress();
-        } else if(dy < -THRESHOLD){
-          if(digit === 0){
-            digit = 9;
-            render();
-            if(onUnderflowCallback) onUnderflowCallback();
-          } else {
-            digit -= 1;
-            render();
-          }
-          refreshAllHighlights();
-          checkProgress();
-        }
+        if(digit === 0){ digit = 9; render(); if(onUnderflowCallback) onUnderflowCallback(); }
+        else { digit -= 1; render(); }
       }
-      startY = null;
-      startZone = null;
-    };
+      refreshAllHighlights();
+      checkProgress();
+    }
 
-    rodEl.addEventListener('pointerup', finishSwipe);
-    rodEl.addEventListener('pointercancel', () => { startY = null; startZone = null; });
+    function bindZone(zoneEl, onGesture, tapDir){
+      let startY = null;
+
+      zoneEl.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        startY = e.clientY;
+        zoneEl.setPointerCapture(e.pointerId);
+      });
+
+      zoneEl.addEventListener('pointerup', (e) => {
+        if(startY === null) return;
+        const dy = startY - e.clientY; // positive = swiped up
+        startY = null;
+        if(dy > THRESHOLD) onGesture('up');
+        else if(dy < -THRESHOLD) onGesture('down');
+        else if(tapDir) onGesture(tapDir(digit)); // sub-threshold tap = toggle
+      });
+
+      zoneEl.addEventListener('pointercancel', () => { startY = null; });
+    }
+
+    // heaven: tap toggles between engaged and disengaged
+    bindZone(heavenZone, applyHeaven, d => (d < 5 ? 'down' : 'up'));
+    // earth: tap adds 1 (no toggle semantics for a counting column)
+    bindZone(earthZone, applyEarth, () => 'up');
 
     return {
       getValue(){ return digit; },
@@ -726,6 +806,7 @@
   }
 
   function checkProgress(){
+    if(freePlayMode){ updateFreePlayValue(); return; } // free play: never advance or score
     if(awaitingAdvance) return;
     if(getAbacusValue() !== runningTarget) return;
 
@@ -807,10 +888,12 @@
   }
 
   function showCompleted(record){
+    lastRecord = record;
     startOverlay.classList.add('hidden');
     document.querySelector('.topbar').style.display = 'none';
     document.querySelector('.stage-wrap').style.display = 'none';
     document.querySelector('.abacus-wrap').style.display = 'none';
+    freePlayBar.classList.remove('active');
     const doneOverlay = document.getElementById('doneOverlay');
     const started = formatDateTime(record.startTime);
     const ended = formatDateTime(record.endTime);
@@ -821,6 +904,38 @@
       'Ended: ' + (ended.timePart || '');
     doneOverlay.style.display = 'flex';
   }
+
+  /* ---------- free play (unlocked after completion, never scored) ---------- */
+
+  function updateFreePlayValue(){
+    if(!freePlayMode) return;
+    fpValue.textContent = getAbacusValue();
+  }
+
+  function enterFreePlay(){
+    freePlayMode = true;
+    document.getElementById('doneOverlay').style.display = 'none';
+    document.querySelector('.topbar').style.display = 'none';   // no round segments
+    document.querySelector('.stage-wrap').style.display = 'none'; // no prompts/answer panel
+    document.querySelector('.abacus-wrap').style.display = 'flex';
+    freePlayBar.classList.add('active');
+    resetAbacus();
+    updateFreePlayValue();
+  }
+
+  function exitFreePlay(){
+    freePlayMode = false;
+    freePlayBar.classList.remove('active');
+    resetAbacus();
+    if(lastRecord) showCompleted(lastRecord);
+  }
+
+  document.getElementById('freePlayBtn').addEventListener('click', enterFreePlay);
+  document.getElementById('fpExitBtn').addEventListener('click', exitFreePlay);
+  document.getElementById('fpResetBtn').addEventListener('click', () => {
+    resetAbacus();
+    updateFreePlayValue();
+  });
 
   function isAndroid(){
     return /Android/i.test(navigator.userAgent);
