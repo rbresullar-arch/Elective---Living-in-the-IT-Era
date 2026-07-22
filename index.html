@@ -125,7 +125,7 @@
   </div>
 
   <div class="activity-row">
-    <a class="activity-btn" href="abacus_addition_activity.html">Activity 2</a>
+    <a class="activity-btn" id="activity2Btn" href="abacus_addition_activity.html">Activity 2</a>
     <span class="status" id="activity2Status">Checking...</span>
   </div>
 </div>
@@ -217,9 +217,22 @@ async function refreshActivity1Status() {
 
 async function refreshActivity2Status() {
   const statusEl = document.getElementById('activity2Status');
+  const btnEl = document.getElementById('activity2Btn');
+  const act1Record = await loadActivity1Result();
+  if (!act1Record) {
+    statusEl.textContent = 'Locked — complete Activity 1 first';
+    statusEl.className = 'status pending';
+    btnEl.removeAttribute('href');
+    btnEl.style.opacity = '0.4';
+    btnEl.style.cursor = 'default';
+    return;
+  }
+  btnEl.setAttribute('href', 'abacus_addition_activity.html');
+  btnEl.style.opacity = '';
+  btnEl.style.cursor = '';
   const record = await loadActivity2Result();
   if (record) {
-    statusEl.textContent = `Score: ${record.correctRounds}/${record.totalRounds} rounds`;
+    statusEl.textContent = `Score: ${record.score}/${record.maxScore} (${record.percentage}%)`;
     statusEl.className = 'status done';
   } else {
     statusEl.textContent = 'Not yet attempted';
