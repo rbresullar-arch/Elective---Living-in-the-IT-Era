@@ -6,14 +6,37 @@
 <title>IT and ICT in Our Lives — Sentence Ordering Activity</title>
 <style>
   * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
   body {
-    background: #ffffff;
+    background: #e8e8e8;
     color: #000000;
     font-family: Georgia, 'Times New Roman', serif;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 24px 16px 80px;
     line-height: 1.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* ---------- 9:16 portrait stage (standard activity layout) ---------- */
+  #stage {
+    position: relative;
+    width: min(100vw, calc(100vh * 9 / 16));
+    height: min(100vh, calc(100vw * 16 / 9));
+    background: #ffffff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 0 1px #ccc;
+  }
+  #stage-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 24px 16px 60px;
   }
   h1 {
     font-size: 22px;
@@ -120,7 +143,7 @@
     font-size: 16px;
     font-weight: bold;
     z-index: 50;
-    margin-bottom: 10px;
+    margin: -24px -16px 10px;
   }
   .timer-bar.warn { color: #b30000; }
   #result .essay-p {
@@ -158,7 +181,7 @@
     font-size: 19px;
     margin-bottom: 12px;
   }  #homeBtn {
-    position: fixed;
+    position: absolute;
     top: 10px;
     left: 10px;
     z-index: 100;
@@ -174,7 +197,9 @@
 </head>
 <body>
 
+<div id="stage">
 <a id="homeBtn" href="index.html">Home</a>
+<div id="stage-scroll">
 
 <h1>IT and ICT in Our Lives</h1>
 
@@ -227,6 +252,9 @@
     <div id="scoreLine"></div>
   </div>
 </div>
+
+</div><!-- /stage-scroll -->
+</div><!-- /stage -->
 
 <script>
 /* ---------- DATA ---------- */
@@ -398,6 +426,20 @@ function attachDrag(block, poolEl) {
 
     function onMove(ev) {
       ghost.style.top = (ev.clientY - offsetY) + 'px';
+
+      // autoscroll the stage when dragging near its top/bottom edge
+      const scroller = document.getElementById('stage-scroll');
+      if (scroller) {
+        const sr = scroller.getBoundingClientRect();
+        const EDGE = 60;   // px from edge that triggers scrolling
+        const SPEED = 12;  // px per move event
+        if (ev.clientY < sr.top + EDGE) {
+          scroller.scrollTop -= SPEED;
+        } else if (ev.clientY > sr.bottom - EDGE) {
+          scroller.scrollTop += SPEED;
+        }
+      }
+
       const els = [...poolEl.querySelectorAll('.block:not(.dragging)')];
       let inserted = false;
       for (const el of els) {
@@ -554,119 +596,78 @@ document.getElementById('finishBtn').addEventListener('click', () => {
 });
 
 const STORAGE_KEY = 'itict_essay_result';
+const COOKIE_NAME = 'itict_essay_result';
+const IDB_NAME = 'itict_db';
+const IDB_STORE = 'results';
+const IDB_KEY = 'result';
 
-/* ---------- Unified persistent storage (localStorage + sessionStorage + cookie + IndexedDB) ---------- */
-const ITICTStorage = (function () {
-  const DB_NAME = 'itict_db';
-  const DB_VERSION = 1;
-  const STORE = 'results';
-  let dbPromise = null;
+/* --- Cookie helpers --- */
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
-  function openDB() {
-    if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE);
-      };
-      req.onsuccess = () => resolve(req.result);
+/* --- IndexedDB helpers --- */
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { console.error('IndexedDB set failed:', e); }
+}
+async function idbGet(key) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
-    return dbPromise;
-  }
-  async function idbSet(key, value) {
-    try {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put(value, key);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-      });
-    } catch (e) { return false; }
-  }
-  async function idbGet(key) {
-    try {
-      const db = await openDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction(STORE, 'readonly');
-        const req = tx.objectStore(STORE).get(key);
-        req.onsuccess = () => resolve(req.result ?? null);
-        req.onerror = () => resolve(null);
-      });
-    } catch (e) { return null; }
-  }
-  function setCookie(name, value, days) {
-    try {
-      const expires = new Date(Date.now() + days * 864e5).toUTCString();
-      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-      return true;
-    } catch (e) { return false; }
-  }
-  function getCookie(name) {
-    try {
-      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-      return match ? decodeURIComponent(match[1]) : null;
-    } catch (e) { return null; }
-  }
+  } catch (e) { console.error('IndexedDB get failed:', e); return null; }
+}
 
-  async function save(key, value) {
-    const json = JSON.stringify(value);
-    const ok = { localStorage: false, sessionStorage: false, cookie: false, indexedDB: false };
-    try { localStorage.setItem(key, json); ok.localStorage = true; } catch (e) {}
-    try { sessionStorage.setItem(key, json); ok.sessionStorage = true; } catch (e) {}
-    ok.cookie = setCookie(key, json, 365);
-    ok.indexedDB = await idbSet(key, value);
-    return ok;
-  }
-
-  async function load(key) {
-    let record = null;
-    try {
-      const v = localStorage.getItem(key);
-      if (v !== null) record = JSON.parse(v);
-    } catch (e) {}
-    if (!record) {
-      try {
-        const v = sessionStorage.getItem(key);
-        if (v !== null) record = JSON.parse(v);
-      } catch (e) {}
-    }
-    if (!record) {
-      const v = getCookie(key);
-      if (v !== null) { try { record = JSON.parse(v); } catch (e) {} }
-    }
-    if (!record) {
-      record = await idbGet(key);
-    }
-    if (record) save(key, record); // backfill missing layers
-    return record;
-  }
-
-  async function remove(key) {
-    try { localStorage.removeItem(key); } catch (e) {}
-    try { sessionStorage.removeItem(key); } catch (e) {}
-    try { document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`; } catch (e) {}
-    try {
-      const db = await openDB();
-      await new Promise((resolve) => {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      });
-    } catch (e) {}
-  }
-
-  return { save, load, remove };
-})();
-
+/* --- Unified triple-storage save/load --- */
 function saveResultEverywhere(record) {
-  ITICTStorage.save(STORAGE_KEY, record);
+  const json = JSON.stringify(record);
+  try { localStorage.setItem(STORAGE_KEY, json); } catch (e) { console.error('localStorage save failed:', e); }
+  try { setCookie(COOKIE_NAME, json, 365); } catch (e) { console.error('Cookie save failed:', e); }
+  idbSet(IDB_KEY, record);
 }
 
 async function loadResultFromAnywhere() {
-  return ITICTStorage.load(STORAGE_KEY);
+  let record = null;
+
+  const lsRaw = localStorage.getItem(STORAGE_KEY);
+  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
+
+  if (!record) {
+    const cookieRaw = getCookie(COOKIE_NAME);
+    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
+  }
+
+  if (!record) {
+    record = await idbGet(IDB_KEY);
+  }
+
+  if (record) saveResultEverywhere(record); // backfill any missing storage
+  return record;
 }
 
 function finishActivity() {
