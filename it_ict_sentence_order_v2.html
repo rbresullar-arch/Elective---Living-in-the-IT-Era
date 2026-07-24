@@ -6,37 +6,14 @@
 <title>IT and ICT in Our Lives — Sentence Ordering Activity</title>
 <style>
   * { box-sizing: border-box; }
-  html, body {
-    height: 100%;
-    margin: 0;
-  }
   body {
-    background: #e8e8e8;
+    background: #ffffff;
     color: #000000;
     font-family: Georgia, 'Times New Roman', serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
     line-height: 1.5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  /* ---------- 9:16 portrait stage (standard activity layout) ---------- */
-  #stage {
-    position: relative;
-    width: min(100vw, calc(100vh * 9 / 16));
-    height: min(100vh, calc(100vw * 16 / 9));
-    background: #ffffff;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 0 0 1px #ccc;
-  }
-  #stage-scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding: 24px 16px 60px;
   }
   h1 {
     font-size: 22px;
@@ -143,7 +120,7 @@
     font-size: 16px;
     font-weight: bold;
     z-index: 50;
-    margin: -24px -16px 10px;
+    margin-bottom: 10px;
   }
   .timer-bar.warn { color: #b30000; }
   #result .essay-p {
@@ -181,7 +158,7 @@
     font-size: 19px;
     margin-bottom: 12px;
   }  #homeBtn {
-    position: absolute;
+    position: fixed;
     top: 10px;
     left: 10px;
     z-index: 100;
@@ -194,12 +171,33 @@
     border: 1.5px solid #000;
   }
 </style>
+
+<style id="dlBtnStyle">
+  #selfDownloadBtn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 200;
+    background: #fff;
+    color: #000;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1.5px solid #000;
+    cursor: pointer;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  #selfDownloadBtn:active { background: #eee; }
+  #selfDownloadBtn:disabled { opacity: .5; cursor: default; }
+</style>
 </head>
 <body>
 
-<div id="stage">
+<button type="button" id="selfDownloadBtn">Download</button>
+
+
 <a id="homeBtn" href="index.html">Home</a>
-<div id="stage-scroll">
 
 <h1>IT and ICT in Our Lives</h1>
 
@@ -252,9 +250,6 @@
     <div id="scoreLine"></div>
   </div>
 </div>
-
-</div><!-- /stage-scroll -->
-</div><!-- /stage -->
 
 <script>
 /* ---------- DATA ---------- */
@@ -426,20 +421,6 @@ function attachDrag(block, poolEl) {
 
     function onMove(ev) {
       ghost.style.top = (ev.clientY - offsetY) + 'px';
-
-      // autoscroll the stage when dragging near its top/bottom edge
-      const scroller = document.getElementById('stage-scroll');
-      if (scroller) {
-        const sr = scroller.getBoundingClientRect();
-        const EDGE = 60;   // px from edge that triggers scrolling
-        const SPEED = 12;  // px per move event
-        if (ev.clientY < sr.top + EDGE) {
-          scroller.scrollTop -= SPEED;
-        } else if (ev.clientY > sr.bottom - EDGE) {
-          scroller.scrollTop += SPEED;
-        }
-      }
-
       const els = [...poolEl.querySelectorAll('.block:not(.dragging)')];
       let inserted = false;
       for (const el of els) {
@@ -770,6 +751,67 @@ function renderResult(record) {
     finished = true;
     renderResult(saved);
   }
+})();
+</script>
+
+
+<script id="dlBtnScript">
+(function(){
+  var FILE_NAME = "it_ict_sentence_order_v2.html";
+  var btn = document.getElementById('selfDownloadBtn');
+  if(!btn) return;
+
+  function saveBlob(text){
+    var blob = new Blob([text], {type: 'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = FILE_NAME;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function fallbackSource(){
+    // Serialize current DOM as a last resort (may include runtime-injected nodes).
+    return '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  }
+
+  btn.addEventListener('click', function(){
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = 'Saving...';
+
+    var done = function(msg){
+      btn.textContent = msg;
+      setTimeout(function(){
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 1800);
+    };
+
+    // Preferred: fetch pristine source from the server.
+    fetch(location.href, {cache: 'no-store'})
+      .then(function(res){
+        if(!res.ok) throw new Error('bad status');
+        return res.text();
+      })
+      .then(function(text){
+        if(!text || text.indexOf('<html') === -1) throw new Error('bad body');
+        saveBlob(text);
+        done('Saved');
+      })
+      .catch(function(){
+        // file:// or offline — fall back to DOM serialization.
+        try {
+          saveBlob(fallbackSource());
+          done('Saved');
+        } catch(e) {
+          done('Failed');
+        }
+      });
+  });
 })();
 </script>
 
