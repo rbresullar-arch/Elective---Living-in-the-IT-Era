@@ -14,32 +14,18 @@
   }
   html,body{
     height:100%;
-    margin:0;
-    background:#e8e8e8;
+    background:#ffffff;
     color:#000000;
     font-family:Georgia, 'Times New Roman', serif;
     overscroll-behavior:none;
   }
   body{
     display:flex;
-    align-items:center;
-    justify-content:center;
-    height:100vh;
-    padding:0;
-  }
-  /* ---------- 9:16 portrait stage (standard activity layout) ---------- */
-  #stage{
-    position:relative;
-    width:min(100vw, calc(100vh * 9 / 16));
-    height:min(100vh, calc(100vw * 16 / 9));
-    background:#ffffff;
-    overflow:hidden;
-    display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:space-between;
+    height:100vh;
     padding:18px;
-    box-shadow:0 0 0 1px #ccc;
   }
 
   /* ---------- top: round label + 5-segment progress ---------- */
@@ -122,7 +108,7 @@
 
   /* ---------- start overlay ---------- */
   .overlay{
-    position:absolute;
+    position:fixed;
     inset:0;
     background:#fff;
     display:flex;
@@ -174,7 +160,7 @@
   }
   .abacus{
     display:flex;
-    gap:0;
+    gap:26px;
     border:1.5px solid #000;
     padding:16px 20px 12px;
     background:#fff;
@@ -217,27 +203,6 @@
     pointer-events:none;
   }
 
-  /* enlarged gesture hitboxes — wider than the rod, so swipes are easy to land */
-  .zone{
-    position:absolute;
-    left:-13px;
-    right:-13px;
-    touch-action:none;
-    cursor:pointer;
-    background:transparent;
-    z-index:5;
-  }
-  .zone-heaven{ top:0; height:64px; }
-  .zone-earth{ top:68px; bottom:0; }
-  .zone:active{ background:rgba(0,0,0,0.05); }
-
-  /* vertical separators between place-value rods */
-  .rod-group + .rod-group{
-    border-left:1px solid #ccc;
-    padding-left:13px;
-    margin-left:13px;
-  }
-
   /* oblate bead: wider than tall, elliptical — visual only, moved by swipe */
   .bead{
     position:absolute;
@@ -271,15 +236,13 @@
   }
 
   @media (max-width:400px){
-    .abacus{ gap:0; padding:14px 10px 10px; }
+    .abacus{ gap:16px; padding:14px 14px 10px; }
     .rod{ width:46px; }
     .bead{ width:40px; height:22px; }
-    .rod-group + .rod-group{ padding-left:9px; margin-left:9px; }
-    .zone{ left:-9px; right:-9px; }
   }
 
   #homeLink{
-    position:absolute;
+    position:fixed;
     top:14px;
     left:14px;
     font-family: Arial, sans-serif;
@@ -294,7 +257,7 @@
   #homeLink:active{ background:#eee; }
 
   #blockOverlay, #doneOverlay{
-    position:absolute;
+    position:fixed;
     inset:0;
     background:#fff;
     display:none;
@@ -316,8 +279,7 @@
     font-size:15px;
     color:#555;
   }
-  #lockedOverlay a.activity-btn,
-  #doneOverlay a.activity-btn{
+  #lockedOverlay a.activity-btn{
     font-family: Arial, sans-serif;
     font-size:13px;
     letter-spacing:.08em;
@@ -328,55 +290,32 @@
     padding:13px 32px;
     display:inline-block;
   }
+</style>
 
-  /* ---------- free play ---------- */
-  #freePlayBtn{
-    background:#fff;
-    color:#000;
-    border:1.5px solid #000;
-  }
-  #freePlayBtn:active{ background:#eee; }
-
-  #freePlayBar{
-    display:none;
-    width:100%;
-    max-width:520px;
-    flex-direction:column;
-    align-items:center;
-    gap:10px;
-    padding:10px 0 4px;
-  }
-  #freePlayBar.active{ display:flex; }
-  #freePlayBar .fp-label{
+<style id="dlBtnStyle">
+  #selfDownloadBtn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 200;
+    background: #fff;
+    color: #000;
     font-family: Arial, sans-serif;
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:#555;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1.5px solid #000;
+    cursor: pointer;
+    letter-spacing: normal;
+    text-transform: none;
   }
-  #freePlayBar .fp-value{
-    font-family: Georgia, serif;
-    font-size:clamp(48px, 14vw, 80px);
-    line-height:1;
-  }
-  #freePlayBar .fp-actions{
-    display:flex;
-    gap:10px;
-  }
-  #freePlayBar .fp-actions button{
-    padding:11px 26px;
-  }
-  #fpExitBtn{
-    background:#fff;
-    color:#000;
-    border:1.5px solid #000;
-  }
-  #fpExitBtn:active{ background:#eee; }
+  #selfDownloadBtn:active { background: #eee; }
+  #selfDownloadBtn:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
 
-<div id="stage">
+<button type="button" id="selfDownloadBtn">Download</button>
+
 
   <a href="index.html" id="homeLink">Home</a>
 
@@ -390,22 +329,10 @@
   <div id="doneOverlay">
     <strong>Activity already completed on this device.</strong>
     <div class="score" id="doneScoreText"></div>
-    <button id="freePlayBtn">Free Play</button>
-    <a class="activity-btn" href="index.html">Back to Home</a>
-  </div>
-
-  <!-- FREE PLAY BAR (shown only in free play mode) -->
-  <div id="freePlayBar">
-    <div class="fp-label">Free Play — no scoring</div>
-    <div class="fp-value" id="fpValue">0</div>
-    <div class="fp-actions">
-      <button id="fpResetBtn">Reset</button>
-      <button id="fpExitBtn">Exit</button>
-    </div>
   </div>
 
   <!-- LOCKED: ACTIVITY 1 NOT DONE -->
-  <div id="lockedOverlay" style="position:absolute;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
+  <div id="lockedOverlay" style="position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
     <strong style="display:block;font-size:19px;">Complete Activity 1 first.</strong>
     <a class="activity-btn" href="it_ict_sentence_order_v2.html">Go to Activity 1</a>
   </div>
@@ -415,12 +342,9 @@
     <h1>Abacus Addition Activity</h1>
     <p class="instructions">
       Numbers appear one at a time. Add each one to your running total on the
-      abacus. The top bead is worth 5 — swipe it <strong>down</strong> toward
-      the bar to add 5, up to remove it. The lower beads are worth 1 each —
-      swipe <strong>up</strong> to add, down to subtract. The blue bead is
-      the next one that will move. Rods are independent — a full rod (9)
-      carries over to the next rod when you swipe up again, and the rod
-      above lights up orange. The next number only appears once your total is
+      abacus — swipe up on a rod to add, down to subtract. The blue bead is
+      the next one that will move. When a rod is full, watch the next rod
+      over light up orange. The next number only appears once your total is
       correct. Once all 5 numbers are done, type the total and check. This
       repeats for 5 rounds.
     </p>
@@ -474,11 +398,9 @@
           </div>
         </div>
       </div>
-      <div class="value-hint">Top bead (5): swipe down or tap · Lower beads (1): swipe up or tap</div>
+      <div class="value-hint">Swipe a rod up to add, down to subtract</div>
     </div>
   </div>
-
-</div><!-- /stage -->
 
 <script>
   const RESULT_KEY = 'itict_abacus_result';
@@ -586,17 +508,12 @@
   const resultText = document.getElementById('resultText');
   const nextBtn = document.getElementById('nextBtn');
 
-  const freePlayBar = document.getElementById('freePlayBar');
-  const fpValue = document.getElementById('fpValue');
-
   let round = 1;
   let terms = [];
   let currentSum = 0;
   let roundWrongAttempts = 0;
   let roundScores = [];
   let startTime = null;
-  let freePlayMode = false;   // when true: no scoring, no round advance
-  let lastRecord = null;      // cached saved result, for returning from free play
   const POINTS_PER_ROUND = 5;
 
   function showPanel(panel){
@@ -625,8 +542,7 @@
 
   function buildRod(rodEl){
     let digit = 0; // 0–9, this rod's current value
-    let onOverflowCallback = null;
-    let onUnderflowCallback = null;
+    let onIncrementCallback = null;
 
     const heaven = document.createElement('div');
     heaven.className = 'bead';
@@ -639,15 +555,6 @@
       rodEl.appendChild(b);
       earthBeads.push(b);
     }
-
-    // gesture hitboxes sit above the beads and receive all pointer events
-    const heavenZone = document.createElement('div');
-    heavenZone.className = 'zone zone-heaven';
-    rodEl.appendChild(heavenZone);
-
-    const earthZone = document.createElement('div');
-    earthZone.className = 'zone zone-earth';
-    rodEl.appendChild(earthZone);
 
     function render(){
       const heavenOn = digit >= 5;
@@ -671,83 +578,56 @@
       heaven.classList.remove('next','urgent');
       earthBeads.forEach(b => b.classList.remove('next','urgent'));
 
-      // heaven bead is independently available whenever it can still be engaged
-      if(digit < 5) heaven.classList.add('next');
+      if(digit >= 9) return; // this rod is full, nothing local to highlight
 
-      if(digit >= 9) return; // earth column full; only carry remains
-
-      // the earth bead that the NEXT upward swipe will move
-      const earthIdx = digit >= 5 ? digit - 5 : digit;
-      if(earthIdx < 4){
-        earthBeads[earthIdx].classList.add('next');
-        if(urgent) earthBeads[earthIdx].classList.add('urgent');
+      // the bead that the NEXT upward swipe will move
+      let nextEl;
+      if(digit === 4){
+        nextEl = heaven; // next swipe engages the heaven (5) bead
+      } else {
+        const earthIdx = digit >= 5 ? digit - 5 : digit;
+        nextEl = earthBeads[earthIdx];
       }
+      nextEl.classList.add('next');
+      if(urgent) nextEl.classList.add('urgent');
     }
 
     render();
 
-    const THRESHOLD = 10;
+    let startY = null;
 
-    function applyHeaven(dir){
-      // swipe DOWN (or tap) engages +5; swipe UP disengages -5
-      if(dir === 'down' && digit < 5){ digit += 5; }
-      else if(dir === 'up' && digit >= 5){ digit -= 5; }
-      else return;
-      render();
-      refreshAllHighlights();
-      checkProgress();
-    }
+    rodEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startY = e.clientY;
+      rodEl.setPointerCapture(e.pointerId);
+    });
 
-    function applyEarth(dir){
-      // swipe UP adds 1 (carry at 9); swipe DOWN subtracts 1 (borrow at 0)
-      if(dir === 'up'){
-        if(digit === 9){ digit = 0; render(); if(onOverflowCallback) onOverflowCallback(); }
-        else { digit += 1; render(); }
-      } else {
-        if(digit === 0){ digit = 9; render(); if(onUnderflowCallback) onUnderflowCallback(); }
-        else { digit -= 1; render(); }
+    const finishSwipe = (e) => {
+      if(startY === null) return;
+      const dy = startY - e.clientY; // positive = swiped up
+      const THRESHOLD = 14;
+      if(dy > THRESHOLD){
+        digit = Math.min(9, digit + 1);
+        render();
+        if(onIncrementCallback) onIncrementCallback();
+        refreshAllHighlights();
+        checkProgress();
+      } else if(dy < -THRESHOLD){
+        digit = Math.max(0, digit - 1);
+        render();
+        refreshAllHighlights();
+        checkProgress();
       }
-      refreshAllHighlights();
-      checkProgress();
-    }
+      startY = null;
+    };
 
-    function bindZone(zoneEl, onGesture, tapDir){
-      let startY = null;
-
-      zoneEl.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        startY = e.clientY;
-        zoneEl.setPointerCapture(e.pointerId);
-      });
-
-      zoneEl.addEventListener('pointerup', (e) => {
-        if(startY === null) return;
-        const dy = startY - e.clientY; // positive = swiped up
-        startY = null;
-        if(dy > THRESHOLD) onGesture('up');
-        else if(dy < -THRESHOLD) onGesture('down');
-        else if(tapDir) onGesture(tapDir(digit)); // sub-threshold tap = toggle
-      });
-
-      zoneEl.addEventListener('pointercancel', () => { startY = null; });
-    }
-
-    // heaven: tap toggles between engaged and disengaged
-    bindZone(heavenZone, applyHeaven, d => (d < 5 ? 'down' : 'up'));
-    // earth: tap adds 1 (no toggle semantics for a counting column)
-    bindZone(earthZone, applyEarth, () => 'up');
+    rodEl.addEventListener('pointerup', finishSwipe);
+    rodEl.addEventListener('pointercancel', () => { startY = null; });
 
     return {
       getValue(){ return digit; },
       setHighlight,
-      setOnOverflow(fn){ onOverflowCallback = fn; },
-      setOnUnderflow(fn){ onUnderflowCallback = fn; },
-      bump(delta){
-        const next = digit + delta;
-        if(next > 9){ digit = next - 10; render(); if(onOverflowCallback) onOverflowCallback(); }
-        else if(next < 0){ digit = next + 10; render(); if(onUnderflowCallback) onUnderflowCallback(); }
-        else { digit = next; render(); }
-      },
+      setOnIncrement(fn){ onIncrementCallback = fn; },
       reset(){ digit = 0; render(); }
     };
   }
@@ -758,11 +638,9 @@
 
   const rodOrder = [onesRod, tensRod, hundredsRod];
 
-  // rods are independent; overflow carries up, underflow borrows down
-  onesRod.setOnOverflow(() => { tensRod.bump(1); });
-  tensRod.setOnOverflow(() => { hundredsRod.bump(1); });
-  onesRod.setOnUnderflow(() => { tensRod.bump(-1); });
-  tensRod.setOnUnderflow(() => { hundredsRod.bump(-1); });
+  // once a higher-place bead is placed, the place(s) below it reset to zero
+  tensRod.setOnIncrement(() => { onesRod.reset(); });
+  hundredsRod.setOnIncrement(() => { tensRod.reset(); onesRod.reset(); });
 
   function refreshAllHighlights(){
     for(let i=0;i<rodOrder.length;i++){
@@ -786,20 +664,10 @@
   let runningTarget = 0;
   let awaitingAdvance = false;
 
-  // per-round term ranges [min, max], indexed by round-1
-  const ROUND_RANGES = [
-    [1, 5],
-    [6, 10],
-    [11, 15],
-    [16, 20],
-    [30, 40]
-  ];
-
   function generateTerms(){
-    const [min, max] = ROUND_RANGES[Math.min(round, ROUND_RANGES.length) - 1];
     terms = [];
     for(let i=0;i<TERMS_PER_ROUND;i++){
-      terms.push(Math.floor(Math.random()*(max - min + 1)) + min);
+      terms.push(Math.floor(Math.random()*15)+1); // 1–15
     }
     currentSum = terms.reduce((a,b)=>a+b, 0);
   }
@@ -824,7 +692,6 @@
   }
 
   function checkProgress(){
-    if(freePlayMode){ updateFreePlayValue(); return; } // free play: never advance or score
     if(awaitingAdvance) return;
     if(getAbacusValue() !== runningTarget) return;
 
@@ -906,12 +773,10 @@
   }
 
   function showCompleted(record){
-    lastRecord = record;
     startOverlay.classList.add('hidden');
     document.querySelector('.topbar').style.display = 'none';
     document.querySelector('.stage-wrap').style.display = 'none';
     document.querySelector('.abacus-wrap').style.display = 'none';
-    freePlayBar.classList.remove('active');
     const doneOverlay = document.getElementById('doneOverlay');
     const started = formatDateTime(record.startTime);
     const ended = formatDateTime(record.endTime);
@@ -922,38 +787,6 @@
       'Ended: ' + (ended.timePart || '');
     doneOverlay.style.display = 'flex';
   }
-
-  /* ---------- free play (unlocked after completion, never scored) ---------- */
-
-  function updateFreePlayValue(){
-    if(!freePlayMode) return;
-    fpValue.textContent = getAbacusValue();
-  }
-
-  function enterFreePlay(){
-    freePlayMode = true;
-    document.getElementById('doneOverlay').style.display = 'none';
-    document.querySelector('.topbar').style.display = 'none';   // no round segments
-    document.querySelector('.stage-wrap').style.display = 'none'; // no prompts/answer panel
-    document.querySelector('.abacus-wrap').style.display = 'flex';
-    freePlayBar.classList.add('active');
-    resetAbacus();
-    updateFreePlayValue();
-  }
-
-  function exitFreePlay(){
-    freePlayMode = false;
-    freePlayBar.classList.remove('active');
-    resetAbacus();
-    if(lastRecord) showCompleted(lastRecord);
-  }
-
-  document.getElementById('freePlayBtn').addEventListener('click', enterFreePlay);
-  document.getElementById('fpExitBtn').addEventListener('click', exitFreePlay);
-  document.getElementById('fpResetBtn').addEventListener('click', () => {
-    resetAbacus();
-    updateFreePlayValue();
-  });
 
   function isAndroid(){
     return /Android/i.test(navigator.userAgent);
@@ -991,6 +824,67 @@
       showCompleted(existing);
     }
   })();
+</script>
+
+
+<script id="dlBtnScript">
+(function(){
+  var FILE_NAME = "abacus_addition_activity.html";
+  var btn = document.getElementById('selfDownloadBtn');
+  if(!btn) return;
+
+  function saveBlob(text){
+    var blob = new Blob([text], {type: 'text/html;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = FILE_NAME;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function fallbackSource(){
+    // Serialize current DOM as a last resort (may include runtime-injected nodes).
+    return '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  }
+
+  btn.addEventListener('click', function(){
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = 'Saving...';
+
+    var done = function(msg){
+      btn.textContent = msg;
+      setTimeout(function(){
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 1800);
+    };
+
+    // Preferred: fetch pristine source from the server.
+    fetch(location.href, {cache: 'no-store'})
+      .then(function(res){
+        if(!res.ok) throw new Error('bad status');
+        return res.text();
+      })
+      .then(function(text){
+        if(!text || text.indexOf('<html') === -1) throw new Error('bad body');
+        saveBlob(text);
+        done('Saved');
+      })
+      .catch(function(){
+        // file:// or offline — fall back to DOM serialization.
+        try {
+          saveBlob(fallbackSource());
+          done('Saved');
+        } catch(e) {
+          done('Failed');
+        }
+      });
+  });
+})();
 </script>
 
 </body>
