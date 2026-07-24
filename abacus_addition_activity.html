@@ -396,6 +396,7 @@
   <div id="doneOverlay">
     <strong>Activity already completed on this device.</strong>
     <div class="score" id="doneScoreText"></div>
+    <div class="score" style="font-size:11px;color:#999;">build: freeplay-v2</div>
     <button id="freePlayBtn">Free Play</button>
     <a class="activity-btn" href="index.html">Back to Home</a>
   </div>
@@ -988,7 +989,7 @@
   var FILE_NAME = "abacus_addition_activity.html";
   var btn = document.getElementById('selfDownloadBtn');
   if(!btn) return;
-  document.body.appendChild(btn); // last child = top of paint order
+  document.body.appendChild(btn);
 
   function saveBlob(text){
     var blob = new Blob([text], {type:'text/html;charset=utf-8'});
@@ -1001,11 +1002,10 @@
 
   btn.addEventListener('click', function(){
     btn.disabled = true;
-    var original = 'Download';
     btn.textContent = 'Saving...';
     var done = function(msg){
       btn.textContent = msg;
-      setTimeout(function(){ btn.textContent = original; btn.disabled = false; }, 1800);
+      setTimeout(function(){ btn.textContent = 'Download'; btn.disabled = false; }, 1800);
     };
     fetch(location.href, {cache:'no-store'})
       .then(function(r){ if(!r.ok) throw 0; return r.text(); })
