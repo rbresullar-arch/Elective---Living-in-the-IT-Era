@@ -194,6 +194,22 @@
     .strip,.dial{ transition:none; }
   }
 
+  #homeLink{
+    position:absolute;
+    top:14px;
+    left:14px;
+    font-family:Arial,sans-serif;
+    font-size:clamp(9px,1.3vh,13px);
+    letter-spacing:.08em;
+    color:#c9b48c;
+    text-decoration:none;
+    border:1px solid #6b5c48;
+    padding:.8vh 1.6vw;
+    z-index:25;
+    background:#241f1a;
+  }
+  #homeLink:active{ background:#332b22; }
+
   /* ---------- game mode ---------- */
   /* target marker sits to the LEFT of the readout row, inline */
   .readout-wrap{
@@ -288,6 +304,13 @@
     border:1px solid #6b5c48;
   }
   .mode-choice:active{ background:#3a3126; }
+  .mode-choice.done{
+    opacity:.5;
+  }
+  .mode-choice.done .mode-name::after{
+    content:' ✓';
+    color:#8fce8f;
+  }
   .mode-name{
     font-family:Georgia,serif;
     font-size:clamp(16px,2.6vh,24px);
@@ -405,6 +428,8 @@
 <body>
 
 <div id="stage">
+
+  <a href="index.html" id="homeLink">Home</a>
 
   <div class="topnav">
     <button id="modeBtn">Game</button>
@@ -994,15 +1019,14 @@ async function savePascalineResult(rec){
   a3SetCookie(A3_RESULT_COOKIE,json,365);
   await a3IdbSet(A3_IDB_KEY,rec);
 }
-// keep only the highest closeness score
+// Fast Play is one-time: save only if no result exists yet, then it's locked
 async function saveFastPlayScore(points, playerTotal, trueSumVal){
-  const prev=await loadPascalineResult();
-  const best = prev ? Math.max(prev.score, points) : points;
-  const rec={
-    score: best,
-    lastScore: points,
+  const prev = await loadPascalineResult();
+  if(prev) return;   // already completed — never overwrite
+  const rec = {
+    score: points,
     maxScore: 100,
-    percentage: best,
+    percentage: points,
     playerTotal, trueSum: trueSumVal,
     endTime: new Date().toISOString()
   };
@@ -1133,7 +1157,7 @@ function showGameOver(title, detail){
   gameOverEl.classList.add('show');
 }
 
-function openModeSelect(){
+async function openModeSelect(){
   // stop any running game, show the picker
   stopGameLoops();
   gameMode = false;
@@ -1143,9 +1167,30 @@ function openModeSelect(){
   eyebrowEl.textContent = 'Pascaline · Choose a mode';
   total = 0; renderTotal(false);
   document.getElementById('modeSelect').classList.add('show');
+
+  // Fast Play is one-time — reflect completion state on its choice
+  const fpBtn = document.querySelector('.mode-choice[data-mode="fastplay"]');
+  const fpDesc = fpBtn.querySelector('.mode-desc');
+  const done = await loadPascalineResult();
+  if(done){
+    fpBtn.classList.add('done');
+    fpDesc.textContent = 'Completed · Score ' + done.score + '/100';
+  } else {
+    fpBtn.classList.remove('done');
+    fpDesc.innerHTML = '10 numbers, 3s each &mdash; match the hidden sum';
+  }
 }
 
-function startMode(mode){
+async function startMode(mode){
+  // Fast Play is one-time — if already done, refuse and show completed state
+  if(mode === 'fastplay'){
+    const done = await loadPascalineResult();
+    if(done){
+      showGameOver('Fast Play Completed',
+        'Already played · Score ' + done.score + '/100. Series and Addition are still open.');
+      return;
+    }
+  }
   activeMode = mode;
   document.getElementById('modeSelect').classList.remove('show');
   gameOverEl.classList.remove('show');
