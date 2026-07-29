@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pascaline — Addition by Gear</title>
+<style>
+  *{
+    box-sizing:border-box; margin:0; padding:0;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-user-drag:none;
+  }
+  html,body{
+    height:100%;
+    background:#1a1714;
+    color:#f2ece2;
+    font-family:Georgia,'Times New Roman',serif;
+    overscroll-behavior:none;
+  }
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+  }
+
+  /* ---------- 16:9 landscape stage ---------- */
+  #stage{
+    position:relative;
+    width:min(100vw, calc(100vh * 16 / 9));
+    height:min(100vh, calc(100vw * 9 / 16));
+    background:#241f1a;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-between;
+    padding:2.6vh 3vw;
+    box-shadow:inset 0 0 0 1px #3d352c;
+  }
+
+  /* ---------- header ---------- */
+  .head{
+    width:100%;
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:Arial,sans-serif;
+    font-size:clamp(8px,1.15vh,12px);
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:#8c7d69;
+  }
+
+  /* ---------- odometer readout ---------- */
+  .readout{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    margin-top:1.4vh;
+    padding:1.1vh 1.6vh;
+    background:#15110d;
+    border:1px solid #4a3f33;
+  }
+  .digit-window{
+    position:relative;
+    width:clamp(26px,4.2vh,52px);
+    height:clamp(38px,6.4vh,80px);
+    overflow:hidden;
+    background:#0d0a07;
+  }
+  .digit-window::after{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,.75),transparent 34%,transparent 66%,rgba(0,0,0,.75));
+    pointer-events:none;
+  }
+  .strip{
+    position:absolute;
+    left:0; right:0; top:0;
+    transition:transform .34s cubic-bezier(.22,.9,.28,1);
+  }
+  .strip.instant{ transition:none; }
+  .strip span{
+    display:block;
+    height:clamp(38px,6.4vh,80px);
+    line-height:clamp(38px,6.4vh,80px);
+    text-align:center;
+    font-size:clamp(24px,4.4vh,54px);
+    color:#f6f0e4;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- gear row ---------- */
+  .gears{
+    display:flex;
+    gap:clamp(10px,2.4vw,34px);
+    align-items:flex-start;
+  }
+  .gear-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:.9vh;
+  }
+  .gear{
+    position:relative;
+    width:clamp(96px,22vh,195px);
+    height:clamp(96px,22vh,195px);
+    touch-action:none;
+    cursor:grab;
+  }
+  .gear:active{ cursor:grabbing; }
+  .gear svg{ width:100%; height:100%; display:block; }
+  .dial{ transition:transform .3s cubic-bezier(.3,.9,.3,1); }
+  .dial.dragging{ transition:none; }
+  .place{
+    font-family:Arial,sans-serif;
+    font-size:clamp(8px,1.15vh,11px);
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:#8c7d69;
+  }
+
+  /* magnifier lens fixed over the top stop */
+  .lens{
+    position:absolute;
+    top:-6%;
+    left:50%;
+    transform:translateX(-50%);
+    width:34%;
+    height:34%;
+    border-radius:50%;
+    background:radial-gradient(circle at 50% 38%, #2a241c, #14100b);
+    border:2px solid #c9b48c;
+    box-shadow:0 0 0 2px #14100b, 0 3px 8px rgba(0,0,0,.5),
+               inset 0 2px 6px rgba(255,255,255,.08);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:4;
+    overflow:hidden;
+  }
+  .lens span{
+    font-family:Georgia,serif;
+    font-size:clamp(22px,4vh,46px);
+    color:#f6f0e4;
+    line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .lens::after{
+    content:"";
+    position:absolute;
+    top:8%; left:14%;
+    width:52%; height:34%;
+    border-radius:50%;
+    background:linear-gradient(180deg, rgba(255,255,255,.18), transparent);
+    pointer-events:none;
+  }
+
+  /* ---------- footer ---------- */
+  .foot{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .hint{
+    font-family:Arial,sans-serif;
+    font-size:clamp(9px,1.25vh,12px);
+    color:#7a6d5c;
+    line-height:1.6;
+  }
+  .hint b{ color:#c9b48c; font-weight:normal; }
+  button{
+    font-family:Arial,sans-serif;
+    font-size:clamp(9px,1.2vh,12px);
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    background:transparent;
+    color:#c9b48c;
+    border:1px solid #6b5c48;
+    padding:1.1vh 2vw;
+    cursor:pointer;
+  }
+  button:active{ background:#332b22; }
+  button:focus-visible{ outline:2px solid #c9b48c; outline-offset:2px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .strip,.dial{ transition:none; }
+  }
+
+  /* ---------- game mode ---------- */
+  /* target marker sits to the LEFT of the readout row, inline */
+  .readout-wrap{
+    position:relative;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(10px,2vw,22px);
+  }
+  .target-marker{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    pointer-events:none;
+  }
+  body.game .target-marker{ display:flex; }
+  .target-eyebrow{
+    font-family:Arial,sans-serif;
+    font-size:clamp(8px,1.1vh,11px);
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:#8c7d69;
+    line-height:1;
+    margin-bottom:.3vh;
+  }
+  .target-number{
+    font-family:Georgia,serif;
+    font-size:clamp(34px,7vh,68px);
+    line-height:1;
+    color:#f6f0e4;
+    font-variant-numeric:tabular-nums;
+    transition:transform .18s ease, color .18s ease;
+  }
+  .target-number.cleared{
+    animation:targetPop .34s ease-out;
+    color:#8fce8f;
+  }
+  @keyframes targetPop{
+    0%{ transform:scale(1); }
+    45%{ transform:scale(1.35); }
+    100%{ transform:scale(1); }
+  }
+  .target-number.missed{
+    animation:targetMiss .4s ease-in;
+    color:#e2632c;
+  }
+  @keyframes targetMiss{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-6px); }
+    60%{ transform:translateX(6px); }
+  }
+
+  /* ---------- mode select ---------- */
+  #modeSelect{
+    position:absolute;
+    inset:0;
+    background:rgba(20,16,11,.96);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2.2vh;
+    z-index:22;
+    text-align:center;
+    padding:5vw;
+  }
+  #modeSelect.show{ display:flex; }
+  #modeSelect h2{
+    font-family:Georgia,serif;
+    font-weight:normal;
+    font-size:clamp(22px,4.5vh,40px);
+    color:#f6f0e4;
+  }
+  .mode-list{
+    display:flex;
+    flex-direction:column;
+    gap:1.4vh;
+    width:min(88%, 360px);
+  }
+  .mode-choice{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.4vh;
+    text-transform:none;
+    letter-spacing:normal;
+    text-align:left;
+    padding:1.6vh 1.6vw;
+    background:#2a241c;
+    border:1px solid #6b5c48;
+  }
+  .mode-choice:active{ background:#3a3126; }
+  .mode-name{
+    font-family:Georgia,serif;
+    font-size:clamp(16px,2.6vh,24px);
+    color:#f6f0e4;
+  }
+  .mode-desc{
+    font-family:Arial,sans-serif;
+    font-size:clamp(9px,1.4vh,12px);
+    color:#8c7d69;
+    letter-spacing:.02em;
+  }
+
+  /* per-mode HUD element visibility */
+  .streak, .entry-live, .score, .lives, .prog { display:none; }
+  body.game.mode-series .lives,
+  body.game.mode-series .streak,
+  body.game.mode-series .entry-live,
+  body.game.mode-series .score { display:block; }
+  body.game.mode-addition .entry-live,
+  body.game.mode-addition .score,
+  body.game.mode-addition .prog { display:block; }
+  body.game.mode-fastplay .entry-live,
+  body.game.mode-fastplay .prog { display:block; }
+  /* Fast Play hides the odometer (blind sum) */
+  body.game.mode-fastplay .readout{ visibility:hidden; }
+
+  /* HUD row shown only in game */
+  .hud{
+    display:none;
+    width:100%;
+    align-items:center;
+    justify-content:space-between;
+    font-family:Arial,sans-serif;
+    font-size:clamp(8px,1.25vh,12px);
+    color:#c9b48c;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-top:.8vh;
+    gap:6px;
+    position:relative;
+    z-index:6;
+  }
+  body.game .hud{ display:flex; }
+  .hud .lives span{ color:#e2632c; letter-spacing:.05em; }
+  .hud .lives span.gone{ color:#4a3f33; }
+
+  /* the free-form hint hides in game; a game hint takes its place */
+  body.game .hint.calc-hint{ display:none; }
+  .hint.game-hint{ display:none; }
+  body.game .hint.game-hint{ display:block; }
+
+  /* clear button only in calculator; clear-entry only in game */
+  body.game #clearBtn{ display:none; }
+  #clearEntryBtn{ display:none; }
+  body.game #clearEntryBtn{ display:inline-block; }
+
+  /* game-over overlay */
+  #gameOver{
+    position:absolute;
+    inset:0;
+    background:rgba(20,16,11,.92);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2vh;
+    z-index:20;
+    text-align:center;
+    padding:5vw;
+  }
+  #gameOver.show{ display:flex; }
+  #gameOver h2{
+    font-family:Georgia,serif;
+    font-weight:normal;
+    font-size:clamp(24px,5vh,44px);
+    color:#f6f0e4;
+  }
+  #gameOver .final{
+    font-family:Arial,sans-serif;
+    font-size:clamp(12px,2vh,17px);
+    color:#c9b48c;
+    letter-spacing:.08em;
+  }
+  #gameOver .go-actions{ display:flex; gap:12px; }
+
+  /* top nav (Game / Back) */
+  .topnav{
+    position:absolute;
+    top:14px;
+    right:14px;
+    z-index:16;
+  }
+  #entryFlash{
+    position:absolute;
+    top:calc(50% - 2vh);
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-family:Arial,sans-serif;
+    font-size:clamp(12px,2vh,16px);
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:#e2632c;
+    opacity:0;
+    pointer-events:none;
+    z-index:7;
+  }
+  #entryFlash.show{ animation:flashUp .7s ease-out; }
+  @keyframes flashUp{
+    0%{ opacity:0; transform:translate(-50%,-30%); }
+    30%{ opacity:1; }
+    100%{ opacity:0; transform:translate(-50%,-70%); }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+
+  <div class="topnav">
+    <button id="modeBtn">Game</button>
+  </div>
+
+  <div class="head">
+    <div class="eyebrow" id="eyebrow">Pascaline &middot; 1642 &middot; Addition only</div>
+    <div class="readout-wrap">
+      <div class="target-marker" id="targetMarker">
+        <div class="target-eyebrow">Target</div>
+        <div class="target-number" id="targetNumber">—</div>
+      </div>
+      <div class="readout" id="readout"></div>
+    </div>
+    <div class="hud" id="hud">
+      <div class="lives" id="lives"></div>
+      <div class="streak" id="streak">Fast 0/3</div>
+      <div class="prog" id="prog">0/10</div>
+      <div class="entry-live" id="entryLive">Entry 0</div>
+      <div class="score" id="score">Score 0</div>
+    </div>
+  </div>
+
+  <div id="entryFlash"></div>
+
+  <div class="gears" id="gears"></div>
+
+  <div class="foot">
+    <div class="hint calc-hint">
+      Turn a wheel <b>clockwise</b> until the lens shows the number you want,<br>
+      then release &mdash; that number is added. Passing nine carries left.
+    </div>
+    <div class="hint game-hint">
+      Dial each shown number on the gears &mdash; it registers <b>automatically</b> when you hit it.<br>
+      Use <b>Clear entry</b> if you overshoot. Tap <b>Exit</b> to change mode or return to the calculator.
+    </div>
+    <button id="clearBtn">Clear to zero</button>
+    <button id="clearEntryBtn">Clear entry</button>
+  </div>
+
+  <div id="modeSelect">
+    <h2>Choose a Mode</h2>
+    <div class="mode-list">
+      <button class="mode-choice" data-mode="series">
+        <span class="mode-name">Series</span>
+        <span class="mode-desc">Clear 3 in a row under 3s each</span>
+      </button>
+      <button class="mode-choice" data-mode="addition">
+        <span class="mode-name">Addition</span>
+        <span class="mode-desc">Add 10 numbers, one at a time</span>
+      </button>
+      <button class="mode-choice" data-mode="fastplay">
+        <span class="mode-name">Fast Play</span>
+        <span class="mode-desc">10 numbers, 3s each &mdash; match the hidden sum</span>
+      </button>
+    </div>
+    <button id="modeSelectBack">Back to calculator</button>
+  </div>
+
+  <div id="gameOver">
+    <h2>Game Over</h2>
+    <div class="final" id="finalScore"></div>
+    <div class="go-actions">
+      <button id="playAgainBtn">Play again</button>
+      <button id="backToCalcBtn">Calculator</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- ratchet sound ---------- */
+let audioCtx = null;
+function ac(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+/* A pawl dropping over a tooth: a burst of filtered noise plus a short
+   wooden resonance. Detune slightly per click so a fast turn doesn't
+   sound like a looped sample. */
+function ratchetClick(strength){
+  const c = ac();
+  const t = c.currentTime;
+  const dur = 0.045 * strength;
+
+  const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<data.length;i++){
+    data[i] = (Math.random()*2 - 1) * Math.pow(1 - i/data.length, 3);
+  }
+  const noise = c.createBufferSource();
+  noise.buffer = buf;
+
+  const bp = c.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 2100 + Math.random()*500;
+  bp.Q.value = 1.6;
+
+  const ng = c.createGain();
+  ng.gain.value = 0.30 * strength;
+
+  noise.connect(bp); bp.connect(ng); ng.connect(c.destination);
+  noise.start(t);
+
+  // body of the tooth
+  const osc = c.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(430 + Math.random()*60, t);
+  osc.frequency.exponentialRampToValueAtTime(150, t + dur*1.6);
+
+  const og = c.createGain();
+  og.gain.setValueAtTime(0.16 * strength, t);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + dur*2.4);
+
+  osc.connect(og); og.connect(c.destination);
+  osc.start(t);
+  osc.stop(t + dur*2.6);
+}
+
+function releaseThunk(){
+  const c = ac();
+  const t = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(180, t);
+  osc.frequency.exponentialRampToValueAtTime(70, t + 0.11);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.20, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t); osc.stop(t + 0.18);
+}
+
+function carryClunk(){
+  const c = ac();
+  const t = c.currentTime + 0.02;
+  const osc = c.createOscillator();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(120, t);
+  osc.frequency.exponentialRampToValueAtTime(52, t + 0.14);
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 700;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.24, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  osc.connect(lp); lp.connect(g); g.connect(c.destination);
+  osc.start(t); osc.stop(t + 0.24);
+}
+
+/* ---------- configuration ---------- */
+const PLACES = [
+  { name: 'Thousands', factor: 1000 },
+  { name: 'Hundreds',  factor: 100  },
+  { name: 'Tens',      factor: 10   },
+  { name: 'Ones',      factor: 1    }
+];
+const DIGITS = PLACES.length;
+
+let total = 0;
+
+/* ---------- odometer readout ---------- */
+const readoutEl = document.getElementById('readout');
+const strips = [];
+
+for(let i=0;i<DIGITS;i++){
+  const win = document.createElement('div');
+  win.className = 'digit-window';
+  const strip = document.createElement('div');
+  strip.className = 'strip instant';
+  // 0..9 then a trailing 0 so a 9 -> 0 roll continues downward, never snaps back
+  for(let d=0; d<=10; d++){
+    const s = document.createElement('span');
+    s.textContent = d % 10;
+    strip.appendChild(s);
+  }
+  win.appendChild(strip);
+  readoutEl.appendChild(win);
+  strips.push({ el: strip, shown: 0 });
+}
+
+function stepHeight(){
+  return readoutEl.querySelector('.digit-window').getBoundingClientRect().height;
+}
+
+function setDigit(i, value, animate){
+  const s = strips[i];
+  const h = stepHeight();
+  if(!animate){
+    s.el.classList.add('instant');
+    s.el.style.transform = 'translateY(' + (-value * h) + 'px)';
+    s.shown = value;
+    void s.el.offsetHeight;
+    s.el.classList.remove('instant');
+    return;
+  }
+  s.el.classList.remove('instant');
+  if(value < s.shown){
+    // rolled past nine: continue down to the phantom tenth cell, then reset silently
+    s.el.style.transform = 'translateY(' + (-10 * h) + 'px)';
+    setTimeout(() => {
+      s.el.classList.add('instant');
+      s.el.style.transform = 'translateY(' + (-value * h) + 'px)';
+      void s.el.offsetHeight;
+      s.el.classList.remove('instant');
+    }, 340);
+  } else {
+    s.el.style.transform = 'translateY(' + (-value * h) + 'px)';
+  }
+  s.shown = value;
+}
+
+function renderTotal(animate){
+  const str = String(total).padStart(DIGITS, '0');
+  for(let i=0;i<DIGITS;i++){
+    const v = Number(str[i]);
+    if(strips[i].shown !== v || !animate) setDigit(i, v, animate);
+  }
+}
+
+/* ---------- gear wheels ---------- */
+const gearsEl = document.getElementById('gears');
+const wheels = [];
+
+/* Logarithmic numeral spacing (softened).
+   0 sits at the top stop (0 deg). Numerals 1..9 are placed at cumulative
+   angles running counter-clockwise (negative), with the gap BEFORE each
+   numeral shrinking as the number climbs. 1 lands farthest from the stop
+   (longest turn), 9 lands nearest (shortest turn). The log gaps are blended
+   toward uniform spacing by LOG_BLEND so the taper stays gentle. */
+const LOG_SPAN = 330;                 // degrees the 1..9 arc occupies
+const LOG_BLEND = 0.4;                // 0 = uniform, 1 = full log
+const rawGap = n => Math.log(1 + 1 / n);   // gap weight before numeral n; large for 1, small for 9
+const logWeights = [];
+for(let n=1;n<=9;n++) logWeights.push(rawGap(n));
+const logSum = logWeights.reduce((a,b)=>a+b,0);
+const uniform = 1 / 9;                 // uniform share per gap
+// each gap = blend of its log share and the uniform share
+const gapWeights = logWeights.map(w =>
+  LOG_BLEND * (w / logSum) + (1 - LOG_BLEND) * uniform
+);
+const gapSum = gapWeights.reduce((a,b)=>a+b,0);
+
+// cumulative angle (positive magnitude, counter-clockwise) for each numeral 0..9
+const NUM_ANGLE = [0];
+{
+  let cum = 0;
+  for(let n=1;n<=9;n++){
+    cum += gapWeights[n-1] / gapSum * LOG_SPAN;
+    NUM_ANGLE[n] = cum;
+  }
+}
+// numeral whose position is closest to a given clockwise dial rotation (deg)
+function numeralAtStop(deg){
+  let best = 0, bestDiff = Infinity;
+  for(let n=0;n<10;n++){
+    const diff = Math.abs(NUM_ANGLE[n] - deg);
+    if(diff < bestDiff){ bestDiff = diff; best = n; }
+  }
+  return best;
+}
+
+function buildGear(place, index){
+  const col = document.createElement('div');
+  col.className = 'gear-col';
+
+  const gear = document.createElement('div');
+  gear.className = 'gear';
+  gear.setAttribute('role','button');
+  gear.setAttribute('tabindex','0');
+  gear.setAttribute('aria-label', 'Add to ' + place.name + ' by turning the wheel');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox','0 0 200 200');
+
+  // fixed outer ring with the stop lever at the top
+  const ring = document.createElementNS(NS,'circle');
+  ring.setAttribute('cx','100'); ring.setAttribute('cy','100'); ring.setAttribute('r','96');
+  ring.setAttribute('fill','#2e2820'); ring.setAttribute('stroke','#5c4e3d'); ring.setAttribute('stroke-width','2');
+  svg.appendChild(ring);
+
+  const lever = document.createElementNS(NS,'path');
+  lever.setAttribute('d','M100 0 L110 22 L90 22 Z');
+  lever.setAttribute('fill','#c9b48c');
+  svg.appendChild(lever);
+
+  // rotating dial
+  const dial = document.createElementNS(NS,'g');
+  dial.setAttribute('class','dial');
+  dial.setAttribute('transform','rotate(0 100 100)');
+
+  const face = document.createElementNS(NS,'circle');
+  face.setAttribute('cx','100'); face.setAttribute('cy','100'); face.setAttribute('r','80');
+  face.setAttribute('fill','#191510'); face.setAttribute('stroke','#6b5c48'); face.setAttribute('stroke-width','1.5');
+  dial.appendChild(face);
+
+  for(let d=0; d<10; d++){
+    // logarithmic layout: numeral d sits NUM_ANGLE[d] degrees counter-clockwise
+    // from the top stop, so grabbing it and turning clockwise to the stop enters d
+    const ang = (-NUM_ANGLE[d]) * Math.PI / 180;
+    const sx = 100 + Math.sin(ang) * 80;
+    const sy = 100 - Math.cos(ang) * 80;
+    const tx = 100 + Math.sin(ang) * 58;
+    const ty = 100 - Math.cos(ang) * 58;
+
+    // spoke notch — the stylus hole of the original
+    const hole = document.createElementNS(NS,'circle');
+    hole.setAttribute('cx', String(tx)); hole.setAttribute('cy', String(ty));
+    hole.setAttribute('r','13');
+    hole.setAttribute('fill','#0d0a07'); hole.setAttribute('stroke','#5c4e3d');
+    dial.appendChild(hole);
+
+    const label = document.createElementNS(NS,'text');
+    label.setAttribute('x', String(tx)); label.setAttribute('y', String(ty + 6));
+    label.setAttribute('text-anchor','middle');
+    label.setAttribute('font-family','Georgia, serif');
+    label.setAttribute('font-size','18');
+    label.setAttribute('fill','#e8dcc6');
+    label.setAttribute('transform','rotate(' + (-NUM_ANGLE[d]) + ' ' + tx + ' ' + ty + ')');
+    label.textContent = d;
+    dial.appendChild(label);
+
+    const tick = document.createElementNS(NS,'line');
+    tick.setAttribute('x1', String(sx)); tick.setAttribute('y1', String(sy));
+    tick.setAttribute('x2', String(100 + Math.sin(ang) * 72));
+    tick.setAttribute('y2', String(100 - Math.cos(ang) * 72));
+    tick.setAttribute('stroke','#6b5c48'); tick.setAttribute('stroke-width','2');
+    dial.appendChild(tick);
+  }
+  svg.appendChild(dial);
+  gear.appendChild(svg);
+
+  // magnifier lens over the top stop; shows the numeral currently under it
+  const lens = document.createElement('div');
+  lens.className = 'lens';
+  const lensVal = document.createElement('span');
+  lensVal.textContent = '0';
+  lens.appendChild(lensVal);
+  gear.appendChild(lens);
+
+  // rotating the dial clockwise by `deg` brings whichever numeral is nearest
+  // that angle under the stop; called live during drag and reset on release
+  function updateLens(deg){
+    lensVal.textContent = numeralAtStop(deg);
+  }
+
+  const label = document.createElement('div');
+  label.className = 'place';
+  label.textContent = place.name;
+
+  col.appendChild(gear);
+  col.appendChild(label);
+  gearsEl.appendChild(col);
+
+  /* --- rotation input: clockwise only --- */
+  let dragging = false;
+  let lastAngle = 0;
+  let accum = 0;        // total clockwise degrees this drag
+  let notchesSounded = 0;
+
+  function angleFrom(e){
+    const r = gear.getBoundingClientRect();
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
+    return Math.atan2(e.clientX - cx, cy - e.clientY) * 180 / Math.PI; // 0 at top, cw+
+  }
+
+  // which numeral hole did the grab land on? pointer angle is measured
+  // counter-clockwise from the stop, matching how numerals are laid out
+
+  gear.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    gear.setPointerCapture(e.pointerId);
+    dragging = true;
+    accum = 0;
+    notchesSounded = 0;
+    ac();                       // unlock audio on first user gesture
+    lastAngle = angleFrom(e);
+    dial.classList.add('dragging');
+  });
+
+  gear.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    const a = angleFrom(e);
+    let delta = a - lastAngle;
+    if(delta > 180) delta -= 360;
+    if(delta < -180) delta += 360;
+    lastAngle = a;
+    if(delta > 0) accum += delta;              // clockwise only; anticlockwise ignored
+    accum = Math.min(accum, 360);              // free turn, capped at one revolution
+    dial.setAttribute('transform','rotate(' + accum + ' 100 100)');
+    updateLens(accum);
+
+    // one click each time a numeral position passes under the stop
+    let crossed = 0;
+    for(let n=1;n<=9;n++){ if(accum >= NUM_ANGLE[n] - 0.01) crossed++; }
+    while(notchesSounded < crossed){
+      notchesSounded++;
+      ratchetClick(1 - index * 0.08);
+    }
+  });
+
+  function release(){
+    if(!dragging) return;
+    dragging = false;
+    dial.classList.remove('dragging');
+    // value is the numeral shown in the lens at release — whichever numeral
+    // was turned to the stop. Grab point no longer matters.
+    const value = accum >= 10 ? numeralAtStop(accum) : 0;
+    dial.setAttribute('transform','rotate(0 100 100)');
+    updateLens(0);
+    accum = 0;
+    notchesSounded = 0;
+    if(value > 0){
+      releaseThunk();
+      add(place.factor * value);
+    }
+  }
+
+  gear.addEventListener('pointerup', release);
+  gear.addEventListener('pointercancel', release);
+
+  // keyboard equivalent: one unit per press (turns to the "1" position)
+  gear.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      const a1 = NUM_ANGLE[1];
+      dial.setAttribute('transform','rotate(' + a1 + ' 100 100)');
+      updateLens(a1);
+      setTimeout(() => { dial.setAttribute('transform','rotate(0 100 100)'); updateLens(0); }, 300);
+      add(place.factor);
+    }
+  });
+
+  wheels.push(gear);
+}
+
+PLACES.forEach(buildGear);
+
+/* ---------- addition ---------- */
+const MAX = Math.pow(10, DIGITS) - 1;
+
+function add(amount){
+  const before = String(total).padStart(DIGITS, '0');
+  total = (total + amount) % (MAX + 1);   // overflow past the highest wheel is lost, as on the machine
+  const after = String(total).padStart(DIGITS, '0');
+
+  // a place that decreased has rolled past nine and driven its neighbour
+  let carries = 0;
+  for(let i=0;i<DIGITS;i++){
+    if(Number(after[i]) < Number(before[i])) carries++;
+  }
+  // stagger them left-to-right so a chain of carries sounds like a chain
+  for(let k=0;k<carries;k++){
+    setTimeout(carryClunk, 90 + k * 110);
+  }
+
+  renderTotal(true);
+  if(gameMode){ renderEntry(); checkAutoCommit(); }
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  total = 0;
+  renderTotal(false);
+});
+
+/* ================= GAME MODE ================= */
+const hudLives = document.getElementById('lives');
+const hudScore = document.getElementById('score');
+const eyebrowEl = document.getElementById('eyebrow');
+const gameOverEl = document.getElementById('gameOver');
+const finalScoreEl = document.getElementById('finalScore');
+const entryFlash = document.getElementById('entryFlash');
+
+let gameMode = false;
+let activeMode = null;     // 'series' | 'addition' | 'fastplay'
+let lives = 3;
+let score = 0;
+let committedTotal = 0;    // machine total captured at last successful commit / clear
+let baseline = 10000;      // ms countdown per target in Series; ratchets down only
+let fastStreak = 0;        // consecutive clears under 3s (Series)
+const WIN_STREAK = 3;
+const FAST_MS = 3000;
+let target = null;         // {value, born, life}
+let rafId = null;
+
+// addition / fastplay run state
+let roundIndex = 0;        // which of the 10 numbers we're on
+let roundTotal = 10;
+let correctCount = 0;      // addition: how many registered correctly
+let sequence = [];         // fastplay: the 10 numbers shown
+let trueSum = 0;           // fastplay: sum of sequence
+let seqTimer = null;       // fastplay per-number timer
+
+function popSound(){
+  const c = ac(); const t = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(520, t);
+  osc.frequency.exponentialRampToValueAtTime(1050, t + 0.09);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t); osc.stop(t + 0.18);
+}
+function missSound(){
+  const c = ac(); const t = c.currentTime;
+  const osc = c.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(220, t);
+  osc.frequency.exponentialRampToValueAtTime(80, t + 0.25);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.18, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+  osc.connect(g); g.connect(c.destination);
+  osc.start(t); osc.stop(t + 0.3);
+}
+
+const targetNumberEl = document.getElementById('targetNumber');
+
+function renderLives(){
+  let s = '';
+  for(let i=0;i<3;i++){
+    s += '<span class="' + (i < lives ? '' : 'gone') + '">&#9679;</span>';
+  }
+  hudLives.innerHTML = s;
+}
+function renderScore(){ hudScore.textContent = 'Score ' + score; }
+function renderStreak(){
+  const el = document.getElementById('streak');
+  if(el) el.textContent = 'Fast ' + fastStreak + '/' + WIN_STREAK;
+}
+function renderProg(){
+  const el = document.getElementById('prog');
+  if(el) el.textContent = roundIndex + '/' + roundTotal;
+}
+function renderEntry(){
+  const el = document.getElementById('entryLive');
+  if(!el) return;
+  const raw = Math.round(total) - committedTotal;
+  const entry = ((raw % 10000) + 10000) % 10000;
+  el.textContent = 'Entry ' + entry;
+}
+function currentEntry(){
+  const raw = Math.round(total) - committedTotal;
+  return ((raw % 10000) + 10000) % 10000;
+}
+
+/* ---------- Activity-3 score persistence (Fast Play only) ---------- */
+const A3_RESULT_KEY = 'itict_pascaline_result';
+const A3_RESULT_COOKIE = 'itict_pascaline_result';
+const A3_IDB_KEY = 'pascaline_result';
+function a3SetCookie(name,value,days){
+  const exp=new Date(Date.now()+days*864e5).toUTCString();
+  document.cookie=name+'='+encodeURIComponent(value)+'; expires='+exp+'; path=/';
+}
+function a3GetCookie(name){
+  const m=document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));
+  return m?decodeURIComponent(m[1]):null;
+}
+function a3IdbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('itict_db',1);
+    r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains('results')) r.result.createObjectStore('results'); };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function a3IdbSet(k,v){ try{ const db=await a3IdbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction('results','readwrite'); tx.objectStore('results').put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }catch(e){} }
+async function a3IdbGet(k){ try{ const db=await a3IdbOpen(); return new Promise((res,rej)=>{ const tx=db.transaction('results','readonly'); const rq=tx.objectStore('results').get(k); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error); }); }catch(e){ return null; } }
+
+async function loadPascalineResult(){
+  let rec=null;
+  const ls=localStorage.getItem(A3_RESULT_KEY);
+  if(ls){ try{ rec=JSON.parse(ls); }catch(e){} }
+  if(!rec){ const ck=a3GetCookie(A3_RESULT_COOKIE); if(ck){ try{ rec=JSON.parse(ck); }catch(e){} } }
+  if(!rec){ rec=await a3IdbGet(A3_IDB_KEY); }
+  return rec;
+}
+async function savePascalineResult(rec){
+  const json=JSON.stringify(rec);
+  try{ localStorage.setItem(A3_RESULT_KEY,json); }catch(e){}
+  a3SetCookie(A3_RESULT_COOKIE,json,365);
+  await a3IdbSet(A3_IDB_KEY,rec);
+}
+// keep only the highest closeness score
+async function saveFastPlayScore(points, playerTotal, trueSumVal){
+  const prev=await loadPascalineResult();
+  const best = prev ? Math.max(prev.score, points) : points;
+  const rec={
+    score: best,
+    lastScore: points,
+    maxScore: 100,
+    percentage: best,
+    playerTotal, trueSum: trueSumVal,
+    endTime: new Date().toISOString()
+  };
+  await savePascalineResult(rec);
+}
+
+/* ================= SERIES MODE ================= */
+function newSeriesTarget(){
+  const value = Math.floor(Math.random() * 15) + 1;   // 1..15
+  target = { value, born: performance.now(), life: baseline };
+  committedTotal = Math.round(total);
+  targetNumberEl.textContent = value;
+  targetNumberEl.className = 'target-number';
+  renderEntry();
+}
+function seriesClear(clearMs){
+  popSound();
+  score += target.value; renderScore();
+  targetNumberEl.classList.add('cleared');
+  if(clearMs < baseline) baseline = Math.max(FAST_MS, clearMs);
+  if(clearMs < FAST_MS){ fastStreak++; } else { fastStreak = 0; }
+  renderStreak();
+  target = null;
+  if(fastStreak >= WIN_STREAK){ winSeries(); return; }
+  setTimeout(() => { if(gameMode) newSeriesTarget(); }, 360);
+}
+function seriesMiss(){
+  missSound();
+  fastStreak = 0; renderStreak();
+  lives--; renderLives();
+  if(lives <= 0){
+    entryFlash.textContent = 'Retry';
+    entryFlash.classList.remove('show'); void entryFlash.offsetWidth; entryFlash.classList.add('show');
+    setTimeout(() => startMode('series'), 700);
+  }
+}
+function winSeries(){
+  stopGameLoops();
+  target = null;
+  showGameOver('You Win', 'Three fast clears in a row! Score: ' + score);
+}
+
+/* ================= ADDITION MODE ================= */
+function newAdditionTarget(){
+  if(roundIndex >= roundTotal){ finishAddition(); return; }
+  const value = Math.floor(Math.random() * 16) + 10;  // 10..25
+  target = { value, born: performance.now(), life: Infinity };  // no timeout in addition
+  committedTotal = Math.round(total);
+  targetNumberEl.textContent = value;
+  targetNumberEl.className = 'target-number';
+  renderEntry();
+}
+function additionClear(){
+  popSound();
+  correctCount++;
+  score = correctCount; renderScore();
+  targetNumberEl.classList.add('cleared');
+  roundIndex++; renderProg();
+  target = null;
+  setTimeout(() => { if(gameMode) newAdditionTarget(); }, 360);
+}
+function finishAddition(){
+  stopGameLoops();
+  showGameOver('Done', 'You added ' + correctCount + ' of ' + roundTotal + ' correctly.');
+}
+
+/* ================= FAST PLAY MODE ================= */
+function startFastSequence(){
+  sequence = [];
+  for(let i=0;i<roundTotal;i++) sequence.push(Math.floor(Math.random()*16)+10); // 10..25
+  trueSum = sequence.reduce((a,b)=>a+b,0);
+  roundIndex = 0;
+  showFastNumber();
+}
+function showFastNumber(){
+  if(roundIndex >= roundTotal){ finishFastPlay(); return; }
+  const value = sequence[roundIndex];
+  targetNumberEl.textContent = value;
+  targetNumberEl.className = 'target-number';
+  roundIndex++; renderProg();
+  // auto-advance after 3s regardless of what the player does
+  seqTimer = setTimeout(showFastNumber, 3000);
+}
+function finishFastPlay(){
+  stopGameLoops();
+  const playerTotal = Math.round(total);
+  const err = Math.abs(playerTotal - trueSum);
+  const points = Math.max(0, Math.round(100 * (1 - err / trueSum)));
+  score = points; renderScore();
+  saveFastPlayScore(points, playerTotal, trueSum);
+  showGameOver(
+    points >= 100 ? 'Perfect!' : 'Time!',
+    'Your total: ' + playerTotal + ' · Correct sum: ' + trueSum + ' · Score: ' + points + '/100'
+  );
+}
+
+/* ---------- shared per-frame loop (Series timeout only) ---------- */
+function tick(now){
+  if(!gameMode) return;
+  if(activeMode === 'series' && target && target.life !== Infinity){
+    const age = now - target.born;
+    if(age >= target.life){
+      targetNumberEl.classList.add('missed');
+      target = null;
+      seriesMiss();
+      setTimeout(() => { if(gameMode && lives > 0) newSeriesTarget(); }, 450);
+    }
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+/* ---------- auto-commit hook (Series + Addition) ---------- */
+function checkAutoCommit(){
+  if(!gameMode || !target) return;
+  if(activeMode === 'fastplay') return;  // fast play never auto-commits; total accrues blindly
+  if(currentEntry() !== target.value) return;
+  if(activeMode === 'series'){
+    seriesClear(performance.now() - target.born);
+  } else if(activeMode === 'addition'){
+    additionClear();
+  }
+}
+
+/* ---------- overlays / lifecycle ---------- */
+function showGameOver(title, detail){
+  gameOverEl.querySelector('h2').textContent = title;
+  finalScoreEl.textContent = detail;
+  gameOverEl.classList.add('show');
+}
+
+function openModeSelect(){
+  // stop any running game, show the picker
+  stopGameLoops();
+  gameMode = false;
+  target = null;
+  document.body.classList.remove('game','mode-series','mode-addition','mode-fastplay');
+  gameOverEl.classList.remove('show');
+  eyebrowEl.textContent = 'Pascaline · Choose a mode';
+  total = 0; renderTotal(false);
+  document.getElementById('modeSelect').classList.add('show');
+}
+
+function startMode(mode){
+  activeMode = mode;
+  document.getElementById('modeSelect').classList.remove('show');
+  gameOverEl.classList.remove('show');
+  document.body.classList.add('game');
+  document.body.classList.remove('mode-series','mode-addition','mode-fastplay');
+  document.body.classList.add('mode-' + mode);
+
+  gameMode = true;
+  lives = 3; score = 0; committedTotal = 0;
+  baseline = 10000; fastStreak = 0;
+  roundIndex = 0; correctCount = 0;
+  total = 0; renderTotal(false);
+  renderEntry(); renderLives(); renderScore(); renderStreak(); renderProg();
+  ac();
+
+  if(mode === 'series'){
+    eyebrowEl.textContent = 'Pascaline · Series';
+    newSeriesTarget();
+  } else if(mode === 'addition'){
+    eyebrowEl.textContent = 'Pascaline · Addition';
+    newAdditionTarget();
+  } else if(mode === 'fastplay'){
+    eyebrowEl.textContent = 'Pascaline · Fast Play';
+    startFastSequence();
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+function stopGameLoops(){
+  cancelAnimationFrame(rafId); rafId = null;
+  clearTimeout(seqTimer); seqTimer = null;
+}
+
+function exitToCalculator(){
+  stopGameLoops();
+  gameMode = false;
+  activeMode = null;
+  target = null;
+  document.body.classList.remove('game','mode-series','mode-addition','mode-fastplay');
+  document.getElementById('modeSelect').classList.remove('show');
+  eyebrowEl.textContent = 'Pascaline · 1642 · Addition only';
+  gameOverEl.classList.remove('show');
+  total = 0; renderTotal(false);
+  document.getElementById('modeBtn').textContent = 'Game';
+}
+
+document.getElementById('modeBtn').addEventListener('click', () => {
+  if(gameMode || document.getElementById('modeSelect').classList.contains('show')){
+    exitToCalculator();
+  } else {
+    openModeSelect();
+    document.getElementById('modeBtn').textContent = 'Exit';
+  }
+});
+document.querySelectorAll('.mode-choice').forEach(btn => {
+  btn.addEventListener('click', () => startMode(btn.dataset.mode));
+});
+document.getElementById('modeSelectBack').addEventListener('click', exitToCalculator);
+document.getElementById('clearEntryBtn').addEventListener('click', () => {
+  total = committedTotal; renderTotal(false); renderEntry();
+});
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+  if(activeMode) startMode(activeMode);
+});
+document.getElementById('backToCalcBtn').addEventListener('click', exitToCalculator);
+
+
+renderTotal(false);
+window.addEventListener('resize', () => renderTotal(false));
+</script>
+
+</body>
+</html>
