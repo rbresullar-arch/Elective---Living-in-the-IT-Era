@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Long Road to the IT Era — GEEL 1 Prelim</title>
+<style>
+  :root{
+    --paper:#f6f1e7;--paper-deep:#efe7d6;--ink:#20211d;--ink-soft:#4b4a42;--ink-faint:#7c7a6d;
+    --rule:#d8cdb6;--ember:#b8442b;--ember-deep:#8a2f1d;--brass:#a6843c;--stage:#fffdf7;
+    --shadow:rgba(40,32,16,.14);--maxw:680px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;font-size:19px;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;}
+  #rail{position:fixed;top:0;left:0;height:3px;width:100%;background:transparent;z-index:60;pointer-events:none;}
+  #rail>span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--brass),var(--ember));transition:width .12s linear;}
+  header.bar{position:sticky;top:0;z-index:50;background:rgba(246,241,231,.92);backdrop-filter:saturate(140%) blur(8px);-webkit-backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:12px;}
+  header.bar .brandmark{font-family:Georgia,serif;font-weight:700;letter-spacing:.02em;font-size:14px;color:var(--ember-deep);line-height:1.05;flex:1;text-transform:uppercase;}
+  header.bar .brandmark small{display:block;font-weight:400;font-size:11px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;margin-top:2px;}
+  .barbtn{appearance:none;border:1px solid var(--rule);background:var(--stage);color:var(--ink-soft);font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .barbtn:active{transform:scale(.96);}
+  .barbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
+  .hero{max-width:var(--maxw);margin:0 auto;padding:54px 24px 34px;}
+  .eyebrow{font-family:Georgia,serif;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ember);font-weight:700;margin:0 0 20px;}
+  .hero h1{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(34px,9vw,52px);line-height:1.04;letter-spacing:-.015em;margin:0 0 20px;}
+  .hero h1 em{font-style:italic;color:var(--ember-deep);}
+  .hero .dek{font-size:19px;color:var(--ink-soft);line-height:1.6;margin:0;font-style:italic;}
+  .hero .meta{margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);font-family:Georgia,serif;font-size:13px;letter-spacing:.04em;color:var(--ink-faint);}
+  #resume{display:none;max-width:var(--maxw);margin:0 auto 8px;padding:0 20px;}
+  #resume .card{background:linear-gradient(180deg,#fff8ec,#fdefd7);border:1px solid var(--brass);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px -12px var(--shadow);}
+  #resume .ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--ember);display:grid;place-items:center;}
+  #resume .ic svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;}
+  #resume .txt{flex:1;line-height:1.3;}
+  #resume .txt b{font-family:Georgia,serif;font-size:15px;display:block;}
+  #resume .txt span{font-size:13px;color:var(--ink-soft);}
+  #resume button{flex:none;border:none;background:var(--ember);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:999px;cursor:pointer;}
+  #resume button:active{transform:scale(.96);}
+  #resume .x{background:transparent;color:var(--ink-faint);padding:6px;font-size:20px;line-height:1;}
+  nav.toc{max-width:var(--maxw);margin:12px auto 0;padding:26px 24px 30px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  nav.toc h2{font-family:Georgia,serif;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 18px;}
+  nav.toc ol{list-style:none;margin:0;padding:0;}
+  nav.toc a{display:flex;align-items:baseline;gap:14px;padding:11px 0;text-decoration:none;color:var(--ink);border-bottom:1px dotted var(--rule);}
+  nav.toc li:last-child a{border-bottom:none;}
+  nav.toc a .n{font-family:Georgia,serif;font-size:13px;color:var(--ember);font-weight:700;min-width:26px;font-variant-numeric:tabular-nums;}
+  nav.toc a .t{flex:1;font-size:17px;line-height:1.35;}
+  nav.toc a .read{font-size:11px;color:var(--brass);letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity .2s;}
+  nav.toc a.done .read{opacity:1;}
+  nav.toc a.done .t{color:var(--ink-faint);}
+  article{max-width:var(--maxw);margin:0 auto;padding:0 24px 40px;}
+  section.chapter{padding:52px 0 8px;scroll-margin-top:70px;}
+  section.chapter:first-of-type{padding-top:40px;}
+  .ch-head{margin:0 0 30px;}
+  .ch-num{font-family:Georgia,serif;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);font-weight:700;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .ch-num::after{content:"";flex:1;height:1px;background:var(--rule);}
+  .ch-head h2{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(27px,7vw,38px);line-height:1.1;letter-spacing:-.01em;margin:0;}
+  .ch-head .era{display:block;margin-top:10px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:var(--ink-faint);letter-spacing:.02em;}
+  article p{margin:0 0 22px;}
+  article p.lead::first-letter{float:left;font-family:Georgia,serif;font-weight:700;color:var(--ember-deep);font-size:64px;line-height:.82;padding:6px 10px 0 0;}
+  .beat{font-family:Georgia,serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:700;margin:34px 0 -6px;display:flex;align-items:center;gap:10px;}
+  .beat::before{content:"";width:20px;height:1px;background:var(--brass);}
+  em.term{font-style:normal;font-weight:700;color:var(--ember-deep);}
+  .pull{margin:30px 0;padding:2px 0 2px 20px;border-left:3px solid var(--ember);font-family:Georgia,serif;font-style:italic;font-size:21px;line-height:1.5;color:var(--ink-soft);}
+  .bridge{margin:30px 0 4px;padding-top:24px;border-top:1px solid var(--rule);font-style:italic;color:var(--ink-soft);}
+  section.refs{padding:52px 0 20px;scroll-margin-top:70px;}
+  section.refs .ref-list{list-style:none;margin:24px 0 0;padding:0;counter-reset:ref;}
+  section.refs .ref-list li{position:relative;padding:0 0 20px 34px;font-size:15px;line-height:1.55;color:var(--ink-soft);}
+  section.refs .ref-list li::before{counter-increment:ref;content:counter(ref);position:absolute;left:0;top:0;font-family:Georgia,serif;font-size:12px;font-weight:700;color:var(--ember);border:1px solid var(--rule);border-radius:50%;width:22px;height:22px;display:grid;place-items:center;}
+  section.refs .ref-list i{color:var(--ink);}
+  section.refs .ref-list a{color:var(--ember-deep);word-break:break-word;}
+  footer.end{max-width:var(--maxw);margin:0 auto;padding:40px 24px calc(env(safe-area-inset-bottom) + 60px);border-top:1px solid var(--rule);text-align:center;}
+  footer.end .mark{font-family:Georgia,serif;color:var(--ember);font-size:22px;letter-spacing:.3em;margin-bottom:18px;}
+  footer.end p{font-size:13px;color:var(--ink-faint);margin:0 0 20px;font-family:Georgia,serif;}
+  .dlbtn{appearance:none;border:1px solid var(--ember);background:transparent;color:var(--ember-deep);font:inherit;font-size:14px;font-weight:600;padding:11px 22px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+  .dlbtn:active{transform:scale(.97);}
+  .dlbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;}
+  #totop{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:40;width:46px;height:46px;border-radius:50%;border:1px solid var(--rule);background:var(--stage);color:var(--ember-deep);display:none;place-items:center;box-shadow:0 8px 22px -10px var(--shadow);cursor:pointer;}
+  #totop svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
+  @media (max-width:420px){body{font-size:18px;}.hero{padding:44px 20px 30px;}article{padding:0 20px 40px;}}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
+</style>
+</head>
+<body>
+
+<div id="rail"><span></span></div>
+
+<header class="bar">
+  <div class="brandmark">The Long Road to the IT Era<small>GEEL 1 · Prelim</small></div>
+  <a class="barbtn" href="index.html" aria-label="Home">
+    <svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>
+    Home
+  </a>
+  <button class="barbtn" id="tocBtn" aria-label="Jump to contents">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+    Contents
+  </button>
+</header>
+
+<div id="resume">
+  <div class="card">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></div>
+    <div class="txt"><b>Pick up where you left off</b><span id="resumeLabel">Chapter</span></div>
+    <button id="resumeGo">Resume</button>
+    <button class="x" id="resumeX" aria-label="Dismiss">×</button>
+  </div>
+</div>
+
+<div class="hero">
+  <p class="eyebrow">A Long Read · Living in the IT Era</p>
+  <h1>How we taught<br><em>dead matter</em><br>to count.</h1>
+  <p class="dek">From a merchant's pile of pebbles to a planet wired together in light — the eight-thousand-year chase to move thinking out of the human skull and into the machine, one invention, and one stubborn inventor, at a time.</p>
+  <div class="meta">Eight chapters · roughly a 55-minute read · your place is saved automatically</div>
+</div>
+
+<nav class="toc" id="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#c1" data-idx="0"><span class="n">I</span><span class="t">What Information Technology Really Is</span><span class="read">Read</span></a></li>
+    <li><a href="#c2" data-idx="1"><span class="n">II</span><span class="t">The Pre-Mechanical Age — Tally Bones, the Abacus &amp; the Quipu</span><span class="read">Read</span></a></li>
+    <li><a href="#c3" data-idx="2"><span class="n">III</span><span class="t">The Mechanical Age — Napier, Pascal, Leibniz &amp; Babbage</span><span class="read">Read</span></a></li>
+    <li><a href="#c4" data-idx="3"><span class="n">IV</span><span class="t">The Electro-Mechanical Age — Hollerith &amp; the Mark I</span><span class="read">Read</span></a></li>
+    <li><a href="#c5" data-idx="4"><span class="n">V</span><span class="t">The Electronic Age — ENIAC, the Transistor &amp; the Chip</span><span class="read">Read</span></a></li>
+    <li><a href="#c6" data-idx="5"><span class="n">VI</span><span class="t">The Evolution — The Microprocessor &amp; the Personal Computer</span><span class="read">Read</span></a></li>
+    <li><a href="#c7" data-idx="6"><span class="n">VII</span><span class="t">Inside the Machine — The Parts of a Computer</span><span class="read">Read</span></a></li>
+    <li><a href="#c8" data-idx="7"><span class="n">VIII</span><span class="t">The Internet — ARPANET, TCP/IP &amp; the Web</span><span class="read">Read</span></a></li>
+    <li><a href="#refs" data-idx="8"><span class="n">✦</span><span class="t">References</span><span class="read">Read</span></a></li>
+  </ol>
+</nav>
+
+<article>
+
+  <section class="chapter" id="c1" data-idx="0">
+    <div class="ch-head">
+      <div class="ch-num">Chapter One</div>
+      <h2>What Information Technology Really Is</h2>
+      <span class="era">The question hiding inside every device you own</span>
+    </div>
+    <p class="lead">Here is a strange fact to begin with. You are, right now, holding more computing power than the entire planet possessed in 1960 — and you are using it to read a story about people who would have found that sentence literally unbelievable. So before we chase eight thousand years of that story, we should answer the question the whole course rests on, the one so obvious that almost nobody stops to ask it: what <em class="term">is</em> information technology, actually? Not the buzzword. The thing itself.</p>
+    <p>Let's not start with a definition. Let's start with a problem, because information technology has always been an answer to a problem, and if you don't feel the problem you'll never really understand the answer.</p>
+    <div class="beat">The problem</div>
+    <p>Picture a hospital that runs entirely on paper. Every patient is a folder. Every X-ray is a physical film sleeve tucked into a shelf in a back room. Now a radiologic technologist needs one specific image — a chest film taken two years ago — to compare against a new one. Somewhere in that room, among thousands of folders, it exists. A clerk goes to find it. And here is the quiet catastrophe: if that film was misfiled, or borrowed and never returned, it is, for all practical purposes, gone. The patient gets radiated a second time. Money is spent. A tiny dose of radiation is delivered to a human body for no reason other than that a piece of paper could not be found.</p>
+    <p>Multiply that by every patient, every day, in every hospital. The problem was never that we lacked information. Humanity has always drowned in information. The problem is that we could not <em class="term">manage</em> it — could not store it, find it, and move it fast enough to keep up with our own lives.</p>
+    <div class="beat">So what is it</div>
+    <p>That is the job information technology was invented to do. <em class="term">Information technology</em> is the use of computers, software, networks, and related devices to create, store, process, move, and retrieve information. That's the whole definition, and every word of it is load-bearing. It is not one machine. It is a system with parts that each have a role: <em class="term">hardware</em>, the physical devices you can touch; <em class="term">software</em>, the instructions that tell the hardware what to do; <em class="term">data</em>, the raw facts; the <em class="term">networks</em> that carry information between machines; and the <em class="term">people</em> who make it mean something.</p>
+    <p>Hold onto one distinction, because the entire field turns on it. <em class="term">Data</em> is raw and lifeless. The characters "45231" are data — a smear of symbols that mean nothing. <em class="term">Information</em> is data that has been given context until it becomes useful: "Patient 45231, chest X-ray, results normal." Same digits. Now they can save a life. Information technology is, at its heart, the machinery for turning the first thing into the second thing, at a scale and speed no human clerk could ever match. (You will also hear the sister term <em class="term">ICT</em> — Information and <em>Communication</em> Technology — which is the same idea with the emphasis pushed onto the networks that connect people: phones, the internet, the whole nervous system of the modern world.)</p>
+    <div class="beat">Who built it</div>
+    <p>And here's where our story gets its shape, because information technology has no single inventor. No one person made it, the way one person makes a chair. It was assembled across centuries by people who each solved one piece of the puzzle without knowing what the finished picture would be. Every one of them — the Scottish laird scratching rods out of ivory, the teenage Frenchman building gears to rescue his exhausted father, the young engineer who had an idea watching a train conductor punch a ticket, the six women who taught themselves to program a thirty-ton machine from its wiring diagrams — every one of them is a chapter waiting further down this page. For now, just notice: the field is a relay race, and the baton is the same problem, handed forward again and again, from one frustrated human being to the next.</p>
+    <div class="beat">How it works, at the core</div>
+    <p>Underneath every device — the phone in your hand, the imaging console in a radiology suite, a supercomputer — is one embarrassingly simple loop. It is called <em class="term">Input–Process–Output</em>, and once you see it you cannot unsee it. Information comes <em class="term">in</em> (you type, you scan, an X-ray sensor captures a shadow). The machine <em class="term">processes</em> it, following the instructions in its software. And a result comes <em class="term">out</em> (an image on a screen, a report, a diagnosis). <em class="term">Storage</em> holds the data on either side of that loop, and <em class="term">networks</em> stretch the loop across the whole planet so the output can appear a continent away, an instant later. Every marvel in this article is, in the end, a cleverer and faster version of that one loop.</p>
+    <div class="pull">The problem was never a lack of information. It was that we could not keep up with our own.</div>
+    <div class="bridge">
+    <p>So the hospital solves its problem: the two-year-old film is pulled from a digital archive in seconds and thrown onto a screen a thousand kilometres away, and no one gets irradiated for the sake of a lost folder. But that clean, instant retrieval is the <em>end</em> of a very long road. Nobody handed us the digital archive. To understand how we got a machine that can hold and find a nation's worth of images, we have to go back — all the way back — to the very first time a human being reached for a tool because their own mind and hands were not enough. Back to a merchant, a pile of pebbles, and the birth of counting itself.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c2" data-idx="1">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Two</div>
+      <h2>The Pre-Mechanical Age</h2>
+      <span class="era">c. 3000 BC – 1450 AD · tally bones, the abacus, and a database made of string</span>
+    </div>
+    <p class="lead">Try this. Without using any tools — no writing, no fingers past ten, nothing but your own head — remember how many individual sheep are in a flock of two hundred, which ones were sold this morning, and to whom, and for how much. You can't. Almost no human can. And that, roughly five thousand years ago, was the wall an entire civilisation hit.</p>
+    <div class="beat">The problem</div>
+    <p>A merchant in an ancient marketplace has sacks of grain going out and payments coming in. In a village of a few dozen people, memory is enough. But trade grew. Cities appeared. Suddenly one person was tracking hundreds of transactions with dozens of partners, and the human mind — magnificent as it is — simply cannot hold that many precise quantities without dropping some. Fingers run out at ten. Memory blurs. Somebody, somewhere, lost a fortune to a number they misremembered, and the pressure to solve that had been building for a very long time. The <em class="term">Pre-Mechanical Age</em> — roughly 3000 BC to 1450 AD — is the enormous stretch of time in which humans attacked this problem without a single moving mechanical part. No gears. No engines. Just the radical idea that a physical object outside your body could hold a thought for you.</p>
+    <div class="beat">The first invention — tally sticks and notched bones</div>
+    <p>The very first solution was so simple a child could invent it, and yet it changed everything: the <em class="term">tally stick</em>. Take a stick, or a bone, and cut one notch for each thing you want to remember — one notch per sheep, per sack, per day. Nobody's name is attached to this invention because it belongs to no one and everyone; notched bones tens of thousands of years old have been found across the world, some so ancient they predate cities, predate farming, predate writing itself. But look at what that first scratch actually <em>did</em>. The instant a human being cut a notch to stand for a sheep, they had done something no other animal has ever done: they had moved a piece of information <em>out of the brain and into an object</em>, where it would wait, unchanging, long after the memory of it had faded. Every hard drive on Earth is a descendant of that notch. The function was pure record-keeping — a count you could not forget because you were no longer the one remembering it — and the mechanism was nothing more than a one-to-one match: one mark, one thing. Crude, yes. But the whole idea of data begins here.</p>
+    <div class="beat">The great invention — the abacus</div>
+    <p>Counting is one thing. <em>Calculating</em> is another, and it is much harder. It is one thing to know you have two hundred sheep; it is another to work out, quickly and correctly, what happens when you sell fifty-seven of them at a price of thirteen each. For that, humanity built its first great calculating machine — and it was so good it is still in use four thousand years later. The <em class="term">abacus</em> has no single inventor either; its seed was planted in ancient Mesopotamia by the Sumerians and Babylonians, and it was carried and reinvented across Persia, Greece, Rome, and Asia. But it was Chinese scholars who refined it into its most powerful form, the <em class="term">suanpan</em>, a machine so efficient that a trained operator can keep pace with someone using an electronic calculator — and sometimes beat them.</p>
+    <p>Here is the beautiful mechanism, and it is worth understanding fully, because it is the ancestor of every calculator you've ever touched. An abacus is a wooden frame strung with rods, and on each rod slide a handful of beads. The trick — the whole genius of it — is that each rod stands for a <em class="term">place value</em>. This rod is the ones. The one beside it is the tens. The next is the hundreds, then the thousands, marching leftward exactly like the digits of a written number. To represent a number, you slide beads toward the central bar. The number now <em>physically exists</em> in the frame — you are not holding it in your head, the wood is holding it for you. To add, you slide more beads onto the rods. And when a rod fills up — when the ones rod can hold no more — you clear it and slide a single bead onto the next rod to the left. You have just <em>carried the one</em>, with your fingers, exactly as you were later taught to do on paper. The device itself is not clever. It cannot think. What it does is hold the number rock-steady, so that <em>you</em> can think one small, safe step at a time, never losing your place, never dropping a digit. It is a machine for making a fragile human mind reliable.</p>
+    <div class="beat">The parallel invention — the Inca quipu</div>
+    <p>Now here is a fact that should genuinely astonish you. On the other side of the planet, cut off from Mesopotamia and China by an entire ocean, with no contact and no shared history whatsoever, another civilisation faced the same problem — how do you record the accounts of a vast empire? — and solved it in a completely different, completely brilliant way. The <em class="term">Inca</em> of the South American Andes had no writing system as we'd recognise it. What they had was the <em class="term">quipu</em>: bundles of coloured, knotted cords. And these were not decoration. They were data. The <em>kind</em> of knot encoded a digit; the <em>position</em> of the knot along the cord encoded its place value — ones, tens, hundreds — using, remarkably, the same base-ten logic as the abacus; and the <em>colour</em> of the cord encoded what was being counted. A trained Inca official, a <em>quipucamayoc</em>, could read a quipu the way you read a spreadsheet, tracking the population, the harvests, and the tribute of an empire that stretched thousands of kilometres. It is a portable database made of string, and it is proof that the drive to store information outside the human head is not a quirk of one culture — it is something humans everywhere reach for the moment their world grows too large to remember.</p>
+    <div class="beat">The invention hiding inside all of them — zero</div>
+    <p>There is one more invention in this age, and it is the most powerful of all, precisely because it doesn't look like an invention. It is a symbol for <em>nothing</em>: <em class="term">zero</em>. It was developed in India — the mathematician <em class="term">Brahmagupta</em>, in the seventh century, wrote down the rules for how to calculate with it — and it solved a problem so deep most people had never even noticed it was a problem. Without zero, how do you tell the difference, in writing, between the number 15 and the number 105 and the number 150? You need a symbol that means "there is nothing in this column" — a placeholder that holds a space open. That is what zero does, and it is the reason we can write any number, no matter how vast, using just ten digits, instead of inventing a fresh symbol for every new quantity. Every binary 0 inside the device you are reading this on is the direct descendant of Brahmagupta's nothing. The whole digital world is built on it.</p>
+    <div class="pull">The instant a human cut a notch to stand for a sheep, a thought existed outside a living brain for the first time in the history of life on Earth.</div>
+    <div class="bridge">
+    <p>Did these tools work? Spectacularly. The abacus, the quipu, the number systems around them — they gave humanity a dependable grip on quantity, and they served for <em>thousands</em> of years, a run no technology since has come close to matching. But look closely at what the abacus does and does not do. It holds the number. It does not move a single bead on its own. Every calculation, start to finish, still runs on human hands and a human mind; the tool is only a very good notebook. And so a new hunger appears — not for a better place to hold the numbers, but for a machine that could do the <em>calculating</em> itself, that could take the thinking out of the human hand entirely. That hunger begins with a Scottish mathematician, a set of ivory rods, and the opening of the Mechanical Age.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c3" data-idx="2">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Three</div>
+      <h2>The Mechanical Age</h2>
+      <span class="era">c. 1450 – 1840 · Napier, Pascal, Leibniz, and the engine that dreamed too early</span>
+    </div>
+    <p class="lead">By the 1600s the world had a calculation crisis. Astronomy, banking, navigation, taxation, engineering — all of it suddenly demanded mountains of arithmetic, and all of it was still being done by hand. A skilled human with an abacus was the best tool available, and it was nowhere near enough. The work was slow, it was mind-numbing, and worst of all it was <em class="term">fragile</em>: one wrong digit anywhere in a long calculation quietly poisons everything downstream, and you might not discover it until the ship is off course or the ledger won't balance. Humanity needed calculation that did not depend, at every single step, on a tired human getting it right. The <em class="term">Mechanical Age</em> is the era when a handful of extraordinary minds answered that need with brass, ivory, gears, and levers — and, in one astonishing case, dreamed up the computer itself a full century before the world could build it.</p>
+    <div class="beat">The first invention — John Napier and his "bones"</div>
+    <p>The first breakthrough came from a Scottish laird named <em class="term">John Napier</em> (1550–1617), lord of Merchiston Castle near Edinburgh, a brilliant and slightly eccentric mathematician who was tormented — his own word was "troublesome" — by the sheer tedious misery of multiplying and dividing large numbers by hand. In 1614 he gave the world <em class="term">logarithms</em>, one of the most important ideas in the history of mathematics, a way of turning brutal multiplication into simple addition. But logarithms take time to master, so in 1617, in a book called <em>Rabdologiae</em> published in the very year he died, Napier offered a physical tool anyone could pick up and use: a set of numbered rods, carved from bone or ivory, that the world came to call <em class="term">Napier's Bones</em>.</p>
+    <p>Here is how they worked, because it is cleverer than it first appears. Each rod carries a single digit's multiplication table running down its length, with each cell split by a diagonal line — tens above the line, units below. To multiply, say, a large number by six, you lay out the rods matching the big number's digits, look along the sixth row, and read the answer straight off — adding the digits that meet along each diagonal stripe, carrying where needed. It is the ancient "lattice" method of multiplication, frozen into a physical object so you never have to hold the times-tables in your head. Napier had taken a mental task and offloaded it onto a tool — the same instinct as the tally stick, now aimed not at memory but at calculation. (He also, almost in passing, popularised the decimal point and even wrote about using binary numbers — two ideas that would echo for centuries.)</p>
+    <div class="beat">The leap — Blaise Pascal and the Pascaline</div>
+    <p>Napier's rods still needed a human to do the adding. The next leap was to build a machine that would do the adding <em>itself</em> — and it was made by a teenager who simply couldn't stand watching his father suffer. <em class="term">Blaise Pascal</em> (1623–1662) was a French prodigy, one of the most gifted minds of his century, who would go on to help found probability theory and make lasting marks on physics. But at nineteen he was mostly a devoted son, watching his father — a tax official in Rouen — spend night after night adding endless columns of figures by hand, exhausted and error-prone. So Blaise built him a machine. Finished in 1642, the <em class="term">Pascaline</em> was a small brass box of geared wheels, and it was the first mechanical calculator that genuinely worked and was actually used.</p>
+    <p>Its mechanism contains the single most important idea of the entire age, so slow down for it. Inside were toothed wheels, one for each digit place — a wheel for the ones, a wheel for the tens, a wheel for the hundreds. Turning a wheel a few notches entered a value, and you read the running total through little windows along the top. But the genius, the thing that made it a <em>calculator</em> and not just a set of dials, was the <em class="term">carry mechanism</em>. When the ones wheel rolled past nine and clicked back around to zero, a small linkage automatically nudged the tens wheel forward by exactly one. The machine performed "carry the one" <em>by itself</em>, mechanically, with no human deciding to do it. Think about what that means. On the abacus, a human hand carried the one. On the Pascaline, a falling lever did. That single automated step is the precise moment a fragment of arithmetic left the human mind and became a physical process happening inside a machine — the very first flicker of what we now call computing.</p>
+    <div class="beat">The refinement — Gottfried Leibniz and the Step Reckoner</div>
+    <p>Pascal's machine could add and subtract, but it could not truly multiply or divide on its own. The man who fixed that was one of the great universal geniuses of history: <em class="term">Gottfried Wilhelm Leibniz</em> (1646–1716), the German philosopher and mathematician who co-invented calculus (and gave us the notation you still use in it today). Leibniz saw Pascal's calculator in Paris and was seized by a conviction he summed up in a single Latin word he loved — <em>Calculemus</em>, "let us calculate" — the dream that human reasoning itself might one day be carried out by machinery. In 1673 he demonstrated a wooden model to the Royal Society in London, and he would spend the next four decades refining it into the <em class="term">Step Reckoner</em>, a machine that could add, subtract, multiply, <em>and</em> divide.</p>
+    <p>His breakthrough was a single, elegant component now called the <em class="term">Leibniz wheel</em> or stepped drum. Picture a brass cylinder with nine teeth running along it — but the teeth are of <em>increasing length</em>, a staircase of them, one tooth's worth, then two, then three, up to nine. By sliding a small counting gear along the drum, you choose how many of those teeth it engages, and so a single turn of the crank can add a number to itself once, or twice, or up to nine times. Multiplication, suddenly, is just automated repeated addition, driven by cranking a handle. That stepped drum was so good it dominated calculator design for the next <em>two hundred years</em>, surviving all the way into pocket mechanical calculators of the 1970s. The 17th century's crude metalworking meant Leibniz's own machines jammed and were never quite reliable — he poured a small fortune into them and was perpetually frustrated — but the <em>idea</em> was immortal. Oh, and one more thing Leibniz gave us, almost as a side project: he worked out the <em class="term">binary</em> number system, everything reduced to ones and zeros. He thought it was beautiful. He had no idea he had just written the native language of every computer that would ever exist.</p>
+    <div class="beat">The dream too early — Charles Babbage and Ada Lovelace</div>
+    <p>And now we come to the man who leapt so far ahead of everyone that the world took a century to catch up. <em class="term">Charles Babbage</em> (1791–1871) was a formidable, irascible English mathematician driven half-mad by a specific problem: the mathematical tables of his era — for navigation, engineering, astronomy — were riddled with errors, because they were computed and copied by hand by tired humans. The story goes that he once looked up from a page of mistakes and burst out that he wished the tables could be calculated "by steam." So he set out to build a machine that would compute them flawlessly, automatically, and print the results with no human hand to introduce a slip: the <em class="term">Difference Engine</em>. But it was his <em>next</em> idea that changed everything. The <em class="term">Analytical Engine</em>, designed in the 1830s, was not built to do one calculation — it was designed to do <em>any</em> calculation you could describe to it. Fed instructions on <em class="term">punched cards</em> (an idea he borrowed from the Jacquard loom, which used punched cards to weave patterns), it had a "mill" to do the arithmetic and a "store" to hold numbers. Read those two words again: a mill and a store. A processor and a memory. Babbage had sketched the fundamental architecture of the modern computer, in brass and steam, a hundred years before the electronics existed to realise it. He never finished building it. The engineering of his century simply couldn't keep up with his mind.</p>
+    <p>But someone else understood what he had really made — arguably better than Babbage did himself. <em class="term">Ada Lovelace</em> (1815–1852), daughter of the poet Lord Byron and a gifted mathematician in her own right, studied the designs for the Analytical Engine and saw something Babbage had treated as a mere calculating device. She realised that if the machine could manipulate numbers according to rules, then those numbers could <em>stand for other things</em> — symbols, music, anything that could be encoded — and the machine could manipulate <em>those</em> too. She wrote out a detailed sequence of operations for the Engine to compute a particular series of numbers, and in doing so wrote what is generally recognised as the first <em class="term">computer program</em> in history — for a computer that did not yet, and would not for a century, physically exist. She was the first human being to look at a machine and see not a calculator, but a mind's tool. She was the first programmer.</p>
+    <div class="pull">A wheel rolls past nine, clicks to zero, and nudges its neighbour forward. That is the exact instant thinking entered the machine.</div>
+    <div class="bridge">
+    <p>Did the Mechanical Age solve the crisis? Partly, and profoundly. Napier's rods, Pascal's wheels, and Leibniz's drum genuinely cut human error and sped up arithmetic, and Babbage and Lovelace proved on paper that a machine could be <em>programmed</em> to solve not one problem but any problem. Yet these were creatures of the hand crank — turned by muscle, limited by friction and the crude metal of their age, and in Babbage's case never fully born. And a new kind of problem was already looming, one that no hand-cranked machine could touch — not a hard sum, but an ocean of data: the records of an entire, exploding nation. To process that, mechanics alone would not be enough. It would take a jolt of electricity, and a young man staring at a train ticket.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c4" data-idx="3">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Four</div>
+      <h2>The Electro-Mechanical Age</h2>
+      <span class="era">c. 1840 – 1940 · a nation too big to count, and the machine that saved it</span>
+    </div>
+    <p class="lead">In 1880, the United States counted itself, and the counting took about seven years. That's not a typo. By the time the numbers were tallied, they were already old. And the population was exploding — so a terrifying arithmetic problem appeared in the minds of a few worried officials: if the 1880 census took seven years, the 1890 one might take ten, or even thirteen. It might not be finished before the <em>next</em> census was due to begin. A country was about to become literally uncountable — and since the Constitution demands that count to divide up seats in Congress, this was not an inconvenience. It was a slow-motion constitutional crisis.</p>
+    <div class="beat">The problem</div>
+    <p>The nation was growing faster than anyone could tally it by hand. Hundreds of clerks sat in rooms transferring marks from schedules to tally sheets, one human stroke at a time, and it was hopeless — slow, crushingly expensive, and riddled with mistakes. This is the moment <em>data itself</em> outgrew the human hand. Not a single hard calculation, like the Mechanical Age faced, but the sheer, grinding <em>volume</em> of tens of millions of records. Something had to read and count data automatically, or the census would collapse under its own weight.</p>
+    <div class="beat">The invention — Herman Hollerith and the tabulating machine</div>
+    <p>The man who solved it was a young engineer named <em class="term">Herman Hollerith</em> (1860–1929), born in Buffalo to German immigrant parents, sharp and ambitious, who had worked the miserable 1880 census himself and seen the problem from the inside. The legend of his breakthrough is almost too perfect: riding a train, he watched the conductor punch holes in a ticket to record a passenger's description — a hole here for "tall," a hole there for "male" — a little punched-card portrait to stop fraud. And Hollerith realised: a <em>person's</em> data could be recorded exactly the same way. Punch a pattern of holes into a stiff card, one card per citizen, each hole's position standing for a fact — this age bracket, that sex, this occupation — and then build a machine to read the cards automatically. Over the 1880s he built exactly that: the <em class="term">punched card</em> and the electric <em class="term">tabulating machine</em> to read it.</p>
+    <p>The mechanism is something you can picture perfectly, and it is where <em>electricity</em> first enters our story. A clerk clamps a punched card into the machine, and a bank of spring-loaded pins presses down onto it. Where the card is solid, a pin is blocked and nothing happens. But where there is a <em>hole</em>, the pin passes straight through the card and dips into a tiny cup of <em class="term">mercury</em> waiting beneath — and mercury conducts electricity. In that instant, the pin completes an <em class="term">electrical circuit</em>, and that pulse of current clicks a counter dial forward by exactly one. Feed thousands of cards through, and the machine electrically tallies an entire nation, category by category, far faster than any room of clerks. It is mechanical card-reading married to electrical counting — and that marriage is the whole age in a single image.</p>
+    <p>Did it work? The result was staggering. Hollerith's machines ran the 1890 census, and work that had been projected to take a decade or more was done in a small fraction of that time, saving the government around <em>five million dollars</em> — a colossal sum then. But the deeper consequence is the one that reaches all the way to you: Hollerith didn't just save a census, he founded an entire <em>industry</em>. The company he built on the back of his machines, through a series of mergers, eventually took a name you know: <em class="term">IBM</em>. The whole world of business <em class="term">data processing</em> — the direct ancestor of everything IT does with records today — starts with a young man, a train ticket, and a cup of mercury.</p>
+    <div class="beat">The culmination — Howard Aiken and the Harvard Mark I</div>
+    <p>The electro-mechanical idea — electricity driving physical parts — reached its towering peak half a century later in a machine conceived by <em class="term">Howard Aiken</em> (1900–1973), a Harvard physicist who wanted, in essence, to finally build Babbage's dream with modern parts. Working with engineers at IBM, he produced the <em class="term">Harvard Mark I</em> in 1944: a gleaming, room-sized colossus, some fifteen metres long, packed with hundreds of thousands of components — shafts, gears, clutches, and electromagnetic relays — all driven by a long rotating drive shaft like something from a factory floor. It could run long sequences of calculations automatically, chattering away for hours, and it was used for real wartime computation. It was magnificent. It was also the <em>end</em> of a line, not the beginning of one — because every one of those hundreds of thousands of parts had to physically <em>move</em>, and moving parts, however cleverly driven by electricity, can only go so fast.</p>
+    <div class="pull">A pin finds a hole, touches mercury, closes a circuit — and a nation counts itself one spark at a time.</div>
+    <div class="bridge">
+    <p>Notice the ceiling built into every machine in this chapter. Hollerith's tabulator and Aiken's Mark I both counted by <em>physical motion</em> — pins pressing, dials clicking, relays clacking, drive shafts turning. Moving parts can only move so fast, and every gear and relay is a speed limit bolted to the machine. To go faster — genuinely, revolutionarily faster — engineers would have to remove the last moving parts altogether and let raw electricity itself do the counting, switching thousands and then millions of times a second, with nothing physical to slow it down. That final leap was forced into being by a world war, built by two men and six brilliant women, and it changes absolutely everything. It is the Electronic Age.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c5" data-idx="4">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Five</div>
+      <h2>The Electronic Age</h2>
+      <span class="era">c. 1940 – present · ENIAC, the transistor, the chip, and the five generations</span>
+    </div>
+    <p class="lead">During the Second World War, armies needed to know exactly where their shells would land. Every artillery gun required firing tables — thousands of trajectory calculations accounting for wind, distance, and gravity — and a single trajectory could take a person around forty hours to work out by hand. The people doing this grinding work were mostly women, and their actual job title, at the time, was "computer." They could not possibly keep up with the demands of a global war. The only way forward was to build a machine with no moving parts at all — and the race to build it opens the age we still live in.</p>
+    <div class="beat">The problem</div>
+    <p>Every machine so far, right up to Aiken's Mark I, shared one fatal limit: it computed by physically moving something. And matter has inertia — gears take time to turn, relays take time to clack. As long as calculation meant motion, there was a hard ceiling on speed, and by the 1940s the world had slammed into it. The problem was no longer "how do we automate arithmetic" or "how do we handle volume." It was raw <em class="term">speed</em>, and it looked impossible to solve as long as anything inside the machine had to physically move.</p>
+    <div class="beat">The first invention — ENIAC, and the six women who ran it</div>
+    <p>The breakthrough came from the University of Pennsylvania, from a partnership between a visionary physicist and a brilliant young engineer. <em class="term">John Mauchly</em> (1907–1980) had the idea and the vision; <em class="term">J. Presper Eckert</em> (1919–1995), only in his mid-twenties, was the electronics genius who could actually make it real. In 1943, with the war raging, the U.S. Army agreed to fund their audacious proposal, and by 1945 they had built the <em class="term">ENIAC</em> — the Electronic Numerical Integrator and Computer, widely regarded as the first general-purpose electronic computer. It was a monster: around <em>eighteen thousand</em> vacuum tubes, filling a room roughly the size of a small house, weighing about thirty tons, drinking enormous power and throwing off so much heat it needed its own cooling. And it was <em>fast</em> — it could do in seconds what took those human computers weeks, tracing a shell's trajectory faster than the shell itself could fly.</p>
+    <p>But here is the part of the story that was nearly erased from history, and shouldn't be. A machine like ENIAC does nothing on its own — it has to be told, in excruciating detail, what to do. There were no programming languages, no screens, no keyboards. So the Army chose six of its best human "computers" — <em class="term">Jean Jennings Bartik, Betty Snyder Holberton, Kathleen McNulty Antonelli, Marlyn Wescoff Meltzer, Frances Bilas Spence, and Ruth Lichterman Teitelbaum</em> — and handed them the job of making the giant actually work. At first they weren't even allowed into the room with the classified machine; they had to learn it from its tangled wiring diagrams alone. And they programmed it not by typing, but <em>physically</em> — by plugging and unplugging hundreds of cables and setting thousands of switches by hand, rewiring the machine's very body for each new problem, a job that could take days. When ENIAC was unveiled to an astonished public in 1946, the men who built the hardware took the credit, and the six women who had brought it to life went, for decades, unnamed. They were among the first true programmers in history.</p>
+    <p>How does a machine like this compute with no moving parts? The answer is the <em class="term">vacuum tube</em> — a glass bulb that acts as an electronic switch, letting current flow or blocking it, with nothing physical moving except the electrons themselves. And electrons are, for our purposes, weightless and instant. A switch that is "off" can stand for a <em>0</em>; a switch that is "on" can stand for a <em>1</em>. Wire eighteen thousand of these together in the right patterns and you can build logic that adds, compares, and decides — at the speed of electricity rather than the speed of turning brass. That is the entire secret of the age.</p>
+    <div class="beat">The secret language — binary</div>
+    <p>Which brings us to the idea that ties every electronic machine together, from ENIAC to the phone in your hand. They all represent <em>everything</em> — numbers, text, images, this very sentence, a chest X-ray — using just two symbols: <em class="term">0</em> and <em class="term">1</em>. This is <em class="term">binary</em>, the system Leibniz had dreamed up three centuries earlier for the sheer beauty of it, and the reason it rules is gorgeously practical. An electronic switch has exactly two natural states: off and on. Off is 0. On is 1. That's it. A single one of these is a <em class="term">bit</em>. String enough bits together and you can encode literally anything. Binary is the bridge between the physical world of electricity and the abstract world of information — the reason electronics and computing turned out to be a marriage made in heaven.</p>
+    <div class="beat">The invention that shrank the world — the transistor</div>
+    <p>ENIAC's vacuum tubes worked, but they were a nightmare: bulky, boiling hot, power-hungry, and they burned out constantly, like light bulbs failing in the middle of a calculation. The whole future of computing depended on finding a better switch — and in 1947, at <em class="term">Bell Labs</em> in New Jersey, three physicists found it. <em class="term">John Bardeen, Walter Brattain, and William Shockley</em> invented the <em class="term">transistor</em>: a tiny sliver of solid material (a semiconductor) that does exactly what a vacuum tube does — switch current off or on, be a 0 or a 1 — but with no glass, no vacuum, no glowing filament, and almost no heat. It could be made small, it sipped power instead of gulping it, and it almost never burned out. It won its inventors the Nobel Prize, and it is, without exaggeration, one of the most important inventions in human history. Every 0 and 1 in your world is switched by a transistor's distant descendants. Swapping fragile tubes for solid transistors is exactly what turned the room-filling first generation of computers into the smaller, faster, more reliable <em>second</em> generation.</p>
+    <div class="beat">The invention that multiplied it — the integrated circuit</div>
+    <p>One transistor is a switch. But a computer needs millions of them, and wiring millions of separate components together by hand is impossible. The solution — the one that unlocked the modern world — came around 1958 and 1959, invented independently and almost simultaneously by two men: <em class="term">Jack Kilby</em> at Texas Instruments and <em class="term">Robert Noyce</em> at Fairchild (later a co-founder of Intel). Their idea was the <em class="term">integrated circuit</em>: instead of making transistors one at a time and wiring them together, <em>build many of them together on a single sliver of silicon</em>, wiring and all, as one inseparable piece. Suddenly you could pack dozens, then hundreds, then thousands of transistors into a space smaller than a fingernail. This is the <em>third generation</em> of computers, and it is the invention that made everything after it — every chip, every phone, every laptop — physically possible.</p>
+    <div class="beat">The five generations, in one breath</div>
+    <p>Step back and you can see the whole electronic age as a story of one thing: a better and better switch, packed tighter and tighter. The <em class="term">First Generation</em> (roughly 1940–1956) ran on <em>vacuum tubes</em> — ENIAC and its giant kin. The <em class="term">Second Generation</em> (c. 1956–1963) replaced them with <em>transistors</em>, and computers shrank and grew reliable. The <em class="term">Third Generation</em> (c. 1964–1971) packed transistors onto <em>integrated circuits</em>, bringing keyboards and screens. The <em class="term">Fourth Generation</em> (1971 to today) folded an entire processor onto one chip — the <em>microprocessor</em>, the subject of our next chapter. And the <em class="term">Fifth Generation</em>, unfolding around us now, is built on massive parallel processing and <em class="term">artificial intelligence</em> — machines aimed at understanding language and learning from experience. One idea. Five sizes. And behind all of them, quietly, <em class="term">John von Neumann</em> (1903–1957), whose "stored-program" design — keeping a computer's instructions in its memory right alongside its data, so the machine can change what it does without being physically rewired — is the architecture nearly every computer on Earth still uses. It was born, in fact, out of the frustration of rewiring ENIAC by hand.</p>
+    <div class="pull">Off is zero, on is one. Every photograph, every song, every X-ray is ultimately a river of that single distinction.</div>
+    <div class="bridge">
+    <p>Did the Electronic Age beat the speed problem? Beyond anyone's wildest hope — modern chips perform <em>billions</em> of operations per second, a scale no machine of gears could ever approach. But every machine so far in this chapter, from ENIAC to the early integrated-circuit computers, was still enormous, expensive, and locked away in the hands of governments, universities, and giant corporations. An ordinary person couldn't touch one. The question that remained was not how to make computers powerful. It was how to get that power out of the vault and into the hands of everyone — and the answer would arrive, of all places, inside a Japanese desk calculator.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c6" data-idx="5">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Six</div>
+      <h2>The Evolution of Computers</h2>
+      <span class="era">the microprocessor, the personal computer, and the escape from the vault</span>
+    </div>
+    <p class="lead">Imagine being told, in 1950, that the room-filling, thirty-ton, million-dollar machine in front of you would one day be outclassed by an object a teenager holds in one hand and uses mostly to watch videos. You would have thought it a fairy tale. And yet that is exactly what happened — and, remarkably, the single invention that set it in motion was commissioned by a calculator company that didn't even want a computer.</p>
+    <div class="beat">The problem</div>
+    <p>The first electronic computers were miracles locked in a vault. ENIAC and the mainframes that followed were enormous, monstrously expensive, power-hungry, and operable only by trained specialists. The computing power was real — but it was hoarded inside a few giant machines that no ordinary person, no small clinic, no corner business could ever own or use. The problem of this era wasn't building power. It was <em class="term">reaching</em> people with it. Power that only a handful can touch may as well not exist for everyone else.</p>
+    <div class="beat">The invention that changed everything — the Intel 4004 microprocessor</div>
+    <p>Here is one of the great accidents in the history of technology. In 1969, a Japanese calculator company called Busicom came to a small, young American firm named Intel and asked them to design a set of a dozen custom chips for a new desk calculator. An Intel engineer named <em class="term">Ted Hoff</em> looked at the request and had a better, radical idea: instead of a dozen specialised chips that could only ever be a calculator, why not build <em>one general-purpose chip</em> — a tiny, complete processor — that could be <em>programmed</em> to be a calculator, or anything else? Hoff and his colleague <em class="term">Stanley Mazor</em> designed the architecture, and a newly-arrived silicon virtuoso named <em class="term">Federico Faggin</em> — working at a furious pace, with a Busicom engineer named <em class="term">Masatoshi Shima</em> — actually made it real, squeezing an unbelievable 2,300 transistors onto a chip the size of a fingernail. In November 1971 it was born: the <em class="term">Intel 4004</em>, the world's first commercial <em class="term">microprocessor</em>. Faggin was so proud he etched his initials, "F.F.", into the chip's design, where they rode on every one ever made.</p>
+    <p>Understand what a microprocessor actually <em>is</em>, because it is the hinge the whole modern world swings on. It is an entire <em>central processing unit</em> — the "brain" that had once filled a room in ENIAC — shrunk down onto a single sliver of silicon. Hoff had taken the memory, the calculating, and the control that earlier designers scattered across whole cabinets of equipment, and folded them all onto one chip. As Hoff himself put it, before the microprocessor people thought of a computer as a precious, multi-million-dollar machine — and with this one product, "we democratized the computer." The power that had lived only in the vault could now be manufactured by the millions, for a few dollars, and dropped into anything.</p>
+    <div class="beat">The invention it created — the personal computer</div>
+    <p>Once a whole processor could sit on a cheap chip, the unthinkable became inevitable: a computer small enough and cheap enough for one ordinary person to own. The giants gave way to a cascade of ever-smaller machines. First the <em class="term">mainframe</em> — still huge, serving a whole organisation, many users sharing one central brain (banks still run on them today). Then the <em class="term">minicomputer</em>, mid-sized and cheaper. And then the earthquake: the <em class="term">microcomputer</em>, or <em class="term">personal computer</em> — a complete machine for a single human being on a single desk. In the late 1970s and 1980s a cast of now-legendary figures carried it into the world. <em class="term">Steve Wozniak</em> and <em class="term">Steve Jobs</em> founded Apple and made a personal computer an ordinary family could actually want and use. <em class="term">Bill Gates</em> and <em class="term">Paul Allen</em> founded Microsoft and built the software that made those machines genuinely useful, putting a computer on desks in offices and homes across the planet. Then the <em class="term">laptop</em> cut the cord to the desk, and finally the <em class="term">smartphone</em> and <em class="term">tablet</em> folded a computer, a camera, and a communicator into a slab of glass and slid it into billions of pockets.</p>
+    <div class="beat">The law behind the whole story — Moore's Law</div>
+    <p>Why did this keep happening, relentlessly, decade after decade — smaller, cheaper, faster, over and over? The answer was spotted early by <em class="term">Gordon Moore</em> (1929–2023), a co-founder of Intel, in an observation now called <em class="term">Moore's Law</em>: the number of transistors that engineers could pack onto a chip was roughly <em>doubling about every two years</em>. Sit with that. Not growing steadily — <em>doubling</em>, again and again. That relentless doubling is the quiet engine under the entire evolution, and it explains the deep magic of the whole chapter: the very same advance that made computers <em>smaller</em> also made them <em>more powerful</em>, at the same time, because "smaller transistors" and "more transistors in the same space" are two sides of one coin. Shrinking the switch did both at once — less power, less heat, lower cost, more portability, <em>and</em> more raw power, all from a single trend. Meanwhile, friendlier inventions on top — the screen, the mouse, and finally the touchscreen — dissolved the need for any specialist training, until the machine that once required an expert in a white coat could be used by a five-year-old with a fingertip.</p>
+    <div class="pull">A calculator company asked for a dozen chips. An engineer gave them one that could be anything — and democratized the computer.</div>
+    <div class="bridge">
+    <p>And so the vault was thrown wide open. A phone in a student's pocket now holds vastly more power than ENIAC, at a sliver of the size and cost, usable by anyone — the problem of access, utterly solved. But whether it's a mainframe humming in a bank or a phone in your hand, every one of these machines is built from the same handful of essential parts, doing the same essential jobs. Having watched the computer shrink from the outside, it's time to open the case and look inside — to name the parts and see, finally, exactly how the machine does what it does.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c7" data-idx="6">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Seven</div>
+      <h2>Inside the Machine</h2>
+      <span class="era">the parts of a computer, and what each one truly does</span>
+    </div>
+    <p class="lead">Open up a computer and your first honest reaction is bewilderment. Boards. Chips. Fans. A tangle of wires and slots and mysterious black rectangles. Somewhere in that clutter, information is being thought about — but which part is doing the thinking? Where does a memory live? And why does everything you hadn't saved vanish the instant the power blinks off? A computer is a black box until you can name its parts, and the moment you can, the mystery collapses into something almost simple.</p>
+    <div class="beat">The problem</div>
+    <p>You cannot truly use, choose, upgrade, or fix a machine you don't understand. Told only that a computer "processes information," you're left helpless in front of the actual object — unable to tell the brain from the memory, unable to know what survives a power cut and what doesn't. To work with confidence, you have to know what the components are and what each one is <em>for</em>. So let's dismantle the black box, following the same Input–Process–Output–Storage loop from the very first chapter, because — beautifully — the parts of the computer map almost exactly onto it.</p>
+    <div class="beat">The way in — input devices</div>
+    <p>Information gets into the machine through <em class="term">input devices</em>. The keyboard and mouse are the obvious ones, but the family is huge: the microphone that hears you, the scanner and camera that turn the physical world into data, and — in a radiology suite — the imaging sensors that catch an X-ray's shadow and convert it into numbers a computer can hold. Every input device is a translator, turning some piece of the outside world into the machine's native language of ones and zeros. It is the "Input" of the loop, made physical.</p>
+    <div class="beat">The brain — the CPU</div>
+    <p>The thinking happens in the <em class="term">Central Processing Unit</em>, the <em class="term">CPU</em> — the true brain of the machine, the direct descendant of ENIAC's room of tubes and Hoff's fingernail-sized 4004. It is where instructions are actually carried out. Inside it sit two crucial pieces: a <em class="term">control unit</em>, which directs the flow of operations like a conductor keeping an orchestra in time, and an <em class="term">arithmetic logic unit</em> (the ALU), which does the actual maths and the actual logic — the adding, the comparing, the deciding. When people say a chip is "fast," this is the part they mean. It is the "Process" of the loop.</p>
+    <div class="beat">The part everyone confuses — memory versus storage</div>
+    <p>Read this twice, because almost everyone gets it wrong. <em class="term">Memory</em> and <em class="term">storage</em> are not the same thing. <em class="term">RAM</em> — Random Access Memory — is the machine's fast, temporary <em>workspace</em>. It holds whatever you are using <em>right now</em>: the document open in front of you, the program that's running. It is blazingly fast, and it is <em class="term">volatile</em> — meaning the instant the power dies, everything in it vanishes without a trace. <em>That</em> is why unsaved work disappears in a blackout: it was only ever living in RAM. <em class="term">Secondary storage</em> — the hard disk drive (HDD), the faster solid-state drive (SSD), a flash drive — is the opposite: slower to reach, but <em class="term">non-volatile</em>, keeping your files safe and waiting even with the power off for years. (There's also a little <em class="term">ROM</em>, Read-Only Memory, holding the permanent built-in instructions the machine needs just to wake itself up.) The simplest way to feel the difference: RAM is the desk you're working on; storage is the filing cabinet you put things in when you're done. A small, fast desk; a big, slow cabinet.</p>
+    <div class="beat">The way out — output devices</div>
+    <p>Results leave the machine through <em class="term">output devices</em> — the monitor that shows you an image, the printer that puts it on paper, the speakers that give it a voice, and, in medical imaging, the diagnostic display where a finished X-ray finally appears for a human to read. This is the "Output" of the loop: the machine translating its ones and zeros back into something a human sense can grasp.</p>
+    <div class="beat">The parts that hold it all together</div>
+    <p>Tying every one of these together is the <em class="term">motherboard</em>, the great circuit board that every other part plugs into, laced with pathways so the components can talk to one another. Feeding the whole thing is the <em class="term">power supply</em>, which converts the wild alternating current from the wall into the gentle, steady voltages the delicate parts can drink. And keeping the entire system from cooking itself to death is <em class="term">cooling</em> — the fans and finned metal heat sinks that carry away the heat a hard-working CPU throws off, the modern echo of the dedicated air-conditioning ENIAC once demanded.</p>
+    <div class="beat">The distinction that matters most — hardware and software</div>
+    <p>Everything named so far is <em class="term">hardware</em>: the physical parts you can touch. But hardware alone is a corpse. What animates it is <em class="term">software</em> — the programs and instructions, which you cannot touch at all, the distant heirs of the sequence Ada Lovelace wrote for a machine that didn't yet exist. Hardware without software just sits there, inert and useless. Software without hardware has nothing to run on. The machine only truly lives when the two meet — when instructions flow through circuits and make dead silicon do something that looks, for all the world, like thought.</p>
+    <div class="beat">How they all work together</div>
+    <p>Here is the whole thing in motion. You do something — press a key, load a file — and data enters through an input device and lands in RAM, the fast workspace. The CPU reaches into RAM, grabs an instruction and some data, processes them (fetch, execute, repeat, billions of times a second), and puts the result back into RAM. Anything you want to <em>keep</em> gets written down to permanent storage; anything you want to <em>see</em> gets pushed out to a display. All of this frantic conversation races along the pathways of the motherboard, powered by the supply, cooled by the fans. And because RAM forgets the instant the power is lost, saving your work to storage isn't a chore — it is the one thin line standing between your work and oblivion.</p>
+    <div class="pull">RAM forgets the moment the power dies. Storage remembers. That single difference is why we say "save your work."</div>
+    <div class="bridge">
+    <p>And there it is — the black box, dismantled and understood, every tangle now a named part with an honest job, all cooperating to run that same ancient loop of input, process, output, first sketched in Chapter One. You could now sit in front of any computer and know what you're looking at. But one machine, however well understood, is a lonely thing. The final, world-remaking leap wasn't making a single computer better — it was <em>connecting</em> them, linking millions of these boxes into one global nervous system until distance almost stopped mattering. That story begins with a Cold War fear and a single word typed between two distant machines. It is the story of the internet.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c8" data-idx="7">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Eight</div>
+      <h2>The Internet</h2>
+      <span class="era">ARPANET, TCP/IP, and the Web that wired the islands together</span>
+    </div>
+    <p class="lead">In the 1960s the world had powerful computers, and every one of them was an island. A researcher at one machine could not easily share a file with a researcher at another, even down the hall, even in the same country. And beneath that inconvenience lurked a genuinely frightening thought, one that haunted military planners at the height of the Cold War: if a communication network runs through a single central hub, then one well-placed strike could sever a nation's ability to talk to itself. The question that would build the modern world was born from that fear — how do you connect computers so they keep talking even when part of the network is destroyed?</p>
+    <div class="beat">The problem</div>
+    <p>Two problems, really, braided together. The everyday one: isolated computers were islands of trapped information, unable to share. The strategic one: any network with a central point could be killed by knocking out that single point. The challenge was to link machines so they could reliably exchange information <em>and</em> keep working even if pieces of the network went dark. Solve that, and the islands become a continent.</p>
+    <div class="beat">The idea that made it possible — packet switching</div>
+    <p>The solution is one genuinely beautiful idea, and everything else is built on top of it: <em class="term">packet switching</em>. The theoretical groundwork was laid by researchers including <em class="term">Leonard Kleinrock</em> (whose lab would later send the internet's very first message) and, independently, Paul Baran and Donald Davies. Here is the idea. When you send information across a network the old way, you open a single dedicated line from end to end, like a phone call — and if any point on that line is cut, the whole thing dies. Packet switching throws that out. Instead, it chops your message into small pieces called <em class="term">packets</em>, stamps each one with its destination address, and sets every packet loose to find its <em>own</em> way across the network, taking whatever route happens to be open at that instant. If one path is blocked — or one machine has been destroyed — the packets simply flow around the damage by another route. At the destination, they are reassembled into the original message. There is no single hub to knock out. The network routes around damage automatically. That is the direct, elegant answer to the Cold War fear that started it all.</p>
+    <div class="beat">The first invention — ARPANET</div>
+    <p>In 1969, that theory became a working machine. Funded by <em class="term">ARPA</em>, the Advanced Research Projects Agency of the U.S. Department of Defense, the <em class="term">ARPANET</em> became the first real packet-switching network — the direct ancestor of the internet. Its first-ever message was sent from Kleinrock's lab at UCLA to a machine at Stanford. The researchers tried to type the word "LOGIN." The system crashed after the first two letters. So the first thing ever transmitted across the ancestor of the internet was, fittingly and almost poetically, the word "LO" — as in "lo and behold." From those two letters, everything grew.</p>
+    <div class="beat">The invention that united everything — TCP/IP</div>
+    <p>ARPANET proved computers could be linked. But soon there were <em>many</em> separate networks springing up, and they couldn't talk to each other — they spoke different technical languages. The internet as we know it was truly born when two computer scientists, <em class="term">Vinton Cerf</em> and <em class="term">Robert Kahn</em>, designed a shared set of rules that <em>any</em> network could adopt to communicate with <em>any</em> other: <em class="term">TCP/IP</em>. It's a partnership of two protocols doing two jobs. <em class="term">IP</em> — the Internet Protocol — handles <em>addressing and routing</em>: it gives every machine an address and makes sure each packet is sent toward the right destination, like the address on an envelope. <em class="term">TCP</em> — the Transmission Control Protocol — handles <em>reliability</em>: it makes sure all the packets actually arrive, asks for any that got lost to be resent, and puts them back in the correct order at the end. When TCP/IP was switched on across the network in 1983, separate islands of computers fused into one interconnected whole, and that moment is often marked as the true birth of the internet. It earned Cerf and Kahn the title "fathers of the internet." (Not long after, the <em class="term">Domain Name System</em> arrived, a phonebook for the internet that translates human-friendly names into the numeric IP addresses machines actually use — so you can type a name instead of memorising a string of numbers.)</p>
+    <div class="beat">The invention that made it human — the World Wide Web</div>
+    <p>Even with all of that, the internet in the 1980s was still the domain of scientists and specialists — powerful, but forbidding. The person who made it something ordinary human beings could actually <em>use</em> was a British computer scientist named <em class="term">Tim Berners-Lee</em>, working at CERN, the great physics laboratory in Switzerland. Between 1989 and 1991 he invented the <em class="term">World Wide Web</em> — and here is the distinction almost everyone gets wrong, so hold it clearly: the Web is <em>not</em> the internet. The internet is the underlying network of connected machines, the roads. The Web is a <em>service that runs on top of it</em> — the pages, the links, the browsers, the whole readable, clickable world you picture when you go "online." Berners-Lee built all its founding pieces himself: the first web browser, the first web server, and the first web page. He invented the idea of the clickable <em class="term">link</em> that lets you leap from one page to any other, weaving the world's documents into a single connected web. And then he did something that shaped history: he and CERN gave it away, <em>free</em>, refusing to patent it or lock it up. He handed humanity's new commons to humanity, and asked for nothing. That choice is a large part of why the Web became the world's, and not a single company's.</p>
+    <div class="pull">They tried to type "LOGIN." It crashed after two letters. So the first word ever sent across the ancestor of the internet was "LO" — lo and behold.</div>
+    <div class="bridge">
+    <p>Did it solve the problem? Beyond all measure. It didn't just connect computers reliably and survivably — it wove them into the fabric of human civilisation itself, until information now crosses the planet in a fraction of a second and the lonely islands of the 1960s have fused into one connected world. And that is where our long road ends — or rather, where it arrives at you. From a merchant counting grain with pebbles, to a notch cut in a bone, to beads sliding on an abacus, to knots tied in Inca cord, to Napier's ivory rods, to Pascal's brass wheels carrying the one, to Leibniz's stepped drum, to Babbage's dreamed-of engine and Lovelace's first program, to a pin touching mercury in Hollerith's machine, to eighteen thousand vacuum tubes glowing in ENIAC while six women rewired it by hand, to Bardeen's transistor and Noyce's chip and Faggin's fingernail-sized 4004, to a planet stitched together in packets of light by Cerf, Kahn, and Berners-Lee — every single stage solved the problem left behind by the one before it, and every stage had a human being, usually a frustrated one, standing behind it. That unbroken chain is the answer to the question we opened with. <em>That</em> is what information technology is: not a gadget, but eight thousand years of humanity teaching dead matter to hold a thought — and finally, to share it. The foundation is set. Everything else in this course is built on this road.</p>
+    </div>
+  </section>
+
+  <section class="refs" id="refs" data-idx="8">
+    <div class="ch-head">
+      <div class="ch-num">Sources</div>
+      <h2>References</h2>
+      <span class="era">where this account draws its facts</span>
+    </div>
+    <p style="color:var(--ink-soft);font-size:16px;">This reading synthesises the standard history of computing with the open-access textbooks assigned in the GEEL 1 syllabus. Course-assigned references are listed first, followed by the sources consulted for specific historical facts, dates, biographies, and mechanisms.</p>
+    <p class="beat" style="margin-top:32px;">Course-assigned texts</p>
+    <ol class="ref-list">
+      <li>Raisinghani, M. S. (2025). <i>Foundations of Information Systems.</i> OpenStax. CC BY-NC-SA 4.0. <a href="https://openstax.org/details/books/foundations-information-systems">openstax.org/details/books/foundations-information-systems</a></li>
+      <li>Bourgeois, D. T., Smith, J. L., Wang, S., &amp; Mortati, J. (2019). <i>Information Systems for Business and Beyond.</i> Saylor Foundation. CC BY-NC 4.0. <a href="https://opentextbook.site/informationsystems2019/">opentextbook.site/informationsystems2019</a></li>
+      <li>Pham, L. T., Desai-Naik, T., Hammond, L., &amp; Abdeljabbar, W. (2021). <i>Information Systems for Business.</i> ASCCC OERI / LibreTexts. CC BY 3.0. <a href="https://workforce.libretexts.org/Bookshelves/Information_Technology/Information_Systems">workforce.libretexts.org — Information Systems</a></li>
+    </ol>
+    <p class="beat" style="margin-top:20px;">Sources for inventors, mechanisms &amp; dates</p>
+    <ol class="ref-list">
+      <li>National Museums Scotland. <i>Napier's Bones: The Logarithmic Genius Who Revolutionised Calculations.</i> On John Napier, <i>Rabdologiae</i> (1617), logarithms, and the lattice-based rods. <a href="https://www.nms.ac.uk/discover-catalogue/napiers-bones-the-logarithmic-genius-who-revolutionised-calculations">nms.ac.uk</a></li>
+      <li>Computer History Museum. <i>The Leibniz Step Reckoner.</i> On the 1673 stepped-drum mechanism enabling multiplication. <a href="https://www.computerhistory.org/revolution/calculators/1/49">computerhistory.org</a></li>
+      <li>Wikipedia. <i>Leibniz wheel</i> and <i>Stepped reckoner.</i> On the stepped-drum design and its two-century use. <a href="https://en.wikipedia.org/wiki/Leibniz_wheel">en.wikipedia.org/wiki/Leibniz_wheel</a></li>
+      <li>Smithsonian Magazine. <i>Herman Hollerith's Tabulating Machine.</i> On the census crisis, the projected backlog, and the founding of what became IBM. <a href="https://www.smithsonianmag.com/smithsonian-institution/herman-holleriths-tabulating-machine-2504989/">smithsonianmag.com</a></li>
+      <li>Lake County News. <i>Herman Hollerith's World-Changing Invention.</i> On the pin-and-mercury circuit mechanism and the punched-card workflow. <a href="https://www.lakeconews.com/news/56248-this-week-in-history-herman-hollerith-s-world-changing-invention">lakeconews.com</a></li>
+      <li>Encyclopedia.com. <i>Herman Hollerith.</i> On the machine replacing roughly eight years of hand tabulation and saving about $5 million. <a href="https://www.encyclopedia.com/people/science-and-technology/electrical-engineering-biographies/herman-hollerith">encyclopedia.com</a></li>
+      <li>American Physical Society. <i>Physics History: ENIAC's First Program.</i> On the six women programmers, the 18,000 vacuum tubes, and the wartime trajectory calculations. <a href="https://www.aps.org/apsnews/2022/11/eniac-first-top-secret-program">aps.org</a></li>
+      <li>Columbia University. <i>ENIAC Programmers.</i> On Eckert and Mauchly, the machine's scale, and programming by cable and switch. <a href="https://www.columbia.edu/cu/computinghistory/eniac.html">columbia.edu</a></li>
+      <li>IEEE Spectrum. <i>Chip Hall of Fame: Intel 4004 Microprocessor.</i> On Hoff, Mazor, Faggin, Shima, the Busicom origin, and the 2,300-transistor chip. <a href="https://spectrum.ieee.org/chip-hall-of-fame-intel-4004-microprocessor">spectrum.ieee.org</a></li>
+      <li>Intel Newsroom. <i>The Chip that Changed the World</i> &amp; <i>The Intel 4004.</i> On "we democratized the computer" and the fingernail-size processor. <a href="https://www.intel.com/content/www/us/en/history/virtual-vault/articles/the-intel-4004.html">intel.com</a></li>
+      <li>General historical consensus, corroborated across the above and standard computing-history references, for the biographies and mechanisms of the abacus and quipu, Brahmagupta and zero, Pascal's carry mechanism, Babbage's Analytical Engine and Ada Lovelace's first program, the Harvard Mark I, the transistor (Bardeen, Brattain &amp; Shockley, 1947), the integrated circuit (Kilby &amp; Noyce, c. 1958–59), von Neumann's stored-program architecture, Moore's Law, binary representation, and the ARPANET / TCP-IP / Domain Name System / World Wide Web timeline (Kleinrock, Cerf, Kahn, Berners-Lee).</li>
+    </ol>
+  </section>
+
+</article>
+
+<footer class="end">
+  <div class="mark">✦ ✦ ✦</div>
+  <p>The Long Road to the IT Era · GEEL 1 — Living in the IT Era · Prelim</p>
+  <button class="dlbtn" id="downloadBtn">
+    <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+    Save this reading
+  </button>
+</footer>
+
+<button id="totop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24"><path d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>
+</button>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "itict_longread_progress_v1";
+  var railFill = document.querySelector("#rail > span");
+  var chapters = Array.prototype.slice.call(document.querySelectorAll("[data-idx]")).filter(function(el){ return el.tagName === "SECTION"; });
+  var tocLinks = document.querySelectorAll("nav.toc a");
+  var toTop = document.getElementById("totop");
+  var CH_TITLES = ["Chapter I — What IT Really Is","Chapter II — The Pre-Mechanical Age","Chapter III — The Mechanical Age","Chapter IV — The Electro-Mechanical Age","Chapter V — The Electronic Age","Chapter VI — The Evolution of Computers","Chapter VII — Inside the Machine","Chapter VIII — The Internet","References"];
+  function loadState(){ try{ var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function saveState(s){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){} }
+  var state = loadState() || { lastIdx:0, maxIdx:-1, scrollY:0 };
+  function updateRail(){
+    var doc = document.documentElement;
+    var scrollable = doc.scrollHeight - doc.clientHeight;
+    var pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    railFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    toTop.style.display = window.scrollY > 900 ? "grid" : "none";
+  }
+  var current = -1;
+  function updateCurrent(){
+    var mark = window.scrollY + window.innerHeight * 0.33;
+    var idx = 0;
+    for(var i=0;i<chapters.length;i++){ if(chapters[i].offsetTop <= mark){ idx = parseInt(chapters[i].getAttribute("data-idx"),10); } }
+    if(idx !== current){
+      current = idx;
+      for(var j=0;j<tocLinks.length;j++){
+        var li = parseInt(tocLinks[j].getAttribute("data-idx"),10);
+        if(li < idx) tocLinks[j].classList.add("done"); else tocLinks[j].classList.remove("done");
+      }
+    }
+    state.lastIdx = current < 0 ? 0 : current;
+    if(state.lastIdx > state.maxIdx) state.maxIdx = state.lastIdx;
+    state.scrollY = window.scrollY;
+  }
+  var ticking = false;
+  function onScroll(){ if(!ticking){ window.requestAnimationFrame(function(){ updateRail(); updateCurrent(); ticking = false; }); ticking = true; } }
+  var saveTimer = null;
+  function scheduleSave(){ if(saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(function(){ saveState(state); }, 400); }
+  window.addEventListener("scroll", function(){ onScroll(); scheduleSave(); }, {passive:true});
+  window.addEventListener("resize", updateRail, {passive:true});
+  window.addEventListener("beforeunload", function(){ saveState(state); });
+  var resumeEl = document.getElementById("resume");
+  var resumeLabel = document.getElementById("resumeLabel");
+  var savedForResume = loadState();
+  if(savedForResume && savedForResume.scrollY > 600 && savedForResume.lastIdx > 0){
+    resumeLabel.textContent = CH_TITLES[savedForResume.lastIdx] || "where you stopped";
+    resumeEl.style.display = "block";
+    document.getElementById("resumeGo").addEventListener("click", function(){ window.scrollTo({ top: savedForResume.scrollY, behavior: "smooth" }); resumeEl.style.display = "none"; });
+    document.getElementById("resumeX").addEventListener("click", function(){ resumeEl.style.display = "none"; });
+  }
+  document.getElementById("tocBtn").addEventListener("click", function(){ document.getElementById("toc").scrollIntoView({behavior:"smooth", block:"start"}); });
+  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  document.getElementById("downloadBtn").addEventListener("click", function(){
+    try{
+      var html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      var blob = new Blob([html], {type:"text/html"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "the-long-road-to-the-IT-era.html";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    }catch(e){ alert("Download unavailable in this view. Use your browser's Save Page option instead."); }
+  });
+  updateRail();
+  updateCurrent();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Web That Ate the World — GEEL 1 Prefinals</title>
+<style>
+  :root{
+    --paper:#f6f1e7;--paper-deep:#efe7d6;--ink:#20211d;--ink-soft:#4b4a42;--ink-faint:#7c7a6d;
+    --rule:#d8cdb6;--ember:#b8442b;--ember-deep:#8a2f1d;--brass:#a6843c;--stage:#fffdf7;
+    --shadow:rgba(40,32,16,.14);--maxw:680px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;font-size:19px;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;}
+  #rail{position:fixed;top:0;left:0;height:3px;width:100%;background:transparent;z-index:60;pointer-events:none;}
+  #rail>span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--brass),var(--ember));transition:width .12s linear;}
+  header.bar{position:sticky;top:0;z-index:50;background:rgba(246,241,231,.92);backdrop-filter:saturate(140%) blur(8px);-webkit-backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:12px;}
+  header.bar .brandmark{font-family:Georgia,serif;font-weight:700;letter-spacing:.02em;font-size:14px;color:var(--ember-deep);line-height:1.05;flex:1;text-transform:uppercase;}
+  header.bar .brandmark small{display:block;font-weight:400;font-size:11px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;margin-top:2px;}
+  .barbtn{appearance:none;border:1px solid var(--rule);background:var(--stage);color:var(--ink-soft);font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .barbtn:active{transform:scale(.96);}
+  .barbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
+  .hero{max-width:var(--maxw);margin:0 auto;padding:54px 24px 34px;}
+  .eyebrow{font-family:Georgia,serif;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ember);font-weight:700;margin:0 0 20px;}
+  .hero h1{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(34px,9vw,52px);line-height:1.04;letter-spacing:-.015em;margin:0 0 20px;}
+  .hero h1 em{font-style:italic;color:var(--ember-deep);}
+  .hero .dek{font-size:19px;color:var(--ink-soft);line-height:1.6;margin:0;font-style:italic;}
+  .hero .meta{margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);font-family:Georgia,serif;font-size:13px;letter-spacing:.04em;color:var(--ink-faint);}
+  #resume{display:none;max-width:var(--maxw);margin:0 auto 8px;padding:0 20px;}
+  #resume .card{background:linear-gradient(180deg,#fff8ec,#fdefd7);border:1px solid var(--brass);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px -12px var(--shadow);}
+  #resume .ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--ember);display:grid;place-items:center;}
+  #resume .ic svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;}
+  #resume .txt{flex:1;line-height:1.3;}
+  #resume .txt b{font-family:Georgia,serif;font-size:15px;display:block;}
+  #resume .txt span{font-size:13px;color:var(--ink-soft);}
+  #resume button{flex:none;border:none;background:var(--ember);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:999px;cursor:pointer;}
+  #resume button:active{transform:scale(.96);}
+  #resume .x{background:transparent;color:var(--ink-faint);padding:6px;font-size:20px;line-height:1;}
+  nav.toc{max-width:var(--maxw);margin:12px auto 0;padding:26px 24px 30px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  nav.toc h2{font-family:Georgia,serif;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 18px;}
+  nav.toc ol{list-style:none;margin:0;padding:0;}
+  nav.toc a{display:flex;align-items:baseline;gap:14px;padding:11px 0;text-decoration:none;color:var(--ink);border-bottom:1px dotted var(--rule);}
+  nav.toc li:last-child a{border-bottom:none;}
+  nav.toc a .n{font-family:Georgia,serif;font-size:13px;color:var(--ember);font-weight:700;min-width:26px;font-variant-numeric:tabular-nums;}
+  nav.toc a .t{flex:1;font-size:17px;line-height:1.35;}
+  nav.toc a .read{font-size:11px;color:var(--brass);letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity .2s;}
+  nav.toc a.done .read{opacity:1;}
+  nav.toc a.done .t{color:var(--ink-faint);}
+  article{max-width:var(--maxw);margin:0 auto;padding:0 24px 40px;}
+  section.chapter{padding:52px 0 8px;scroll-margin-top:70px;}
+  section.chapter:first-of-type{padding-top:40px;}
+  .ch-head{margin:0 0 30px;}
+  .ch-num{font-family:Georgia,serif;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);font-weight:700;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .ch-num::after{content:"";flex:1;height:1px;background:var(--rule);}
+  .ch-head h2{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(27px,7vw,38px);line-height:1.1;letter-spacing:-.01em;margin:0;}
+  .ch-head .era{display:block;margin-top:10px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:var(--ink-faint);letter-spacing:.02em;}
+  article p{margin:0 0 22px;}
+  article p.lead::first-letter{float:left;font-family:Georgia,serif;font-weight:700;color:var(--ember-deep);font-size:64px;line-height:.82;padding:6px 10px 0 0;}
+  .beat{font-family:Georgia,serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:700;margin:34px 0 -6px;display:flex;align-items:center;gap:10px;}
+  .beat::before{content:"";width:20px;height:1px;background:var(--brass);}
+  em.term{font-style:normal;font-weight:700;color:var(--ember-deep);}
+  .pull{margin:30px 0;padding:2px 0 2px 20px;border-left:3px solid var(--ember);font-family:Georgia,serif;font-style:italic;font-size:21px;line-height:1.5;color:var(--ink-soft);}
+  .bridge{margin:30px 0 4px;padding-top:24px;border-top:1px solid var(--rule);font-style:italic;color:var(--ink-soft);}
+  section.refs{padding:52px 0 20px;scroll-margin-top:70px;}
+  section.refs .ref-list{list-style:none;margin:24px 0 0;padding:0;counter-reset:ref;}
+  section.refs .ref-list li{position:relative;padding:0 0 20px 34px;font-size:15px;line-height:1.55;color:var(--ink-soft);}
+  section.refs .ref-list li::before{counter-increment:ref;content:counter(ref);position:absolute;left:0;top:0;font-family:Georgia,serif;font-size:12px;font-weight:700;color:var(--ember);border:1px solid var(--rule);border-radius:50%;width:22px;height:22px;display:grid;place-items:center;}
+  section.refs .ref-list i{color:var(--ink);}
+  section.refs .ref-list a{color:var(--ember-deep);word-break:break-word;}
+  footer.end{max-width:var(--maxw);margin:0 auto;padding:40px 24px calc(env(safe-area-inset-bottom) + 60px);border-top:1px solid var(--rule);text-align:center;}
+  footer.end .mark{font-family:Georgia,serif;color:var(--ember);font-size:22px;letter-spacing:.3em;margin-bottom:18px;}
+  footer.end p{font-size:13px;color:var(--ink-faint);margin:0 0 20px;font-family:Georgia,serif;}
+  .dlbtn{appearance:none;border:1px solid var(--ember);background:transparent;color:var(--ember-deep);font:inherit;font-size:14px;font-weight:600;padding:11px 22px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+  .dlbtn:active{transform:scale(.97);}
+  .dlbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;}
+  #totop{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:40;width:46px;height:46px;border-radius:50%;border:1px solid var(--rule);background:var(--stage);color:var(--ember-deep);display:none;place-items:center;box-shadow:0 8px 22px -10px var(--shadow);cursor:pointer;}
+  #totop svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
+  @media (max-width:420px){body{font-size:18px;}.hero{padding:44px 20px 30px;}article{padding:0 20px 40px;}}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
+</style>
+</head>
+<body>
+
+<div id="rail"><span></span></div>
+
+<header class="bar">
+  <div class="brandmark">The Web That Ate the World<small>GEEL 1 · Prefinals</small></div>
+  <a class="barbtn" href="index.html" aria-label="Home">
+    <svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>
+    Home
+  </a>
+  <button class="barbtn" id="tocBtn" aria-label="Jump to contents">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+    Contents
+  </button>
+</header>
+
+<div id="resume">
+  <div class="card">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></div>
+    <div class="txt"><b>Pick up where you left off</b><span id="resumeLabel">Chapter</span></div>
+    <button id="resumeGo">Resume</button>
+    <button class="x" id="resumeX" aria-label="Dismiss">×</button>
+  </div>
+</div>
+
+<div class="hero">
+  <p class="eyebrow">A Long Read · Living in the IT Era</p>
+  <h1>How a wire<br>became<br><em>everywhere.</em></h1>
+  <p class="dek">The prelim built the machine; the midterm switched it on across society. This is the story of the thing that tied every machine to every other — how a Cold-War network of a few computers grew into the web, the cloud, and the daily air we breathe, and what it asks of us now that we all live inside it.</p>
+  <div class="meta">Six chapters · roughly a 40-minute read · your place is saved automatically</div>
+</div>
+
+<nav class="toc" id="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#c1" data-idx="0"><span class="n">I</span><span class="t">What ICT Really Is — and How the Internet Actually Works</span><span class="read">Read</span></a></li>
+    <li><a href="#c2" data-idx="1"><span class="n">II</span><span class="t">The Web &amp; the Browser — HTTP, DNS &amp; the Address Bar</span><span class="read">Read</span></a></li>
+    <li><a href="#c3" data-idx="2"><span class="n">III</span><span class="t">Building the Web — HTML, CSS &amp; Responsive Design</span><span class="read">Read</span></a></li>
+    <li><a href="#c4" data-idx="3"><span class="n">IV</span><span class="t">The Cloud &amp; Software as a Service</span><span class="read">Read</span></a></li>
+    <li><a href="#c5" data-idx="4"><span class="n">V</span><span class="t">Digital Citizenship — Netiquette, Privacy &amp; Security</span><span class="read">Read</span></a></li>
+    <li><a href="#c6" data-idx="5"><span class="n">VI</span><span class="t">The Digital Divide &amp; Responsible Technology Use</span><span class="read">Read</span></a></li>
+    <li><a href="#refs" data-idx="6"><span class="n">✦</span><span class="t">References</span><span class="read">Read</span></a></li>
+  </ol>
+</nav>
+
+<article>
+
+  <section class="chapter" id="c1" data-idx="0">
+    <div class="ch-head">
+      <div class="ch-num">Chapter One</div>
+      <h2>What ICT Really Is — and How the Internet Actually Works</h2>
+      <span class="era">The invisible machine you have used ten thousand times without seeing</span>
+    </div>
+    <p class="lead">You have almost certainly never seen the internet. You have seen websites, apps, videos, group chats — but the internet itself, the actual thing, is something else entirely, and most people who use it every hour of their waking lives could not tell you what it is. That is not a failure on their part. It is a triumph of engineering: the whole point of good infrastructure is to disappear. But this chapter is going to make it reappear, because you cannot understand the web, the cloud, or a single one of the digital-safety ideas at the end of this reading until you understand the plumbing underneath them all.</p>
+    <p>First, a distinction the course keeps returning to. You already met <em class="term">IT</em> — information technology, the machinery for storing and processing information. <em class="term">ICT</em> adds one enormous letter: <em class="term">Information and Communication Technology</em>. The C is the internet's whole reason for existing. IT is a computer thinking; ICT is millions of computers <em>talking</em>. Everything in this reading lives on the C.</p>
+    <div class="beat">The internet is not the web</div>
+    <p>Start by killing the most common confusion of all, because people use these two words as if they mean the same thing and they absolutely do not. The <em class="term">internet</em> is the physical network — the cables, the routers, the wireless links, the agreed-upon rules that let any computer on Earth exchange data with any other. The <em class="term">World Wide Web</em> is just one thing that <em>runs on top of</em> the internet: the collection of pages and sites you browse. The web is a tenant; the internet is the building. Email runs on the internet but is not the web. A video call runs on the internet but is not the web. Confusing the two is like confusing "the road system" with "pizza delivery" — one is the thing that moves, the other is the thing that carries it.</p>
+    <p>So what is the network, physically? Genuinely, unglamorously: wires. Most of the intercontinental internet is not in "the cloud" or in space — it is a web of <em class="term">fibre-optic cables</em> lying on the ocean floor, pulsing with light, connecting continents. Your phone hops wirelessly to a router, the router to your internet provider, the provider into that global tangle of cable, and out the other side to a <em class="term">server</em> — a computer, sitting in a building somewhere, whose job is to wait for requests and answer them. That is the entire shape of it: your device (the <em class="term">client</em>) asks; a <em class="term">server</em> answers; and a planet's worth of cable carries the conversation.</p>
+    <div class="beat">The trick that made it all possible — packets</div>
+    <p>Now the single most important idea in this chapter, the one that makes the whole internet work, and it is beautiful. When you send something across the internet — a photo, a message, a video — it does <em>not</em> travel as one continuous stream, like water through a hose. It is chopped into thousands of tiny pieces called <em class="term">packets</em>. Each packet is stamped with where it came from, where it is going, and which piece of the whole it is (piece 3 of 5,000). Then each packet is released into the network to find its own way, and — here is the astonishing part — different packets from the same photo may travel completely different routes across the world, through different cities and cables, and arrive out of order. At the far end, the receiving computer reads the stamps and reassembles them into the original, perfectly.</p>
+    <p>Why bother with such a strange scheme? Because it makes the network almost impossible to kill. This idea, <em class="term">packet switching</em>, was born in the 1960s partly out of a Cold-War fear: a communication system that could survive having pieces of it destroyed. If one route goes down, the packets simply flow around the damage, like water finding a new channel. There is no single wire that, if cut, stops everything. The internet has no off switch. That resilience — designed into its very bones sixty years ago — is why it grew into the most robust machine humanity has ever built.</p>
+    <div class="beat">The rules everyone agreed to — protocols</div>
+    <p>None of this works unless every computer agrees, exactly, on how to format those packets and stamps. Those agreements are called <em class="term">protocols</em> — the shared languages of the network. The foundational pair is written <em class="term">TCP/IP</em>, and it is worth pulling apart. <em class="term">IP</em> (Internet Protocol) handles <em>addressing</em>: it gives every device on the network a unique number, an <em class="term">IP address</em> (like 142.250.72.14), so packets know where to go — it is the postal system. <em class="term">TCP</em> (Transmission Control Protocol) handles <em>reliability</em>: it is the part that numbers the packets, checks that all of them arrived, and asks for any that got lost to be sent again — it is the delivery guarantee. Together, TCP/IP is the contract that turns a chaotic swarm of packets into dependable delivery. Every device you own speaks it fluently, and none of them could talk to each other if they didn't.</p>
+    <div class="pull">The internet has no off switch. Its packets flow around damage the way water finds a new channel — a survival instinct designed into it sixty years ago.</div>
+    <div class="bridge">
+    <p>So we have the network: cables under the sea, packets finding their own way, protocols keeping the whole conversation honest. But notice what is still missing. You do not type <em>142.250.72.14</em> into your phone to reach a website, and when you visit a page you are not thinking about packet numbers. Sitting on top of this raw machinery is a second layer — the human-friendly one, the one with addresses you can actually remember and a program that turns a distant server's answer into something you can see. That layer is the web, and to understand it we have to follow what really happens in the half-second after you type an address and press enter.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c2" data-idx="1">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Two</div>
+      <h2>The Web &amp; the Browser</h2>
+      <span class="era">DNS, HTTP, and the quiet miracle inside the address bar</span>
+    </div>
+    <p class="lead">Type an address, press enter, and a page from the other side of the planet appears before you can blink. It feels like nothing. It is, in fact, one of the most choreographed sequences in all of technology — a relay of four or five different systems, each handing off to the next in milliseconds. Slow it down and you will never look at an address bar the same way again, and you will understand precisely what a "web browser" is doing for you.</p>
+    <div class="beat">The phone book of the internet — DNS</div>
+    <p>Remember that every device on the internet is found by a number, an IP address — but no human wants to memorise <em>142.250.72.14</em> to reach a search engine. So the web has a translation layer, and it is one of the unsung heroes of the whole system: the <em class="term">Domain Name System</em>, or <em class="term">DNS</em>. DNS is the internet's phone book. You type a name a human can remember — a <em class="term">domain name</em> like <em>google.com</em> — and DNS quietly looks up the actual IP number that name points to, so the packets know where to go. This lookup happens in a fraction of a second, invisibly, every single time you visit any site. When people say the internet "went down" but their WiFi is fine, the culprit is very often DNS: the phone book, not the phones.</p>
+    <p>It is worth seeing the anatomy of the address itself, because it is not arbitrary. In <em>www.example.com</em>, the <em>.com</em> is the <em class="term">top-level domain</em> (others include <em>.org</em>, <em>.edu</em>, <em>.gov</em>, and country codes like <em>.ph</em>); <em>example</em> is the specific name someone registered; and <em>www</em> names a particular machine or service within it. Read right to left, an address zooms in from the general to the specific — country and category, then organisation, then the exact door you want.</p>
+    <div class="beat">The conversation — HTTP</div>
+    <p>Once DNS has found the server's address, your browser has to actually <em>ask</em> it for the page — and it does so in a specific language called <em class="term">HTTP</em>, the HyperText Transfer Protocol. HTTP is simply the agreed set of phrases for "please send me this page" and "here it is." Your browser sends a <em class="term">request</em>; the server sends back a <em class="term">response</em> — the page's contents. You have seen HTTP's error messages without knowing their names: the infamous <em>404</em> is HTTP's way of saying "I looked, and there is no page at that address."</p>
+    <p>The version you want today has one more letter: <em class="term">HTTPS</em>, where the S stands for <em class="term">Secure</em>. On plain HTTP, your request and the server's reply travel across all those cables as readable text — anyone positioned along the route could in principle read them. HTTPS wraps the whole conversation in <em class="term">encryption</em>, scrambling it so that only your browser and the server can make sense of it. This is the meaning of the little padlock beside a web address, and it is not decoration: on a page without it, never type a password, a card number, or anything you would not shout across a room. That padlock is a direct, visible piece of the privacy-and-security ideas waiting in Chapter Five.</p>
+    <div class="beat">The program that ties it together — the browser</div>
+    <p>The <em class="term">web browser</em> — Chrome, Firefox, Safari, Edge — is the single most-used piece of software on Earth, and its job is to hide every step above and present you with a finished page. When the server's response arrives, it is not a picture of a page. It is a bundle of code and text, and the browser's real work is to <em class="term">render</em> that code: to read the instructions and paint the actual page — the layout, the colours, the images, the clickable links — onto your screen. A browser is, in effect, a universal interpreter that turns the raw language of the web into something a human can see and touch.</p>
+    <p>This is why browsers can differ, and why comparing them is a real exercise and not brand loyalty. They vary in <em class="term">speed</em> (how fast they render complex pages), in <em class="term">privacy</em> (how aggressively they block trackers that follow you between sites), in <em class="term">compatibility</em> (whether they display a given site the way its maker intended), and in <em class="term">features</em> (extensions, tab handling, syncing across devices). Choosing a browser is choosing who you trust to stand between you and the entire web.</p>
+    <div class="beat">What a website is actually made of</div>
+    <p>Pull back and look at the whole architecture, because it is cleaner than it seems. A website lives on a <em class="term">server</em>; it is reached by a <em class="term">domain name</em> (resolved by DNS); it is delivered over <em class="term">HTTP/HTTPS</em>; and it is displayed by a <em class="term">browser</em>. The site itself is a set of files — pages of content, styling that controls their look, images, and often small programs that make them interactive. A single page you visit may be stitched together from files pulled off several different servers at once. When you grasp that a "website" is just organised files sent from a server and rebuilt by your browser, the last piece of mystery falls away — and the natural next question becomes: what <em>are</em> those files, and could you make one yourself?</p>
+    <div class="pull">The padlock is not decoration. It is the visible sign that your conversation with a server has been scrambled so that only the two of you can read it.</div>
+    <div class="bridge">
+    <p>You could — and it is easier than almost anyone expects, which is the quiet radical fact at the centre of the web. The same page a browser renders for a billion-dollar company is built from the very same handful of plain-text languages a first-year student can learn in an afternoon. The web was designed, deliberately, to be <em>open</em>: its building materials are readable, teachable, and free. So let us stop being visitors and become builders, and meet the three languages every page on Earth is made of.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c3" data-idx="2">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Three</div>
+      <h2>Building the Web</h2>
+      <span class="era">HTML, CSS, and the art of a page that fits any screen</span>
+    </div>
+    <p class="lead">Here is something genuinely empowering, and it is the heart of this part of the course. The web is not a locked box built by wizards. Every page you have ever visited is made from plain text you can read, learn, and write yourself — no expensive software, no special machine, just a text editor and a browser you already own. In this chapter you will learn the actual names and jobs of the languages of the web, and by the end you will understand exactly what is happening inside any page you build or visit.</p>
+    <p>There are three of them, and the cleanest way to hold them in your head is a three-part analogy about a human body. HTML is the skeleton. CSS is the skin and clothing. JavaScript is the muscles. Let's meet each.</p>
+    <div class="beat">The skeleton — HTML</div>
+    <p><em class="term">HTML</em> — HyperText Markup Language — is the structure and content of a page. It is not a programming language; it is a <em class="term">markup</em> language, which means it does not calculate or make decisions — it <em>labels</em>. HTML's job is to take raw content and tag each piece with what it <em>is</em>: this is a heading, this is a paragraph, this is an image, this is a link, this is a list. It works through <em class="term">tags</em> written in angle brackets, almost always in pairs that open and close around content — <em>&lt;p&gt;</em> to begin a paragraph and <em>&lt;/p&gt;</em> to end it. Write <em>&lt;h1&gt;Hospital Records&lt;/h1&gt;</em> and you have told the browser: this text is the most important heading on the page. That is the whole idea — content, wrapped in labels that say what it means.</p>
+    <p>The most powerful tag of all is the one that gives the web its name: the <em class="term">hyperlink</em>. A link is what lets one page point to another anywhere on Earth, and it is the reason the web is a <em>web</em> and not a pile of unconnected documents. Every time you click through from one page to another, you are following an HTML link — the single feature, invented by Tim Berners-Lee at the end of the 1980s, that turned a network of computers into a connected universe of human knowledge.</p>
+    <div class="beat">The skin and clothing — CSS</div>
+    <p>HTML alone is bare bones — literally. A page with only HTML is readable but plain: black text on a white background, everything stacked in a column. Everything you find beautiful about the web — colour, spacing, fonts, layout, the whole feeling of a well-designed page — comes from the second language: <em class="term">CSS</em>, Cascading Style Sheets. If HTML says <em>what</em> things are, CSS says how they should <em>look</em>. It sets the colours, chooses the fonts, controls the spacing, arranges the boxes, and decides where everything sits on the page.</p>
+    <p>The reason the two languages are kept separate is one of the great design decisions of the web, and it is worth understanding. By dividing <em>structure</em> (HTML) from <em>appearance</em> (CSS), you can completely redesign how a site looks — new colours, new layout, an entirely fresh identity — without touching a single word of its content, just by swapping the style sheet. Content and presentation are independent. This is exactly the discipline behind the very page you are reading: its words are one layer, and every colour, serif, and margin you see is a separate styling layer laid over the top.</p>
+    <div class="beat">The muscles — JavaScript</div>
+    <p>HTML structures, CSS beautifies — but both are static. To make a page <em>do</em> things — respond to a click, check a form before it is sent, update part of the screen without reloading, run an interactive activity — you need the third language, and this one is a true programming language: <em class="term">JavaScript</em>. JavaScript can make decisions, react to what the user does, and change the page live, in the moment. Every interactive thing you have ever used in a browser — a dropdown that opens, a game, a map you can drag, a running total that updates as you type — is JavaScript at work. It is the language that turned the web from a library you read into a place you <em>use</em>.</p>
+    <div class="beat">The problem that reshaped everything — responsive design</div>
+    <p>For the web's first fifteen years, there was one kind of screen: a desktop monitor, wide and roughly the same size for everyone. Designers built pages to a fixed width and were done. Then, in 2007, the smartphone arrived, and within a few years most of the planet was reaching the web through a glass rectangle in their palm — and every one of those fixed-width pages was suddenly a disaster, a tiny unreadable postage stamp you had to pinch and drag around.</p>
+    <p>The answer was a new philosophy called <em class="term">responsive design</em>: build a single page that <em>detects the size of the screen it is being viewed on and rearranges itself to fit</em>. On a wide monitor it might show three columns side by side; on a phone those same columns stack into one tall, thumb-friendly ribbon; images shrink, menus fold away into a tappable icon, text stays readable. It is one page, one set of files, that reshapes itself for any device from a watch to a wall display. This is why a well-made modern site feels native whether you open it on a laptop or a phone — and it is the standard every page in this course is built to meet. Responsive design is not a luxury; with most of the world now online through mobile devices, it is the baseline of building for real people.</p>
+    <div class="pull">Divide what a thing is from how it looks, and you can give a page an entirely new face without changing a single word it says.</div>
+    <div class="bridge">
+    <p>So you can build a page, style it, make it move, and shape it to fit any screen. But once you have built it, a hard question appears — the same one that greeted every early web-maker. Your files sit on your own computer, where only you can see them. To let the world reach your page, it has to live on a <em>server</em> that never sleeps, that anyone can reach at any hour. Buying and running such a machine yourself is expensive and technical. The solution to that problem quietly became one of the largest shifts in the entire history of computing — the move of everything, our files, our software, our whole digital lives, off our own machines and up into what we now casually call the cloud.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c4" data-idx="3">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Four</div>
+      <h2>The Cloud &amp; Software as a Service</h2>
+      <span class="era">Where "the cloud" actually is, and why your software stopped living on your computer</span>
+    </div>
+    <p class="lead">Let us begin by demolishing the word. "The cloud" is the most misleading term in modern technology, because it makes people picture something floating, weightless, everywhere and nowhere. The truth is the opposite and far more interesting: the cloud is thousands of very physical, very heavy computers — <em class="term">servers</em> — packed into enormous warehouses called <em class="term">data centres</em>, humming, drawing colossal amounts of electricity, cooled around the clock, scattered across the planet. When you "save something to the cloud," you are saving it onto a specific hard drive in a specific building, possibly on another continent. There is no cloud. There is just someone else's computer — many of them — that you rent instead of owning.</p>
+    <div class="beat">The old way, and why it hurt</div>
+    <p>To feel why this changed everything, remember how software used to work, which is how it worked for the first fifty years of computing. You bought a program in a box, on a disc. You <em>installed</em> it onto your one particular computer, where it lived. Your files lived there too, on that machine's own drive. This had three miseries baked into it. If that computer broke or was stolen, your files were simply gone. If you were at a different computer, your program and your work were unreachable. And when a new version came out, you had to buy the box and install it all over again, on every machine. Your digital life was chained to one physical object.</p>
+    <div class="beat">The shift — software you visit instead of install</div>
+    <p>The cloud dissolved all three problems at once, through a model with a precise name: <em class="term">Software as a Service</em>, or <em class="term">SaaS</em>. The idea is a genuine reversal. Instead of buying software and installing it on your machine, you <em>access</em> software that runs on the provider's servers, usually straight through your web browser, usually for a recurring subscription rather than a one-time purchase. You do not own a copy. You use the living service, and it lives in the data centre.</p>
+    <p>You already live inside SaaS, probably without ever having named it. <em class="term">Gmail</em> is SaaS — your email is not on your computer, it is on Google's servers, and you visit it. <em class="term">Google Docs</em> is SaaS — the word processor is not installed anywhere on your machine; you open a browser tab and there it is. <em class="term">Google Drive</em>, <em class="term">OneDrive</em>, and <em class="term">Dropbox</em> are the storage version of the same idea — your files kept on distant servers, reachable from any device. <em class="term">Netflix</em>, <em class="term">Canva</em>, <em class="term">Spotify</em>: all SaaS. The pattern is everywhere once you learn to see it: the software is a place you go, not a thing you have.</p>
+    <div class="beat">Why this was such a leap</div>
+    <p>Consider the payoffs, because they are the reason the whole industry moved. Your work is now reachable from <em>any</em> device, anywhere — start a document on a school computer, finish it on your phone on the bus, and it is the same file, always current. If your laptop is dropped in a river, nothing is lost, because nothing important was on the laptop. Updates simply <em>happen</em> on the provider's end; you always have the newest version without lifting a finger. And then the feature that reshaped how humans work together: <em class="term">real-time collaboration</em>. Because the single true copy of a document lives on one server rather than scattered across everyone's machines, many people can open and edit it at the same moment and watch each other's changes appear live. The old nightmare of emailing "report_final_v2_ACTUAL_final.docx" around a group and losing track of who changed what simply vanishes. One document, one place, everyone at once.</p>
+    <div class="beat">The other side of the bargain — security and backup</div>
+    <p>But hand your files to someone else's computer and a sober set of questions arrives, and the course insists you take them seriously. If your data lives on a company's servers, then your <em class="term">privacy</em> depends on that company's honesty and competence, and your <em>access</em> depends on their servers staying online and your account staying secure. This raises the discipline of <em class="term">cloud security</em>: a strong, unique password on the account that now holds your whole digital life; <em class="term">two-factor authentication</em> so a stolen password alone cannot open the door; and a clear head about what is sensitive enough that you should think twice before storing it on someone else's machine at all.</p>
+    <p>It also reframes the oldest rule in computing: <em class="term">back up your data</em>. The cloud is <em>a</em> backup — keeping a copy off your own fragile device is genuinely safer than not — but it is not a magic one. Accounts get locked, companies fail, files get deleted or corrupted and the deletion syncs everywhere. The professional's principle is the <em class="term">3-2-1 rule</em>: keep <em>three</em> copies of anything you cannot bear to lose, on <em>two</em> different kinds of storage, with at least <em>one</em> of them somewhere else entirely. The cloud is a powerful part of that plan. It is not a substitute for having one.</p>
+    <div class="pull">There is no cloud. There is only someone else's computer — thousands of them, in warehouses, humming — that you rent instead of owning.</div>
+    <div class="bridge">
+    <p>And there, quietly, we have arrived somewhere serious. Look at what has happened across these four chapters: your messages, your photographs, your schoolwork, your conversations, your money, your medical records — the whole substance of a modern life — now travel across shared cables and rest on machines you will never see, owned by companies you will never meet. That is a staggering amount of trust to place in an invisible system. Which means the final and most important question of this reading is not technical at all. It is human. Now that we all live inside this machine, how do we live inside it <em>well</em> — safely, decently, and fairly?</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c5" data-idx="4">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Five</div>
+      <h2>Digital Citizenship</h2>
+      <span class="era">Netiquette, privacy, and keeping yourself safe in a shared world</span>
+    </div>
+    <p class="lead">Everything before this chapter was about machines. This chapter is about you. Because a citizen of the digital world needs more than a working knowledge of packets and protocols — they need judgement, manners, and a set of habits that keep them and the people around them safe. This is the part of the course that will matter on the day you least expect it, and it rests on one uncomfortable truth: online, you are never as anonymous, as private, or as safe as it feels. The screen creates an illusion of distance and privacy that simply is not there.</p>
+    <div class="beat">How to behave — netiquette and digital citizenship</div>
+    <p>Start with the gentlest idea, which is also the foundation: <em class="term">netiquette</em>, the etiquette of the network — the basic courtesy of behaving online as a decent person behaves anywhere. It sounds obvious until you notice how routinely it is forgotten, because a screen makes it fatally easy to forget that a real human being is reading. The core rule fits in one sentence: <em>there is a person on the other end.</em> Don't type what you would never say to someone's face. Don't join a pile-on. Assume good faith before you assume malice, since tone vanishes in text and a joke can read as a knife. Being a good <em class="term">digital citizen</em> means carrying your real-world conscience with you onto the screen instead of leaving it at the login page.</p>
+    <p>This carries a specific, career-relevant edge for anyone entering a profession — and for a future healthcare worker it is not optional but ethical and legal. Your <em class="term">digital footprint</em> — the trail of posts, photos, and comments you leave — is permanent, public in ways you cannot control, and searchable by employers, boards, and patients. And in medicine, a single careless post about a patient, even with no name attached, can violate <em class="term">confidentiality</em>, end a career, and betray a person at their most vulnerable. The rule for a health professional online is absolute: what happens with a patient never, under any framing, appears on a screen anyone else can see.</p>
+    <div class="beat">What they know about you — privacy</div>
+    <p>Now the hard truth about <em class="term">privacy</em>, and it deserves a clear eye rather than either panic or denial. Most of the internet's great free services are not charities, and they are not really free. The bargain, usually unspoken, is this: you get the service, and in exchange the company collects <em class="term">data</em> about you — what you search, what you watch, where you go, how long you linger, who your friends are — and uses it, largely to sell advertising aimed precisely at you. The industry's own dark joke captures it exactly: when the product is free, <em>you</em> are the product. This is not a reason to flee the internet. It is a reason to use it with your eyes open, understanding that convenience is being traded for information about your life.</p>
+    <p>Open eyes translate into concrete habits. Read, at least once, what a service says it will do with your data. Go into the <em class="term">privacy settings</em> of the apps you live in and actually set them, rather than accepting whatever default collects the most. Think for one extra second before posting something that will outlive the mood that produced it. And remember the internet's most unforgiving law: <em>the internet does not forget.</em> A deleted post may already be screenshotted, cached, or copied. The safest assumption is that anything you put online could one day be seen by anyone — a future employer, a stranger, your own children.</p>
+    <div class="beat">Who is trying to trick you — security</div>
+    <p>Finally, the threats — because a shared world contains people who want to take from you, and the single most important fact about modern digital danger is that it usually does not attack your computer. It attacks <em>you</em>. The most common way people are harmed online is not some genius breaking through firewalls; it is <em class="term">social engineering</em> — simply tricking a human into opening the door themselves. Understanding that shifts your defence from the machine to your own judgement, which is exactly where it belongs.</p>
+    <p>The workhorse of that trickery is <em class="term">phishing</em>: a message — email, text, DM — disguised as something you trust (your bank, a delivery service, a school, a friend) designed to panic or tempt you into clicking a poisoned link or surrendering a password. The tells are learnable and consistent: false urgency ("your account will be closed in 24 hours!"), a link whose real destination does not match the name shown, requests for information a legitimate organisation would never ask for by message, and small wrongnesses in address or grammar. The defence is a single habit worth more than any software: <em class="term">slow down and verify.</em> When a message pressures you to act instantly, that pressure is itself the warning sign. Stop. Check the sender. Reach the organisation through a channel you already trust rather than the one the message handed you.</p>
+    <p>Around that central rule sit three quieter guardians. A <em class="term">strong, unique password</em> for every important account — long, unguessable, and never reused, so that one breached site cannot unlock the rest of your life — ideally held in a <em class="term">password manager</em> so you need remember only one. <em class="term">Two-factor authentication</em>, which demands a second proof (a code on your phone) so a stolen password alone is not enough. And plain <em class="term">skepticism</em> as a standing posture: the willingness to doubt a too-good offer, an unexpected link, an urgent stranger. In the digital world, a healthy suspicion is not paranoia. It is literacy.</p>
+    <div class="pull">The most dangerous attacks do not target your computer. They target you — and the best firewall you will ever own is the habit of slowing down.</div>
+    <div class="bridge">
+    <p>These are the skills of protecting yourself. But digital citizenship reaches past the self, because the network we have been describing was never handed out equally. For everything the internet gives, it gives it unevenly — and a true account of living in the IT era has to face the millions it reaches last, or not at all, and ask what we owe them. That question closes this reading.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c6" data-idx="5">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Six</div>
+      <h2>The Digital Divide &amp; Responsible Technology Use</h2>
+      <span class="era">Who the network reaches last, and how to live with a tool this powerful</span>
+    </div>
+    <p class="lead">It is easy, reading a page like this on a device that can summon the world, to assume everyone lives this way. They do not. Roughly a third of humanity has never been online at all, and hundreds of millions more have access so slow, so costly, or so unreliable that the digital world we have described is, for them, a rumour. This gap has a name — the <em class="term">digital divide</em> — and in an age where school, work, government, healthcare, and money are all moving online, being on the wrong side of it is no longer a mild inconvenience. It is a form of exclusion from modern life itself.</p>
+    <div class="beat">What the divide really is</div>
+    <p>The digital divide is the gap between those who have real access to information technology and those who do not — and it is deeper than simply owning a device. It has several layers, and they stack. There is the divide of <em class="term">infrastructure</em>: whole regions, often rural or poor, where fast internet simply has not been built. There is the divide of <em class="term">affordability</em>: places where the network exists but a data plan or a device costs more than a family can spare. And there is the divide of <em class="term">skills</em> — <em class="term">digital literacy</em> — where someone has a connection and a phone but was never taught to use them safely or well, and so is left exposed to every scam and shut out of every opportunity the tools could offer.</p>
+    <p>This is not an abstraction, and it is not only a problem of distant places — it runs through cities, through households, through classrooms. When a school moves its lessons online, the student without a reliable connection at home does not merely struggle; they fall behind through no fault of their own. When a government puts its services on a website, the citizen who cannot reach or navigate that site loses access to their own rights. Every time society assumes "everyone is online," it quietly abandons the people who are not.</p>
+    <div class="beat">The duty that comes with access — accessibility</div>
+    <p>There is a second, closely related divide that a health-facing course must name directly: the gap faced by people with <em class="term">disabilities</em>. A website built without care can be a locked door to a person who is blind and navigates by a screen reader, or who cannot use a mouse, or who cannot hear a video's audio. <em class="term">Accessibility</em> is the discipline of building digital things that everyone can use — pages that work with screen readers, images that carry text descriptions, videos with captions, controls reachable without a mouse, colours with enough contrast to read (a principle this very reading is built on). Accessibility is not a favour done for a few. It is a basic mark of whether a thing was built for <em>all</em> its users or only the convenient ones — and for anyone heading into patient care, designing and choosing tools that do not exclude the vulnerable is part of the job.</p>
+    <div class="beat">Living well with the machine — responsible use</div>
+    <p>And so the reading closes not with the network but with you, holding it. A tool this powerful shapes its user, and the last skill of the digital citizen is the hardest: using it deliberately rather than being used by it. The same platforms that connect us are engineered — precisely, profitably — to capture and hold your attention as long as possible, because your attention is what they sell. Recognising that design is the first act of freedom from it.</p>
+    <p>Responsible use is a small set of honest habits. <em class="term">Digital wellness</em>: noticing how the hours online actually leave you feeling, and being willing to set the thing down — protecting sleep, real conversation, and quiet from a device built never to let you go. A <em class="term">critical eye</em> for information: the same internet that carries humanity's knowledge carries its lies just as fast, so the literate citizen learns to check a claim before believing it and, above all, before sharing it, because passing on misinformation makes you part of the machinery of harm. And a spirit of <em class="term">contribution over consumption</em>: the web at its best was built by people adding to the common good — a helpful answer, an honest review, an accessible page, a kindness in a comment section — rather than only taking from it.</p>
+    <p>That is where this course has been travelling all along. It began with pebbles and tally bones — the first time a human reached past their own mind for a tool. It ends with a tool so vast it holds the thinking of the entire species, resting in your hand. The machines were the easy part; humanity built them across eight thousand years. The harder and more human question is the one you now carry forward: not what the technology can do, but what <em>you</em> will do with it — how to be, in a world made of information, a person of judgement, decency, and care.</p>
+    <div class="pull">The machines were the easy part. The harder question is the one you carry out of this course: not what the technology can do, but what you will do with it.</div>
+    <div class="bridge">
+    <p>From a wire under the sea to a duty in your hands — that is the arc of the prefinals. You now understand the internet as a physical network of packets and protocols, the web as a layer of addresses and pages your browser rebuilds, the three languages any page is made of, the cloud as rented computers in distant warehouses, and the human disciplines — safety, privacy, fairness, restraint — that decide whether all this power does good. Carry the last question with you. It does not have a single answer, and it is the whole point.</p>
+    </div>
+  </section>
+
+  <section class="refs" id="refs" data-idx="6">
+    <div class="ch-head">
+      <div class="ch-num">Sources &amp; Further Reading</div>
+      <h2>References</h2>
+      <span class="era">Where these ideas come from, and where to read further</span>
+    </div>
+    <p>This reading synthesises standard, well-established explanations of internet and web technology, cloud computing, and digital-citizenship practice, aligned to the GEEL 1 course outline (weeks 10&ndash;14). The core references below are the open textbooks assigned in the syllabus; the remaining entries point to widely used, authoritative explanations of each concept.</p>
+    <ol class="ref-list">
+      <li>Bourgeois, D. T., Smith, J. L., Wang, S., &amp; Mortati, J. (2019). <i>Information Systems for Business and Beyond.</i> Saylor Foundation / Open Textbook. On networking, the internet, the web, and information security. <a href="https://opentextbook.site/informationsystems2019/">opentextbook.site</a></li>
+      <li>Pham, L. T., Desai-Naik, T., Hammond, L., &amp; Abdeljabbar, W. (2021). <i>Information Systems for Business.</i> ASCCC OERI / LibreTexts. On cloud computing, SaaS, and IT infrastructure. <a href="https://workforce.libretexts.org/Bookshelves/Information_Technology/Information_Systems">workforce.libretexts.org</a></li>
+      <li>Raisinghani, M. S. (2025). <i>Foundations of Information Systems.</i> OpenStax. On IT/ICT fundamentals, networks, and security. <a href="https://openstax.org/details/books/foundations-information-systems">openstax.org</a></li>
+      <li>Mozilla Developer Network (MDN). <i>How the Web Works</i>, <i>What is a URL?</i>, and <i>HTML/CSS/JavaScript basics.</i> On clients and servers, DNS, HTTP, and the three web languages. <a href="https://developer.mozilla.org/en-US/docs/Learn">developer.mozilla.org</a></li>
+      <li>Internet Society. <i>How the Internet Works</i> &amp; <i>Brief History of the Internet.</i> On packet switching, TCP/IP, and the network's resilient design. <a href="https://www.internetsociety.org/internet/history-internet/brief-history-internet/">internetsociety.org</a></li>
+      <li>Cloudflare Learning Center. <i>What is DNS?</i>, <i>What is HTTPS?</i>, and <i>What is the Cloud?</i> On name resolution, encryption, and data centres. <a href="https://www.cloudflare.com/learning/">cloudflare.com/learning</a></li>
+      <li>World Wide Web Consortium (W3C). <i>Web Content Accessibility Guidelines (WCAG)</i> and <i>Accessibility Fundamentals.</i> On building digital content usable by everyone. <a href="https://www.w3.org/WAI/fundamentals/">w3.org/WAI</a></li>
+      <li>International Telecommunication Union (ITU). <i>Measuring Digital Development: Facts and Figures.</i> On global internet access and the digital divide. <a href="https://www.itu.int/en/ITU-D/Statistics/">itu.int</a></li>
+      <li>General historical and technical consensus, corroborated across the above and standard computing references, for the origins of packet switching and ARPANET, Tim Berners-Lee's invention of the World Wide Web and the hyperlink (1989&ndash;1991), the TCP/IP protocol suite (Cerf &amp; Kahn), the rise of responsive design following the 2007 smartphone era, the Software-as-a-Service model, and current phishing, password, and two-factor-authentication security guidance.</li>
+    </ol>
+  </section>
+
+</article>
+
+<footer class="end">
+  <div class="mark">✦ ✦ ✦</div>
+  <p>The Web That Ate the World · GEEL 1 — Living in the IT Era · Prefinals</p>
+  <button class="dlbtn" id="downloadBtn">
+    <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+    Save this reading
+  </button>
+</footer>
+
+<button id="totop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24"><path d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>
+</button>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "itict_longread_prefinals_progress_v1";
+  var railFill = document.querySelector("#rail > span");
+  var chapters = Array.prototype.slice.call(document.querySelectorAll("[data-idx]")).filter(function(el){ return el.tagName === "SECTION"; });
+  var tocLinks = document.querySelectorAll("nav.toc a");
+  var toTop = document.getElementById("totop");
+  var CH_TITLES = ["Chapter I — What ICT Is & How the Internet Works","Chapter II — The Web & the Browser","Chapter III — Building the Web","Chapter IV — The Cloud & SaaS","Chapter V — Digital Citizenship","Chapter VI — The Digital Divide","References"];
+  function loadState(){ try{ var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function saveState(s){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){} }
+  var state = loadState() || { lastIdx:0, maxIdx:-1, scrollY:0 };
+  function updateRail(){
+    var doc = document.documentElement;
+    var scrollable = doc.scrollHeight - doc.clientHeight;
+    var pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    railFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    toTop.style.display = window.scrollY > 900 ? "grid" : "none";
+  }
+  var current = -1;
+  function updateCurrent(){
+    var mark = window.scrollY + window.innerHeight * 0.33;
+    var idx = 0;
+    for(var i=0;i<chapters.length;i++){ if(chapters[i].offsetTop <= mark){ idx = parseInt(chapters[i].getAttribute("data-idx"),10); } }
+    if(idx !== current){
+      current = idx;
+      for(var j=0;j<tocLinks.length;j++){
+        var li = parseInt(tocLinks[j].getAttribute("data-idx"),10);
+        if(li < idx) tocLinks[j].classList.add("done"); else tocLinks[j].classList.remove("done");
+      }
+    }
+    state.lastIdx = current < 0 ? 0 : current;
+    if(state.lastIdx > state.maxIdx) state.maxIdx = state.lastIdx;
+    state.scrollY = window.scrollY;
+  }
+  var ticking = false;
+  function onScroll(){ if(!ticking){ window.requestAnimationFrame(function(){ updateRail(); updateCurrent(); ticking = false; }); ticking = true; } }
+  var saveTimer = null;
+  function scheduleSave(){ if(saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(function(){ saveState(state); }, 400); }
+  window.addEventListener("scroll", function(){ onScroll(); scheduleSave(); }, {passive:true});
+  window.addEventListener("resize", updateRail, {passive:true});
+  window.addEventListener("beforeunload", function(){ saveState(state); });
+  var resumeEl = document.getElementById("resume");
+  var resumeLabel = document.getElementById("resumeLabel");
+  var savedForResume = loadState();
+  if(savedForResume && savedForResume.scrollY > 600 && savedForResume.lastIdx > 0){
+    resumeLabel.textContent = CH_TITLES[savedForResume.lastIdx] || "where you stopped";
+    resumeEl.style.display = "block";
+    document.getElementById("resumeGo").addEventListener("click", function(){ window.scrollTo({ top: savedForResume.scrollY, behavior: "smooth" }); resumeEl.style.display = "none"; });
+    document.getElementById("resumeX").addEventListener("click", function(){ resumeEl.style.display = "none"; });
+  }
+  document.getElementById("tocBtn").addEventListener("click", function(){ document.getElementById("toc").scrollIntoView({behavior:"smooth", block:"start"}); });
+  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  document.getElementById("downloadBtn").addEventListener("click", function(){
+    try{
+      var html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      var blob = new Blob([html], {type:"text/html"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "the-web-that-ate-the-world.html";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    }catch(e){ alert("Download unavailable in this view. Use your browser's Save Page option instead."); }
+  });
+  updateRail();
+  updateCurrent();
+})();
+</script>
+
+</body>
+</html>

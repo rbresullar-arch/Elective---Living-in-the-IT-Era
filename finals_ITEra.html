@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The World in Your Pocket — GEEL 1 Finals</title>
+<style>
+  :root{
+    --paper:#f6f1e7;--paper-deep:#efe7d6;--ink:#20211d;--ink-soft:#4b4a42;--ink-faint:#7c7a6d;
+    --rule:#d8cdb6;--ember:#b8442b;--ember-deep:#8a2f1d;--brass:#a6843c;--stage:#fffdf7;
+    --shadow:rgba(40,32,16,.14);--maxw:680px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;font-size:19px;line-height:1.72;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden;}
+  #rail{position:fixed;top:0;left:0;height:3px;width:100%;background:transparent;z-index:60;pointer-events:none;}
+  #rail>span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--brass),var(--ember));transition:width .12s linear;}
+  header.bar{position:sticky;top:0;z-index:50;background:rgba(246,241,231,.92);backdrop-filter:saturate(140%) blur(8px);-webkit-backdrop-filter:saturate(140%) blur(8px);border-bottom:1px solid var(--rule);padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;display:flex;align-items:center;gap:12px;}
+  header.bar .brandmark{font-family:Georgia,serif;font-weight:700;letter-spacing:.02em;font-size:14px;color:var(--ember-deep);line-height:1.05;flex:1;text-transform:uppercase;}
+  header.bar .brandmark small{display:block;font-weight:400;font-size:11px;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase;margin-top:2px;}
+  .barbtn{appearance:none;border:1px solid var(--rule);background:var(--stage);color:var(--ink-soft);font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .barbtn:active{transform:scale(.96);}
+  .barbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;}
+  .hero{max-width:var(--maxw);margin:0 auto;padding:54px 24px 34px;}
+  .eyebrow{font-family:Georgia,serif;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ember);font-weight:700;margin:0 0 20px;}
+  .hero h1{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(34px,9vw,52px);line-height:1.04;letter-spacing:-.015em;margin:0 0 20px;}
+  .hero h1 em{font-style:italic;color:var(--ember-deep);}
+  .hero .dek{font-size:19px;color:var(--ink-soft);line-height:1.6;margin:0;font-style:italic;}
+  .hero .meta{margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);font-family:Georgia,serif;font-size:13px;letter-spacing:.04em;color:var(--ink-faint);}
+  #resume{display:none;max-width:var(--maxw);margin:0 auto 8px;padding:0 20px;}
+  #resume .card{background:linear-gradient(180deg,#fff8ec,#fdefd7);border:1px solid var(--brass);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 20px -12px var(--shadow);}
+  #resume .ic{flex:none;width:34px;height:34px;border-radius:9px;background:var(--ember);display:grid;place-items:center;}
+  #resume .ic svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;}
+  #resume .txt{flex:1;line-height:1.3;}
+  #resume .txt b{font-family:Georgia,serif;font-size:15px;display:block;}
+  #resume .txt span{font-size:13px;color:var(--ink-soft);}
+  #resume button{flex:none;border:none;background:var(--ember);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:999px;cursor:pointer;}
+  #resume button:active{transform:scale(.96);}
+  #resume .x{background:transparent;color:var(--ink-faint);padding:6px;font-size:20px;line-height:1;}
+  nav.toc{max-width:var(--maxw);margin:12px auto 0;padding:26px 24px 30px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+  nav.toc h2{font-family:Georgia,serif;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 18px;}
+  nav.toc ol{list-style:none;margin:0;padding:0;}
+  nav.toc a{display:flex;align-items:baseline;gap:14px;padding:11px 0;text-decoration:none;color:var(--ink);border-bottom:1px dotted var(--rule);}
+  nav.toc li:last-child a{border-bottom:none;}
+  nav.toc a .n{font-family:Georgia,serif;font-size:13px;color:var(--ember);font-weight:700;min-width:26px;font-variant-numeric:tabular-nums;}
+  nav.toc a .t{flex:1;font-size:17px;line-height:1.35;}
+  nav.toc a .read{font-size:11px;color:var(--brass);letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity .2s;}
+  nav.toc a.done .read{opacity:1;}
+  nav.toc a.done .t{color:var(--ink-faint);}
+  article{max-width:var(--maxw);margin:0 auto;padding:0 24px 40px;}
+  section.chapter{padding:52px 0 8px;scroll-margin-top:70px;}
+  section.chapter:first-of-type{padding-top:40px;}
+  .ch-head{margin:0 0 30px;}
+  .ch-num{font-family:Georgia,serif;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);font-weight:700;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .ch-num::after{content:"";flex:1;height:1px;background:var(--rule);}
+  .ch-head h2{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(27px,7vw,38px);line-height:1.1;letter-spacing:-.01em;margin:0;}
+  .ch-head .era{display:block;margin-top:10px;font-family:Georgia,serif;font-style:italic;font-size:15px;color:var(--ink-faint);letter-spacing:.02em;}
+  article p{margin:0 0 22px;}
+  article p.lead::first-letter{float:left;font-family:Georgia,serif;font-weight:700;color:var(--ember-deep);font-size:64px;line-height:.82;padding:6px 10px 0 0;}
+  .beat{font-family:Georgia,serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);font-weight:700;margin:34px 0 -6px;display:flex;align-items:center;gap:10px;}
+  .beat::before{content:"";width:20px;height:1px;background:var(--brass);}
+  em.term{font-style:normal;font-weight:700;color:var(--ember-deep);}
+  .pull{margin:30px 0;padding:2px 0 2px 20px;border-left:3px solid var(--ember);font-family:Georgia,serif;font-style:italic;font-size:21px;line-height:1.5;color:var(--ink-soft);}
+  .bridge{margin:30px 0 4px;padding-top:24px;border-top:1px solid var(--rule);font-style:italic;color:var(--ink-soft);}
+  section.refs{padding:52px 0 20px;scroll-margin-top:70px;}
+  section.refs .ref-list{list-style:none;margin:24px 0 0;padding:0;counter-reset:ref;}
+  section.refs .ref-list li{position:relative;padding:0 0 20px 34px;font-size:15px;line-height:1.55;color:var(--ink-soft);}
+  section.refs .ref-list li::before{counter-increment:ref;content:counter(ref);position:absolute;left:0;top:0;font-family:Georgia,serif;font-size:12px;font-weight:700;color:var(--ember);border:1px solid var(--rule);border-radius:50%;width:22px;height:22px;display:grid;place-items:center;}
+  section.refs .ref-list i{color:var(--ink);}
+  section.refs .ref-list a{color:var(--ember-deep);word-break:break-word;}
+  footer.end{max-width:var(--maxw);margin:0 auto;padding:40px 24px calc(env(safe-area-inset-bottom) + 60px);border-top:1px solid var(--rule);text-align:center;}
+  footer.end .mark{font-family:Georgia,serif;color:var(--ember);font-size:22px;letter-spacing:.3em;margin-bottom:18px;}
+  footer.end p{font-size:13px;color:var(--ink-faint);margin:0 0 20px;font-family:Georgia,serif;}
+  .dlbtn{appearance:none;border:1px solid var(--ember);background:transparent;color:var(--ember-deep);font:inherit;font-size:14px;font-weight:600;padding:11px 22px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+  .dlbtn:active{transform:scale(.97);}
+  .dlbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;}
+  #totop{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:40;width:46px;height:46px;border-radius:50%;border:1px solid var(--rule);background:var(--stage);color:var(--ember-deep);display:none;place-items:center;box-shadow:0 8px 22px -10px var(--shadow);cursor:pointer;}
+  #totop svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;}
+  @media (max-width:420px){body{font-size:18px;}.hero{padding:44px 20px 30px;}article{padding:0 20px 40px;}}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{transition:none!important;}}
+</style>
+</head>
+<body>
+
+<div id="rail"><span></span></div>
+
+<header class="bar">
+  <div class="brandmark">The World in Your Pocket<small>GEEL 1 · Finals</small></div>
+  <a class="barbtn" href="index.html" aria-label="Home">
+    <svg viewBox="0 0 24 24"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/></svg>
+    Home
+  </a>
+  <button class="barbtn" id="tocBtn" aria-label="Jump to contents">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+    Contents
+  </button>
+</header>
+
+<div id="resume">
+  <div class="card">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></div>
+    <div class="txt"><b>Pick up where you left off</b><span id="resumeLabel">Chapter</span></div>
+    <button id="resumeGo">Resume</button>
+    <button class="x" id="resumeX" aria-label="Dismiss">×</button>
+  </div>
+</div>
+
+<div class="hero">
+  <p class="eyebrow">A Long Read · Living in the IT Era</p>
+  <h1>What we do<br>with a world<br><em>this connected.</em></h1>
+  <p class="dek">The road that began with a notch in a bone ends here — with commerce, money, and identity all living online, a computer in every pocket, and machines that seem to think. This is the story of the digital economy, the threats that hunt inside it, the technologies arriving next, and the one question none of them can answer: what kind of person you will be inside the world we have built.</p>
+  <div class="meta">Six chapters · roughly a 38-minute read · your place is saved automatically</div>
+</div>
+
+<nav class="toc" id="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#c1" data-idx="0"><span class="n">I</span><span class="t">Digital Business &amp; the Online Marketplace</span><span class="read">Read</span></a></li>
+    <li><a href="#c2" data-idx="1"><span class="n">II</span><span class="t">Digital Payments &amp; the Architecture of Trust</span><span class="read">Read</span></a></li>
+    <li><a href="#c3" data-idx="2"><span class="n">III</span><span class="t">Cybersecurity &amp; Digital Privacy</span><span class="read">Read</span></a></li>
+    <li><a href="#c4" data-idx="3"><span class="n">IV</span><span class="t">Mobile Technologies &amp; the App</span><span class="read">Read</span></a></li>
+    <li><a href="#c5" data-idx="4"><span class="n">V</span><span class="t">Emerging Tech — AI, IoT &amp; Blockchain</span><span class="read">Read</span></a></li>
+    <li><a href="#c6" data-idx="5"><span class="n">VI</span><span class="t">Digital Ethics &amp; the Future in Your Hands</span><span class="read">Read</span></a></li>
+    <li><a href="#refs" data-idx="6"><span class="n">✦</span><span class="t">References</span><span class="read">Read</span></a></li>
+  </ol>
+</nav>
+
+<article>
+
+  <section class="chapter" id="c1" data-idx="0">
+    <div class="ch-head">
+      <div class="ch-num">Chapter One</div>
+      <h2>Digital Business &amp; the Online Marketplace</h2>
+      <span class="era">How the shop left the street and moved into your pocket</span>
+    </div>
+    <p class="lead">Within living memory, buying something meant a journey. You went to a place, a physical shop with walls and shelves and opening hours, you handed over cash, and you carried the thing home. That entire ritual — thousands of years old, older than money itself — has quietly collapsed in a single generation. Today a student in Davao can buy a component from a factory in Shenzhen, from a phone, in bed, at two in the morning, and have it arrive at the door. This chapter is about that collapse: what <em class="term">e-commerce</em> actually is, how the online marketplace works, and why it reorganised the economic life of the planet.</p>
+    <div class="beat">What e-commerce really changed</div>
+    <p><em class="term">E-commerce</em> — electronic commerce — is simply the buying and selling of goods and services over the internet. But that plain definition hides a revolution, because moving the shop online removed three limits that had bound commerce since the beginning. It removed the limit of <em class="term">geography</em>: a seller is no longer confined to customers who can physically walk in, but can reach anyone on Earth with a connection. It removed the limit of <em class="term">time</em>: the digital shop never closes, never sleeps, sells while its owner dreams. And it removed the limit of <em class="term">shelf space</em>: a physical store can only stock what fits inside it, but an online store can offer a near-infinite catalogue, because its "shelves" are just entries in a database.</p>
+    <p>That last change has a name worth knowing — the <em class="term">long tail</em>. A physical bookshop can only afford to stock the few thousand titles that sell well enough to earn their place on a shelf. An online store, carrying no cost for an item just sitting in a database, can offer millions — including the strange, niche, once-a-year purchases that no physical shop could justify. Add up all those rarely-bought oddities and they rival the blockbusters. The internet made it profitable to sell the unpopular, and in doing so served tastes the old economy simply abandoned.</p>
+    <div class="beat">The shapes of the digital marketplace</div>
+    <p>Not all e-commerce is the same, and the differences matter. The clearest split is by <em>who sells to whom</em>. <em class="term">B2C</em> — business to consumer — is the familiar kind: a company selling to you, the individual, as when you buy from Lazada's own stock. <em class="term">B2B</em> — business to business — is companies selling to other companies, quietly the largest slice of all e-commerce by value though invisible to most shoppers: the supplier selling parts to a manufacturer. And <em class="term">C2C</em> — consumer to consumer — is people selling to each other, the world of Facebook Marketplace and the second-hand listing, where the "company" is just a platform standing between two ordinary strangers.</p>
+    <p>That last model reveals the real genius of the modern marketplace, and it is not really about selling — it is about connecting. Platforms like <em class="term">Shopee</em>, <em class="term">Lazada</em>, and Facebook Marketplace often own very little of what is sold on them. They are not shops so much as <em class="term">intermediaries</em>: they build the meeting place, the search, the payment system, and the trust, and then they let millions of independent sellers and buyers find each other inside it. Their product is not goods. Their product is the marketplace itself. This is why a handful of platforms can host the commerce of entire nations — they did not out-stock the shops; they became the ground the shops now stand on.</p>
+    <div class="beat">The engine underneath — data and the personalised shop</div>
+    <p>Walk into a physical shop and it looks the same to everyone. Open an online marketplace and it is, invisibly, a shop built just for you. Every click, search, hover, and past purchase is <em class="term">data</em>, and the platform uses it to decide what to show you, in what order, at what price — the <em class="term">recommendation engine</em> that fills your feed with "you might also like." This is astonishingly effective and genuinely useful; it is also the same data bargain from the prefinals brought into your wallet. The marketplace that feels like it knows what you want knows it because it has been watching, carefully, for a long time. Convenience and surveillance, once again, are two faces of the same coin — and being a literate buyer means enjoying the first while never forgetting the second.</p>
+    <div class="pull">Their product is not goods. Their product is the marketplace itself — the trusted ground the shops now stand on.</div>
+    <div class="bridge">
+    <p>But a marketplace, online or off, cannot function on catalogues and connections alone. It runs on one thing above all others: <em>trust</em>. When you hand money to a shopkeeper standing in front of you, trust is easy — you can see them, the goods, the exchange. Online, you are sending money into the dark to a stranger you will never meet, for goods you cannot yet touch. That is a terrifying thing to do, and billions of people do it every day without a second thought. How? Because an entire hidden machinery of digital payment and digital trust was built to make the impossible feel routine — and that machinery is the next chapter.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c2" data-idx="1">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Two</div>
+      <h2>Digital Payments &amp; the Architecture of Trust</h2>
+      <span class="era">How money became information, and how strangers learned to trust each other</span>
+    </div>
+    <p class="lead">Money is one of humanity's oldest technologies, and for almost all of its history it was a physical thing — a coin, a note, something you could bite to test. The deepest change of the digital economy is that money stopped being an object and became <em>information</em>: a number moving between databases, a message passed along the same internet that carries your photos. This chapter is about that transformation and the trust it demands, because sending money to strangers is the single scariest thing the internet asks of ordinary people, and understanding how it is made safe is a core survival skill of digital life.</p>
+    <div class="beat">Money as a message</div>
+    <p>When you tap a card or pay from an app, no money physically travels anywhere. What happens is a conversation, conducted in a fraction of a second between several parties: your bank, the seller's bank, and a payment network in between. A <em class="term">digital payment</em> is really just an instruction — "move this amount from my account to theirs" — verified, approved, and recorded. The "money" is nothing but agreed-upon numbers in trusted ledgers. This is why a payment can cross the planet instantly: information moves at the speed of light, and money is now information.</p>
+    <p>In much of the world, and increasingly in the Philippines, this happens through the mobile phone rather than the card. <em class="term">E-wallets</em> and mobile-money services — GCash, Maya, and their kin — turned the phone itself into a wallet, a bank branch, and a cashier all at once. Their significance is not merely convenience; it is <em class="term">financial inclusion</em>. Millions of people who never had a bank account — too poor, too rural, too far from a branch — can now hold, send, and receive money through a phone they already own. A technology of convenience for some became a technology of access for the excluded, quietly one of the more consequential shifts of the digital age.</p>
+    <div class="beat">The problem of trust, solved in layers</div>
+    <p>Now the hard question. If money is just a message, what stops someone from forging the message, intercepting it, or simply taking your payment and vanishing? The answer is a stack of trust mechanisms, each solving one piece of the fear.</p>
+    <p>The first layer is <em class="term">encryption</em> — the same idea as the HTTPS padlock from the prefinals. Your payment details are scrambled as they travel, so that even if someone intercepts the message on its way across the network, they see only nonsense. The second layer is <em class="term">verification</em>: the systems that confirm you are really you before money moves — a PIN, a fingerprint, a one-time code texted to your phone. This is <em class="term">two-factor authentication</em> guarding your money directly, and it is why a thief with only your card number still often cannot spend it. The third layer is the network's own fraud detection — quiet algorithms watching for the impossible, like your card being used in two countries an hour apart, and freezing it before the loss grows.</p>
+    <div class="beat">Trusting the seller — reputation as infrastructure</div>
+    <p>Encryption protects the money in transit, but it does nothing about the deeper fear: that the stranger you are paying is a fraud who will take your cash and send nothing. The marketplace's answer to that is one of the most elegant social inventions of the internet — <em class="term">reputation systems</em>. Ratings, reviews, star scores, "verified seller" badges, and order histories together turn a nameless stranger into someone with a track record you can inspect. A seller with ten thousand orders and a 4.8-star average has, in effect, posted a bond of accumulated trust that they will not casually throw away to cheat you. Reputation became infrastructure: the platform does not personally vouch for each seller, but it lets the crowd's experience vouch for them instead.</p>
+    <p>This is reinforced by <em class="term">escrow</em>-style protection, another quiet piece of genius. On many platforms your payment does not go straight to the seller; the platform holds it, and only releases it once you confirm the goods arrived as described. The buyer is protected from paying into the void; the seller is protected from a buyer who lies about non-delivery. The platform, by standing in the middle holding the money, manufactures enough trust for two strangers to safely trade. Learn to read these signals — reviews, ratings, buyer protection, secure-payment badges — because in the online marketplace, judging a seller's trustworthiness is not optional caution. It is the skill that keeps your money yours.</p>
+    <div class="pull">Reputation became infrastructure: the platform does not vouch for the stranger, it lets the crowd's experience vouch for them instead.</div>
+    <div class="bridge">
+    <p>And yet every one of these protections — the encryption, the verification codes, the reputation, the buyer guarantees — can be undone in a single instant by the oldest weakness in the system: a human being, tricked. All the mathematical security in the world collapses the moment someone willingly hands their password or their one-time code to a stranger who asked nicely and urgently. The money is only ever as safe as the person holding it is alert. Which brings us to the darkest and most necessary chapter of this reading: the people who are trying to take it from you, and how they actually work.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c3" data-idx="2">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Three</div>
+      <h2>Cybersecurity &amp; Digital Privacy</h2>
+      <span class="era">The threats, the tricks, and the habits that keep you whole</span>
+    </div>
+    <p class="lead">This is the chapter that will one day matter more than any other in this course, on a day you cannot predict, when a message arrives that is designed with real skill to take something from you. The prefinals introduced digital safety; this chapter goes deeper, because in a world where your money, your identity, your records, and your relationships all live online, <em class="term">cybersecurity</em> is no longer a specialist's concern. It is a basic life skill, as fundamental as locking a door — and the first thing to understand is that the lock they are trying to pick is usually not on your computer. It is in your head.</p>
+    <div class="beat">The central truth — you are the target</div>
+    <p>Films imagine hackers as geniuses typing furiously to break through digital walls. The reality is far more mundane and far more dangerous: the overwhelming majority of successful attacks do not defeat technology at all. They defeat <em>people</em>. This is <em class="term">social engineering</em> — manipulating a human into voluntarily giving up access, information, or money. Why struggle to break a strong lock when you can simply trick the person holding the key into opening the door for you? Every threat below is, at its core, a variation on that single move. Once you truly internalise that <em>you</em> are the target, not your device, your whole defence changes: it becomes about judgement, not gadgets.</p>
+    <div class="beat">The field guide to attacks</div>
+    <p>Know your enemy by name, because naming a trick strips it of its power. <em class="term">Phishing</em> is the workhorse: a fraudulent message impersonating someone you trust — a bank, a courier, a government office, a friend — engineered to make you click a poisoned link or surrender a password. Its variants are worth knowing: <em class="term">smishing</em> is phishing by SMS text; <em class="term">vishing</em> is by voice call; and <em class="term">spear phishing</em> is the frightening, targeted version, where the attacker has researched you personally and the message is tailored to be exactly believable — using your name, your school, your recent activity.</p>
+    <p>Beyond phishing lies <em class="term">malware</em> — malicious software that sneaks onto your device, often hidden inside a tempting download or attachment. Its ugliest form is <em class="term">ransomware</em>, which silently encrypts all your files and then demands payment to unlock them, holding your own digital life hostage; it has crippled hospitals, shutting down the very medical systems a future healthcare worker will depend on. Then there is <em class="term">identity theft</em>, the patient assembly of enough stolen pieces of you — full name, birthday, ID numbers, a mother's maiden name harvested from a careless quiz — to impersonate you to a bank or a government. And underlying much of it, the <em class="term">data breach</em>: when a company holding millions of people's information is itself hacked, spilling passwords and details into criminal hands. This is precisely why reusing one password everywhere is so dangerous — a breach at one careless website hands attackers the key to every account where you used the same one.</p>
+    <div class="beat">The defence — a small set of unbreakable habits</div>
+    <p>The good news is genuinely reassuring: you do not need to be a technical expert to be hard to attack. A handful of disciplined habits defeats the vast majority of threats, because most attacks are opportunistic and simply move on to easier prey.</p>
+    <p>First and above all: <em class="term">slow down and verify.</em> Nearly every attack relies on manufactured urgency — "act now, your account will be suspended, you have won, respond immediately." That pressure is not incidental; it <em>is</em> the attack, engineered to stop you thinking. The instant a message pushes you to act right now, treat the urgency itself as the alarm. Stop. Verify through a channel you already trust — not the link or number the message gave you. Second: <em class="term">strong, unique passwords</em> for every important account, made effortless by a <em class="term">password manager</em> that remembers them so you need not. Third: <em class="term">two-factor authentication</em> everywhere it is offered, so that a stolen password alone is a key to nothing. Fourth: keep software <em class="term">updated</em>, because those tedious updates are very often patches sealing the exact holes attackers exploit. Fifth: <em class="term">think before you click</em>, and think before you download. These five habits are not glamorous, but together they are a wall most attackers will never bother to climb.</p>
+    <div class="beat">Guarding your privacy as a discipline</div>
+    <p>Security protects you from attackers; <em class="term">privacy</em> is about controlling who sees your life even when no one is attacking. The two are cousins. Every account you make, quiz you take, and app you grant permissions to is a small decision about how much of yourself to expose. The literate citizen treats <em class="term">privacy settings</em> as something to configure deliberately rather than ignore, questions why an app that plays music wants access to contacts and location, and remembers the permanent, searchable nature of the <em class="term">digital footprint</em>. Guarding your privacy is not secrecy or paranoia. It is simply refusing to give away, for free and by accident, information that can be used against you.</p>
+    <div class="pull">The urgency is not incidental to the attack. The urgency is the attack — engineered, precisely, to stop you thinking.</div>
+    <div class="bridge">
+    <p>Everything so far — the marketplace, the payments, the threats — has quietly assumed one device above all others, the one you are very likely reading this on right now. It sits in your pocket, it knows where you are, it holds your money and your messages and your face, and it has become, in barely fifteen years, the single most important machine most humans own. It deserves a chapter of its own, because understanding the smartphone is understanding the shape of modern life itself.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c4" data-idx="3">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Four</div>
+      <h2>Mobile Technologies &amp; the App</h2>
+      <span class="era">The computer that fit in a pocket and swallowed the world</span>
+    </div>
+    <p class="lead">In 2007 a phone was for calling people. By 2015 the phone was the internet, the camera, the wallet, the map, the television, the newspaper, the game console, and the primary computer for most of humanity. No technology in history has spread so far, so fast, or reshaped daily life so completely. This chapter is about the mobile revolution — what made it possible, how the <em class="term">app</em> became the basic unit of digital life, and why for billions of people the phone is not a computer they own but the <em>only</em> computer they have ever known.</p>
+    <div class="beat">Why the phone changed everything</div>
+    <p>Earlier chapters traced computers shrinking from room-sized to desk-sized. The smartphone was the moment they shrank into the human hand and, crucially, gained three new senses the desktop never had. It became <em class="term">personal</em> in the deepest way — not a machine shared by a household but one belonging to a single person, carried everywhere, always on. It became <em class="term">connected</em> constantly and wirelessly, never tethered to a desk. And it gained <em class="term">context</em>: through GPS it knows <em>where</em> you are, through its camera and sensors it can see and feel the world around it. A desktop computer sits in the dark waiting to be used; a smartphone travels through your actual life, aware of your location and moment, and that awareness is what made possible everything from ride-hailing to mobile maps to a payment made by tapping your phone against a stall.</p>
+    <p>For the Philippines and much of the developing world, one fact reframes the whole story: for most people here, the smartphone was not an addition to a computer they already had — it was their <em>first</em> and often <em>only</em> computer. Much of the planet skipped the desktop-and-landline era entirely and leapt straight to mobile. This is why services here are built phone-first, why e-wallets took hold so fast, and why "getting online" for most of the world has always meant a phone, never a PC. The mobile era is not a chapter of the computing story for these billions; it is the whole book.</p>
+    <div class="beat">The app — a door to a single purpose</div>
+    <p>The unit of the mobile world is the <em class="term">app</em> — an application, a self-contained program built to do one job well on your phone. Where a desktop ran a few large, general programs, the phone runs dozens of small, focused ones, each a dedicated door to a single service: one for messaging, one for maps, one for your bank, one for a shop. They arrive through an <em class="term">app store</em> — Apple's App Store, Google Play — which is itself a quiet marvel: a single curated marketplace where a developer anywhere can publish to a global audience, and where the store's review process acts as a first line of defence, screening (imperfectly) for malicious apps before they reach you.</p>
+    <p>That gatekeeping matters, because an app you install is a program you invite deep into your most personal device, and it asks for <em class="term">permissions</em> — access to your camera, microphone, location, contacts, files. Here the security discipline of the last chapter becomes concrete and daily. A flashlight app has no honest reason to want your contacts; a simple game does not need your location around the clock. Reading and questioning what an app asks for, and refusing what makes no sense, is one of the most practical privacy skills of modern life. Every permission is a door; you decide which to open.</p>
+    <div class="beat">A glimpse behind the curtain — how apps are made</div>
+    <p>You need not be a programmer to grasp the shape of app creation, and knowing it demystifies the devices you live by. An app begins as a <em class="term">design</em> — often a <em class="term">wireframe</em>, a rough skeletal sketch of each screen and how they connect, made before a single line of code, so the flow can be tested cheaply on paper. Then it is <em class="term">built</em> in a programming language, tuned to the small screen and touch instead of mouse and keyboard, and to the reality that it must sip battery and data rather than gulp them. Then it is <em class="term">tested</em> across many devices and screen sizes — the responsive-design problem from the prefinals, now at the scale of thousands of different phones — before it is published, and then patched and improved for as long as it lives. The glowing tile you tap without thought is the visible tip of exactly this iceberg: design, build, test, ship, repeat.</p>
+    <div class="pull">A desktop sits in the dark waiting to be used. A smartphone travels through your actual life — and that awareness is what changed everything.</div>
+    <div class="bridge">
+    <p>So the phone in your hand is a personal, connected, context-aware computer, running focused apps you invite in one permission at a time. But it is also a window onto something larger and stranger arriving fast — technologies that will make the smartphone era itself look like an opening act. Machines that appear to think. Ordinary objects waking up and joining the network. Ledgers no one owns yet everyone trusts. The final stretch of this course, and of your first year in the IT era, is a look at what is coming over the horizon — and the hard human questions it forces us to answer before it arrives.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c5" data-idx="4">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Five</div>
+      <h2>Emerging Technologies — AI, IoT &amp; Blockchain</h2>
+      <span class="era">The three forces reshaping the near future, explained plainly</span>
+    </div>
+    <p class="lead">Every generation believes it lives at a turning point, and most are wrong. This one may not be. Three technologies have matured at once, and together they are poised to reshape work, cities, money, and the texture of daily life more deeply than the smartphone did. They are surrounded by hype, hysteria, and salesmanship, so this chapter's job is to cut through all of it and explain, in plain language, what each one <em>actually</em> is, what it can truly do, and what it cannot — because a citizen who understands these forces is far harder to fool, sell to, or frighten than one who does not.</p>
+    <div class="beat">Artificial Intelligence — the machine that learns</div>
+    <p><em class="term">Artificial Intelligence</em> is the field of building machines that perform tasks once thought to require human intelligence — recognising a face, understanding a sentence, driving a car, answering a question. But the phrase misleads, so here is the honest picture. Most of today's AI is not a thinking mind; it is <em class="term">machine learning</em> — a system that is not programmed with explicit rules but instead <em>learns patterns from enormous amounts of data</em>. Show it millions of labelled X-rays and it learns to flag the shadow of a tumour; feed it a large share of the text humans have ever written and it learns to predict plausible next words so well that it can hold a conversation. It is pattern-matching at a scale and subtlety no human can match — genuinely powerful, and genuinely not the same thing as understanding.</p>
+    <p>Holding both halves of that truth at once is the mark of AI literacy. These tools are already extraordinary and will touch nearly every profession, medicine among the first — assisting diagnosis, reading scans, sorting records. And they carry real, non-hypothetical dangers that follow directly from how they work. Because AI learns from human data, it absorbs and amplifies human <em class="term">bias</em>: a hiring or medical system trained on biased history will reproduce that bias at scale, wearing a mask of mathematical objectivity. Because it predicts plausible text rather than knowing facts, it can state falsehoods with total confidence — so-called <em class="term">hallucination</em> — which is why AI output must be verified, never simply trusted, above all where lives are at stake. The literate response to AI is neither worship nor panic. It is informed, critical use: a powerful assistant to check, not an oracle to obey.</p>
+    <div class="beat">The Internet of Things — when objects wake up</div>
+    <p>For its whole history the internet connected computers and, later, phones — machines built for communicating. The <em class="term">Internet of Things</em>, or <em class="term">IoT</em>, is the extension of the network into ordinary physical objects: watches, doorbells, lights, cars, refrigerators, factory sensors, and — of deep relevance to healthcare — medical devices, from hospital monitors to a diabetic's continuous glucose sensor quietly reporting to a phone. An IoT device is simply an everyday object given a sensor, a small computer, and a connection, so it can gather data about the physical world and send it across the network. The result is a world that increasingly <em>senses itself</em>: a home that adjusts its own temperature, a factory that predicts a machine's failure before it breaks, a body whose vital signs stream continuously to a doctor.</p>
+    <p>The promise is enormous and the peril is precise. Every one of these billions of small, cheap, always-on devices is also a small, cheap computer connected to the internet — and each is a potential door for attackers. Many are built with weak or absent security, shipped with default passwords never changed, rarely updated. A hacked laptop is a problem; a hacked network of hundreds of thousands of insecure cameras and doorbells has already been assembled into weapons capable of knocking major services offline. And an IoT world is a world saturated with sensors, which is to say a world of unprecedented <em class="term">surveillance</em> — every convenience also a watchful eye. The question IoT forces is not whether the objects should be smart, but who controls what they see and to whom they report.</p>
+    <div class="beat">Blockchain — trust without a middleman</div>
+    <p><em class="term">Blockchain</em> is the most misunderstood of the three, buried under cryptocurrency hype, so strip it to its genuine idea. A blockchain is a <em class="term">distributed ledger</em> — a record book that is not held by any single authority but copied across thousands of computers at once, with every new entry cryptographically linked to the one before it in a chain that cannot be quietly altered. Change one past record and the chain breaks visibly, and the thousands of other copies disagree and reject it. The result is a record that is extremely hard to forge or tamper with, and — this is the radical part — that requires <em>no central authority</em> to trust. Recall from Chapter Two that trust online has always meant a trusted middleman: a bank, a platform, an escrow. Blockchain's ambition is to manufacture trust from mathematics and distribution instead, so strangers can agree on a shared truth with no institution in the middle.</p>
+    <p>That is the real innovation, and it reaches beyond its first application. <em class="term">Cryptocurrency</em> — Bitcoin and its kin — was simply blockchain's opening act: digital money with no central bank. But the underlying idea of a tamper-resistant, ownerless shared record is being explored for tracking goods honestly through a supply chain, for securing records, for proving something happened without a trusted authority vouching for it. It is early, unproven at scale, energy-hungry in some forms, and drenched in speculation and outright fraud — a field demanding real skepticism. But the core idea — trust engineered without a central owner — is genuinely new, and worth understanding apart from the noise around it.</p>
+    <div class="pull">The literate response to these forces is neither worship nor panic. It is informed, critical use — an assistant to check, not an oracle to obey.</div>
+    <div class="bridge">
+    <p>Powerful as they are, none of these technologies decides anything. A tool has no conscience; it does only what people build and permit it to do. An AI can diagnose a disease or entrench a prejudice; an IoT network can save a life or spy on it; a blockchain can free a transaction or launder a crime. Which of these actually happens is never settled by the machine. It is settled by human choices — by ethics. And so this course, which began eight thousand years ago with a notch cut in a bone, ends where every honest account of technology must: not with the tools, but with the people who wield them, and the question of how to wield them well.</p>
+    </div>
+  </section>
+
+  <section class="chapter" id="c6" data-idx="5">
+    <div class="ch-head">
+      <div class="ch-num">Chapter Six</div>
+      <h2>Digital Ethics &amp; the Future in Your Hands</h2>
+      <span class="era">The questions no machine can answer for you</span>
+    </div>
+    <p class="lead">Every chapter of this course has, in the end, been building toward this one — because knowing how a technology works is only ever half of the education. The other half, the harder and more human half, is knowing what we <em>should</em> do with it, and what it may quietly be doing to us. <em class="term">Digital ethics</em> is the study of right and wrong in a world remade by technology, and it matters now more than at any point in history, because for the first time ordinary people wield tools powerful enough to help or harm at a planetary scale — and no algorithm can make these choices on our behalf.</p>
+    <div class="beat">The questions that have no easy answers</div>
+    <p>Ethics lives in genuine dilemmas, where reasonable people disagree, and the digital age is full of fresh ones. When an AI helps decide who gets a loan, a job, or a diagnosis, and it turns out to be biased against a group of people — who is <em>responsible</em>? The programmer who built it, the company that sold it, the hospital that used it, the data that trained it? When a self-driving car must choose between two harms in a crash, whose safety should its code have been written to prefer? When a platform's algorithm learns that outrage and fear keep people scrolling longest, and so quietly feeds a society more of both — is that merely business, or is it harm? These are not puzzles with clean solutions. They are the real moral frontier of the century, and the citizens who will have to answer them are your generation.</p>
+    <p>Three ethical threads run through nearly all of it, worth naming plainly. There is the question of <em class="term">privacy versus convenience</em>: how much of ourselves we are willing to trade for services that watch us, and whether that trade is ever truly consented to or merely accepted by exhaustion. There is the question of <em class="term">bias and fairness</em>: whether our automated systems distribute their benefits and harms justly, or simply automate old injustices at new speed and hide them behind a screen of apparent neutrality. And there is the question of <em class="term">responsibility and accountability</em>: whether, in a chain of humans and machines, anyone can still be held answerable when harm is done — or whether "the algorithm decided" becomes an excuse that dissolves all blame.</p>
+    <div class="beat">The ethics closest to home — misinformation</div>
+    <p>Of all these, one demands action from you personally, today, and costs nothing but attention: the ethics of <em class="term">information</em> itself. The same network that carries humanity's knowledge carries its lies just as fast and just as far, and <em class="term">misinformation</em> — false information spread carelessly — and <em class="term">disinformation</em> — falsehood spread deliberately to deceive — have become forces capable of swaying elections, endangering public health, and tearing at the trust a society needs to function. In a health field, a viral falsehood about a treatment or a vaccine is not an abstraction; it can kill. And here is the uncomfortable part: the machinery of that harm is not run only by villains. It is run, click by click, by ordinary well-meaning people who share things they never checked. The single most ethical digital habit you can build is also the simplest — <em>verify before you share.</em> Every time you pass on a claim without checking it, you become, however innocently, part of the problem. Every time you pause and check, you are part of the cure.</p>
+    <div class="beat">Being a good ancestor of the digital world</div>
+    <p>So what does it mean to live well in the IT era — to be not merely a competent user of these tools, but a good one? It means carrying your real-world conscience onto the screen and refusing to leave it at the login page. It means using your critical faculties on everything you read, buy, and are shown, treating no feed as neutral and no claim as true until checked. It means guarding not only your own privacy and security but respecting others' — the patient's confidentiality, the stranger's dignity, the truth itself. It means using these extraordinary powers to build and to help rather than to deceive and to harm, and it means remembering, always, that behind every screen is a human being as real as you.</p>
+    <p>This course began with a merchant reaching for a pile of pebbles because their own mind was not enough — the very first time a human being used a tool to think. It ends with you, holding in one hand a machine that contains the accumulated thought of the entire human species, connected to nearly every other person alive. That is a power our ancestors would have called godlike, and it has been handed to your generation not as a reward but as a responsibility. The machines are built; that was the easy part, the part that took eight thousand years and is now finished. What remains is the only part that was ever really in question, and it is not a technical problem at all. It is this: <em>what kind of person will you be, inside the world we have made?</em> No teacher, no textbook, and no algorithm can answer that for you. It is, gloriously and terrifyingly, yours to decide.</p>
+    <div class="pull">The machines are built; that was the easy part. What remains is the only part that was ever in question — what kind of person you will be inside the world we made.</div>
+    <div class="bridge">
+    <p>That is the end of the road this course has walked — from the tally bone to the blockchain, from a notch that held a number to a network that holds a civilisation. You now understand the digital marketplace and the trust that lets it run, the payments that turned money into information, the threats that hunt the careless and the habits that defeat them, the phone that became the world's computer, the emerging forces reshaping the near future, and the ethics that must govern them all. Carry the final question with you out of this room. It does not have a single answer. Living well with it — that is the whole of the work.</p>
+    </div>
+  </section>
+
+  <section class="refs" id="refs" data-idx="6">
+    <div class="ch-head">
+      <div class="ch-num">Sources &amp; Further Reading</div>
+      <h2>References</h2>
+      <span class="era">Where these ideas come from, and where to read further</span>
+    </div>
+    <p>This reading synthesises standard, well-established explanations of e-commerce and digital payments, cybersecurity and privacy, mobile technology, and emerging technologies with their ethics, aligned to the GEEL 1 course outline (weeks 15&ndash;18). The core references below are the open textbooks assigned in the syllabus; the remaining entries point to widely used, authoritative explanations of each concept.</p>
+    <ol class="ref-list">
+      <li>Bourgeois, D. T., Smith, J. L., Wang, S., &amp; Mortati, J. (2019). <i>Information Systems for Business and Beyond.</i> Saylor Foundation / Open Textbook. On e-commerce, information security, and the ethical dimensions of information systems. <a href="https://opentextbook.site/informationsystems2019/">opentextbook.site</a></li>
+      <li>Pham, L. T., Desai-Naik, T., Hammond, L., &amp; Abdeljabbar, W. (2021). <i>Information Systems for Business.</i> ASCCC OERI / LibreTexts. On digital business, mobile computing, and emerging technologies. <a href="https://workforce.libretexts.org/Bookshelves/Information_Technology/Information_Systems">workforce.libretexts.org</a></li>
+      <li>Raisinghani, M. S. (2025). <i>Foundations of Information Systems.</i> OpenStax. On IT security, privacy, AI, and the future of information systems. <a href="https://openstax.org/details/books/foundations-information-systems">openstax.org</a></li>
+      <li>Cloudflare Learning Center. <i>What is Phishing?</i>, <i>What is Ransomware?</i>, and <i>What is a Data Breach?</i> On social engineering and the anatomy of common attacks. <a href="https://www.cloudflare.com/learning/">cloudflare.com/learning</a></li>
+      <li>National Institute of Standards and Technology (NIST). <i>Small Business Cybersecurity Corner</i> and <i>Digital Identity Guidelines.</i> On passwords, multi-factor authentication, and security habits. <a href="https://www.nist.gov/cybersecurity">nist.gov/cybersecurity</a></li>
+      <li>Bangko Sentral ng Pilipinas. <i>Digital Payments &amp; Financial Inclusion.</i> On e-wallets, mobile money, and inclusion in the Philippine context. <a href="https://www.bsp.gov.ph/">bsp.gov.ph</a></li>
+      <li>IBM &amp; Google. <i>What is Artificial Intelligence?</i>, <i>What is IoT?</i>, and <i>What is Blockchain?</i> On plain-language explanations of the emerging technologies. <a href="https://www.ibm.com/topics">ibm.com/topics</a></li>
+      <li>UNESCO. <i>Recommendation on the Ethics of Artificial Intelligence</i> (2021). On global principles for bias, accountability, and responsible AI. <a href="https://www.unesco.org/en/artificial-intelligence/recommendation-ethics">unesco.org</a></li>
+      <li>General technical and scholarly consensus, corroborated across the above and standard references, for the mechanics of e-commerce models (B2C/B2B/C2C) and the long tail, encryption and escrow in digital payments, the taxonomy of cyber-threats (phishing, malware, ransomware, identity theft), the smartphone and app-store era, machine learning and algorithmic bias, IoT security and surveillance, distributed-ledger/blockchain principles, and current digital-ethics and misinformation scholarship.</li>
+    </ol>
+  </section>
+
+</article>
+
+<footer class="end">
+  <div class="mark">✦ ✦ ✦</div>
+  <p>The World in Your Pocket · GEEL 1 — Living in the IT Era · Finals</p>
+  <button class="dlbtn" id="downloadBtn">
+    <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+    Save this reading
+  </button>
+</footer>
+
+<button id="totop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24"><path d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>
+</button>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "itict_longread_finals_progress_v1";
+  var railFill = document.querySelector("#rail > span");
+  var chapters = Array.prototype.slice.call(document.querySelectorAll("[data-idx]")).filter(function(el){ return el.tagName === "SECTION"; });
+  var tocLinks = document.querySelectorAll("nav.toc a");
+  var toTop = document.getElementById("totop");
+  var CH_TITLES = ["Chapter I — Digital Business & the Marketplace","Chapter II — Digital Payments & Trust","Chapter III — Cybersecurity & Privacy","Chapter IV — Mobile Technologies & the App","Chapter V — Emerging Tech: AI, IoT & Blockchain","Chapter VI — Digital Ethics & the Future","References"];
+  function loadState(){ try{ var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function saveState(s){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }catch(e){} }
+  var state = loadState() || { lastIdx:0, maxIdx:-1, scrollY:0 };
+  function updateRail(){
+    var doc = document.documentElement;
+    var scrollable = doc.scrollHeight - doc.clientHeight;
+    var pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    railFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+    toTop.style.display = window.scrollY > 900 ? "grid" : "none";
+  }
+  var current = -1;
+  function updateCurrent(){
+    var mark = window.scrollY + window.innerHeight * 0.33;
+    var idx = 0;
+    for(var i=0;i<chapters.length;i++){ if(chapters[i].offsetTop <= mark){ idx = parseInt(chapters[i].getAttribute("data-idx"),10); } }
+    if(idx !== current){
+      current = idx;
+      for(var j=0;j<tocLinks.length;j++){
+        var li = parseInt(tocLinks[j].getAttribute("data-idx"),10);
+        if(li < idx) tocLinks[j].classList.add("done"); else tocLinks[j].classList.remove("done");
+      }
+    }
+    state.lastIdx = current < 0 ? 0 : current;
+    if(state.lastIdx > state.maxIdx) state.maxIdx = state.lastIdx;
+    state.scrollY = window.scrollY;
+  }
+  var ticking = false;
+  function onScroll(){ if(!ticking){ window.requestAnimationFrame(function(){ updateRail(); updateCurrent(); ticking = false; }); ticking = true; } }
+  var saveTimer = null;
+  function scheduleSave(){ if(saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(function(){ saveState(state); }, 400); }
+  window.addEventListener("scroll", function(){ onScroll(); scheduleSave(); }, {passive:true});
+  window.addEventListener("resize", updateRail, {passive:true});
+  window.addEventListener("beforeunload", function(){ saveState(state); });
+  var resumeEl = document.getElementById("resume");
+  var resumeLabel = document.getElementById("resumeLabel");
+  var savedForResume = loadState();
+  if(savedForResume && savedForResume.scrollY > 600 && savedForResume.lastIdx > 0){
+    resumeLabel.textContent = CH_TITLES[savedForResume.lastIdx] || "where you stopped";
+    resumeEl.style.display = "block";
+    document.getElementById("resumeGo").addEventListener("click", function(){ window.scrollTo({ top: savedForResume.scrollY, behavior: "smooth" }); resumeEl.style.display = "none"; });
+    document.getElementById("resumeX").addEventListener("click", function(){ resumeEl.style.display = "none"; });
+  }
+  document.getElementById("tocBtn").addEventListener("click", function(){ document.getElementById("toc").scrollIntoView({behavior:"smooth", block:"start"}); });
+  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  document.getElementById("downloadBtn").addEventListener("click", function(){
+    try{
+      var html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      var blob = new Blob([html], {type:"text/html"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "the-world-in-your-pocket.html";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    }catch(e){ alert("Download unavailable in this view. Use your browser's Save Page option instead."); }
+  });
+  updateRail();
+  updateCurrent();
+})();
+</script>
+
+</body>
+</html>
