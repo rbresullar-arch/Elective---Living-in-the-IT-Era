@@ -157,6 +157,11 @@
       <a class="activity-btn" id="activity2Btn" href="abacus_addition_activity.html">Activity 2</a>
       <span class="status" id="activity2Status">Checking...</span>
     </div>
+
+    <div class="activity-row">
+      <a class="activity-btn" id="activity3Btn" href="pascaline.html">Activity 3</a>
+      <span class="status" id="activity3Status">Checking...</span>
+    </div>
   </div>
 
   <div class="tab-panel" id="tab-reads">
@@ -188,6 +193,10 @@ const IDB_KEY = 'result';
 const RESULT2_KEY = 'itict_abacus_result';
 const RESULT2_COOKIE = 'itict_abacus_result';
 const IDB_KEY2 = 'abacus_result';
+
+const RESULT3_KEY = 'itict_pascaline_result';
+const RESULT3_COOKIE = 'itict_pascaline_result';
+const IDB_KEY3 = 'pascaline_result';
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
@@ -238,6 +247,20 @@ async function loadActivity2Result() {
   }
   if (!record) {
     record = await idbGet(IDB_KEY2);
+  }
+  return record;
+}
+
+async function loadActivity3Result() {
+  let record = null;
+  const lsRaw = localStorage.getItem(RESULT3_KEY);
+  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
+  if (!record) {
+    const cookieRaw = getCookie(RESULT3_COOKIE);
+    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
+  }
+  if (!record) {
+    record = await idbGet(IDB_KEY3);
   }
   return record;
 }
@@ -294,11 +317,40 @@ async function refreshActivity2Status() {
   }
 }
 
+async function refreshActivity3Status() {
+  const statusEl = document.getElementById('activity3Status');
+  const btnEl = document.getElementById('activity3Btn');
+  const act1Record = await loadActivity1Result();
+  const act2Record = await loadActivity2Result();
+  if (!act1Record || !act2Record) {
+    statusEl.textContent = 'Locked — complete Activities 1 & 2 first';
+    statusEl.className = 'status pending';
+    btnEl.removeAttribute('href');
+    btnEl.style.opacity = '0.4';
+    btnEl.style.cursor = 'default';
+    return;
+  }
+  btnEl.setAttribute('href', 'pascaline.html');
+  btnEl.style.opacity = '';
+  btnEl.style.cursor = '';
+  const record = await loadActivity3Result();
+  if (record) {
+    const max = record.maxScore || 100;
+    const pct = record.percentage != null ? record.percentage : Math.round((record.score / max) * 100);
+    statusEl.textContent = `Score (Fast Play): ${record.score}/${max} (${pct}%)`;
+    statusEl.className = 'status done';
+  } else {
+    statusEl.textContent = 'Not yet attempted';
+    statusEl.className = 'status pending';
+  }
+}
+
 function enterActivities(name) {
   document.getElementById('greeting').textContent = `Hello, ${name}!`;
   showSection('section-activities');
   refreshActivity1Status();
   refreshActivity2Status();
+  refreshActivity3Status();
 }
 
 document.getElementById('nameForm').addEventListener('submit', (e) => {
