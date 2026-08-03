@@ -66,7 +66,8 @@
     padding: 16px;
     margin-bottom: 14px;
   }
-  .activity-row a.activity-btn {
+  .activity-row a.activity-btn,
+  .activity-row button.activity-btn {
     font-family: Georgia, serif;
     font-size: 16px;
     padding: 10px 26px;
@@ -74,6 +75,11 @@
     color: #fff;
     text-decoration: none;
     display: inline-block;
+    border: none;
+  }
+  .activity-row button.activity-btn:disabled {
+    background: #999;
+    cursor: default;
   }
   .status {
     font-size: 14px;
@@ -162,6 +168,11 @@
       <a class="activity-btn" id="activity3Btn" href="pascaline.html">Activity 3</a>
       <span class="status" id="activity3Status">Checking...</span>
     </div>
+
+    <div class="activity-row" id="redoRow" style="display:none;">
+      <button type="button" class="activity-btn" id="redoBtn" style="cursor:pointer;">Redo Fast Play</button>
+      <span class="status" id="redoStatus"></span>
+    </div>
   </div>
 
   <div class="tab-panel" id="tab-reads">
@@ -197,6 +208,7 @@ const IDB_KEY2 = 'abacus_result';
 const RESULT3_KEY = 'itict_pascaline_result';
 const RESULT3_COOKIE = 'itict_pascaline_result';
 const IDB_KEY3 = 'pascaline_result';
+const REDO_FLAG_KEY = 'itict_pascaline_redo_used';
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
@@ -221,6 +233,29 @@ async function idbGet(key) {
       req.onerror = () => reject(req.error);
     });
   } catch (e) { return null; }
+}
+
+async function idbDelete(key) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const req = tx.objectStore(IDB_STORE).delete(key);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  } catch (e) { return false; }
+}
+
+function deleteCookie(name) {
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+}
+
+async function clearActivity3Result() {
+  try { localStorage.removeItem(RESULT3_KEY); } catch (e) {}
+  try { sessionStorage.removeItem(RESULT3_KEY); } catch (e) {}
+  deleteCookie(RESULT3_COOKIE);
+  await idbDelete(IDB_KEY3);
 }
 
 async function loadActivity1Result() {
@@ -345,12 +380,52 @@ async function refreshActivity3Status() {
   }
 }
 
+async function refreshRedoButton() {
+  const row = document.getElementById('redoRow');
+  const btn = document.getElementById('redoBtn');
+  const st = document.getElementById('redoStatus');
+  const used = localStorage.getItem(REDO_FLAG_KEY) === '1';
+  const record = await loadActivity3Result();
+
+  // Only relevant once a Fast Play score exists.
+  if (!record && !used) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = '';
+
+  if (used) {
+    btn.disabled = true;
+    st.textContent = 'Redo already used';
+    st.className = 'status pending';
+    return;
+  }
+  if (record) {
+    btn.disabled = false;
+    st.textContent = 'One redo available';
+    st.className = 'status pending';
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+document.getElementById('redoBtn').addEventListener('click', async () => {
+  if (localStorage.getItem(REDO_FLAG_KEY) === '1') return;
+  const btn = document.getElementById('redoBtn');
+  btn.disabled = true;
+  await clearActivity3Result();
+  localStorage.setItem(REDO_FLAG_KEY, '1');
+  await refreshActivity3Status();
+  await refreshRedoButton();
+});
+
 function enterActivities(name) {
   document.getElementById('greeting').textContent = `Hello, ${name}!`;
   showSection('section-activities');
   refreshActivity1Status();
   refreshActivity2Status();
   refreshActivity3Status();
+  refreshRedoButton();
 }
 
 document.getElementById('nameForm').addEventListener('submit', (e) => {
