@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Binary Decoder — Activity 4</title>
+<style>
+  *{
+    box-sizing:border-box; margin:0; padding:0;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  html,body{
+    height:100%;
+    background:#ffffff;
+    color:#000000;
+    font-family:Georgia,'Times New Roman',serif;
+    overscroll-behavior:none;
+  }
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    height:100dvh;
+  }
+
+  /* ---------- 9:16 portrait stage ---------- */
+  #stage{
+    position:relative;
+    width:min(100vw, calc(100dvh * 9 / 16));
+    height:min(100dvh, calc(100vw * 16 / 9));
+    background:#ffffff;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    box-shadow:inset 0 0 0 1px #000;
+  }
+  /* on true mobile portrait, let the stage fill the screen fully */
+  @media (max-width:520px){
+    #stage{
+      width:100vw;
+      height:100dvh;
+      box-shadow:none;
+    }
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    flex:0 0 auto;
+    padding:14px 18px 10px;
+    border-bottom:1.5px solid #000;
+  }
+  .eyebrow{
+    font-family:Arial,sans-serif;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#555;
+    text-align:center;
+  }
+  .progress-line{
+    display:flex;
+    gap:5px;
+    margin-top:9px;
+  }
+  .progress-line .seg{
+    flex:1; height:4px; background:#e6e6e6;
+  }
+  .progress-line .seg.done{ background:#000; }
+
+  /* ---------- scroll body ---------- */
+  .body{
+    flex:1 1 auto;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:18px 20px 28px;
+    user-select:text;
+  }
+  .body::-webkit-scrollbar{ width:0; }
+
+  h1{
+    font-size:23px; font-weight:normal; text-align:center;
+    line-height:1.4; margin-bottom:6px;
+  }
+  h2{
+    font-size:18px; font-weight:normal; margin:22px 0 8px;
+    border-bottom:1px solid #000; padding-bottom:4px;
+  }
+  p{ font-size:15px; line-height:1.62; margin-bottom:12px; }
+  p.small{
+    font-family:Arial,sans-serif; font-size:12.5px; color:#555; line-height:1.6;
+  }
+  .lead{ text-align:center; color:#444; }
+
+  .mono{
+    font-family:'Courier New',monospace;
+    letter-spacing:.05em;
+  }
+
+  /* place-value table */
+  .pv-table{
+    width:100%;
+    border-collapse:collapse;
+    margin:10px 0 14px;
+    font-family:'Courier New',monospace;
+    font-size:15px;
+    text-align:center;
+  }
+  .pv-table th, .pv-table td{
+    border:1px solid #000; padding:8px 2px;
+  }
+  .pv-table th{
+    font-family:Arial,sans-serif; font-size:11px;
+    letter-spacing:.06em; color:#555; font-weight:normal;
+    background:#f4f4f4;
+  }
+  .pv-table td.bit1{ background:#000; color:#fff; font-weight:bold; }
+  .pv-table td.bit0{ color:#bbb; }
+
+  /* divide-by-2 worked steps */
+  .steps{
+    font-family:'Courier New',monospace;
+    font-size:14.5px;
+    line-height:1.9;
+    background:#f6f6f6;
+    border:1px solid #000;
+    padding:12px 14px;
+    margin:8px 0 14px;
+    white-space:pre;
+    overflow-x:auto;
+  }
+  .callout{
+    border-left:4px solid #000;
+    padding:8px 0 8px 14px;
+    margin:10px 0 16px;
+    font-size:14.5px;
+    line-height:1.6;
+  }
+  .callout strong{ font-family:Arial,sans-serif; font-size:12px; letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:4px; color:#555; }
+
+  /* interactive tutorial trainer */
+  .trainer{
+    border:1.5px solid #000;
+    padding:16px 16px 18px;
+    margin:14px 0 8px;
+  }
+  .trainer .t-num{
+    font-size:40px; text-align:center; margin:2px 0 10px;
+    font-family:'Courier New',monospace;
+  }
+  .bit-row{
+    display:flex; gap:6px; justify-content:center; margin:8px 0 4px;
+  }
+  .bit-cell{
+    flex:0 0 auto;
+    width:40px; text-align:center;
+  }
+  .bit-cell .pval{
+    font-family:Arial,sans-serif; font-size:10px; color:#888; margin-bottom:4px;
+  }
+  .bit-btn{
+    width:40px; height:46px;
+    border:1.5px solid #000; background:#fff; color:#000;
+    font-family:'Courier New',monospace; font-size:22px;
+    cursor:pointer; padding:0;
+  }
+  .bit-btn.on{ background:#000; color:#fff; }
+  .t-readout{
+    text-align:center; font-family:Arial,sans-serif; font-size:13px;
+    color:#555; margin-top:10px;
+  }
+  .t-readout b{ color:#000; font-size:15px; }
+  .t-feedback{
+    text-align:center; font-family:Arial,sans-serif; font-weight:bold;
+    font-size:15px; margin-top:8px; min-height:20px;
+  }
+  .t-feedback.ok{ color:#000; }
+  .t-feedback.no{ color:#000; }
+
+  /* generic buttons */
+  button.act{
+    font-family:Arial,sans-serif; font-size:13px;
+    letter-spacing:.08em; text-transform:uppercase;
+    background:#000; color:#fff; border:none;
+    padding:13px 30px; cursor:pointer;
+  }
+  button.act:active{ background:#333; }
+  button.act:disabled{ background:#999; cursor:default; }
+  button.ghost{
+    background:#fff; color:#000; border:1.5px solid #000;
+  }
+  button.ghost:active{ background:#eee; }
+  .btn-row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px; }
+
+  /* ---------- GAME view ---------- */
+  #gameView{ display:none; height:100%; flex-direction:column; }
+  #gameView.active{ display:flex; }
+  .bit-echo-bar{
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    padding:9px 14px;
+    background:#000; color:#fff;
+  }
+  .bit-echo-bar .echo-label{
+    font-family:Arial,sans-serif; font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:#bbb;
+  }
+  .bit-echo-bar .bit-echo{
+    font-family:'Courier New',monospace;
+    font-size:clamp(20px,6vw,28px); letter-spacing:.22em;
+    color:#fff;
+  }
+  .game-top{
+    flex:0 0 auto; padding:14px 18px 10px; border-bottom:1.5px solid #000;
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .game-top .lbl{ font-family:Arial,sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#555; }
+  .game-top .val{ font-family:'Courier New',monospace; font-size:22px; }
+  .timer-bar-wrap{ flex:0 0 auto; height:6px; background:#e6e6e6; }
+  #timerBar{ height:100%; width:100%; background:#000; transition:width .25s linear; }
+  .game-mid{
+    flex:1 1 auto; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:clamp(10px,2.4vh,18px);
+    padding:clamp(12px,3vw,20px);
+  }
+  .prompt-decimal{
+    font-family:'Courier New',monospace;
+    font-size:clamp(56px,20vw,96px); line-height:1;
+  }
+  .prompt-hint{ font-family:Arial,sans-serif; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#555; }
+
+  /* ---------- place-value guide (128..1) ---------- */
+  .bit-guide{
+    display:flex; gap:clamp(2px,1vw,5px);
+    width:min(100%,360px); justify-content:center;
+  }
+  .bit-guide .col{
+    flex:1 1 0; min-width:0;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .bit-guide .pv{
+    font-family:Arial,sans-serif;
+    font-size:clamp(9px,2.6vw,12px);
+    color:#555; line-height:1;
+    padding:3px 0 4px;
+  }
+  .bit-guide .slot{
+    width:100%;
+    border:1px solid #000;
+    aspect-ratio:1/1.15;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Courier New',monospace;
+    font-size:clamp(16px,5vw,24px);
+    color:#000; background:#fff;
+    transition:background .12s ease, color .12s ease;
+  }
+  .bit-guide .slot.on{ background:#000; color:#fff; }
+  .bit-guide .slot.empty{ color:#ccc; }
+  .guide-caption{
+    font-family:Arial,sans-serif; font-size:11px; color:#888;
+    letter-spacing:.04em; margin-top:-4px;
+  }
+
+  #binInput{
+    font-family:'Courier New',monospace;
+    font-size:clamp(26px,8vw,34px); text-align:center;
+    letter-spacing:.14em;
+    width:min(90%,320px); border:none; border-bottom:2.5px solid #000;
+    background:transparent; padding:6px 0;
+  }
+  #binInput:focus{ outline:none; }
+  .game-feedback{
+    font-family:Arial,sans-serif; font-weight:bold;
+    font-size:clamp(14px,4vw,16px);
+    min-height:22px; letter-spacing:.03em;
+  }
+  .tier-tag{ font-family:Arial,sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#555; }
+
+  /* ---------- overlays ---------- */
+  .overlay{
+    position:fixed; inset:0; background:#fff;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; z-index:30; padding:28px; text-align:center;
+  }
+  .overlay.show{ display:flex; }
+  .overlay strong{ display:block; font-size:20px; font-weight:normal; }
+  .overlay .score{ font-family:Arial,sans-serif; font-size:14px; color:#444; line-height:1.9; }
+  .overlay h1{ font-size:22px; }
+  .overlay p.instructions{ font-family:Arial,sans-serif; font-size:13px; color:#555; line-height:1.7; max-width:320px; }
+
+  #homeLink{
+    position:fixed; top:12px; left:12px;
+    font-family:Arial,sans-serif; font-size:12px; color:#000;
+    text-decoration:none; border:1.5px solid #000; padding:5px 11px;
+    z-index:40; background:#fff;
+  }
+  #homeLink:active{ background:#eee; }
+
+  .dl-note{ font-family:Arial,sans-serif; font-size:11px; color:#888; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<a href="index.html" id="homeLink">Home</a>
+
+<!-- BROWSER GATE -->
+<div class="overlay" id="blockOverlay">
+  <strong>This activity requires Google Chrome on Android.</strong>
+  <p class="instructions">Please open this page in Google Chrome and try again.</p>
+</div>
+
+<!-- LOCKED -->
+<div class="overlay" id="lockedOverlay">
+  <strong>Complete Activity 3 first.</strong>
+  <a class="act" style="text-decoration:none;" href="pascaline.html">Go to Activity 3</a>
+</div>
+
+<!-- ALREADY COMPLETED -->
+<div class="overlay" id="doneOverlay">
+  <strong>Activity already completed on this device.</strong>
+  <div class="score" id="doneScoreText"></div>
+  <div class="btn-row">
+    <button class="act ghost" id="doneDownloadBtn">Download my copy</button>
+  </div>
+</div>
+
+<!-- ================= MAIN STAGE ================= -->
+<div id="stage">
+
+  <!-- TUTORIAL VIEW -->
+  <div id="tutorialView" style="display:flex;flex-direction:column;height:100%;">
+    <div class="topbar">
+      <div class="eyebrow">Activity 4 · Binary Decoder · Tutorial</div>
+      <div class="progress-line" id="tutProgress"></div>
+    </div>
+    <div class="body" id="tutBody"><!-- steps injected --></div>
+  </div>
+
+  <!-- GAME VIEW -->
+  <div id="gameView">
+    <div class="bit-echo-bar">
+      <span class="echo-label">8-bit form</span>
+      <span class="bit-echo" id="bitEcho">00000000</span>
+    </div>
+    <div class="game-top">
+      <div><div class="lbl">Time</div><div class="val" id="timeVal">180</div></div>
+      <div style="text-align:center;"><div class="lbl">Solved</div><div class="val" id="solvedVal">0</div></div>
+      <div style="text-align:right;"><div class="lbl">Score</div><div class="val" id="scoreVal">0</div></div>
+    </div>
+    <div class="timer-bar-wrap"><div id="timerBar"></div></div>
+    <div class="game-mid">
+      <div class="tier-tag" id="tierTag">Range 0–15</div>
+      <div class="prompt-hint">Convert to binary</div>
+      <div class="prompt-decimal" id="promptDecimal">0</div>
+      <div class="bit-guide" id="bitGuide"><!-- adaptive columns injected --></div>
+      <div class="guide-caption">Your digits line up under these values</div>
+      <input id="binInput" type="text" inputmode="numeric" pattern="[01]*"
+             autocomplete="off" autocapitalize="off" autocorrect="off"
+             spellcheck="false" enterkeyhint="go" placeholder="0000">
+      <div class="game-feedback" id="gameFeedback"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- START OVERLAY (tutorial intro) -->
+<div class="overlay show" id="startOverlay">
+  <h1>Binary Decoder</h1>
+  <p class="instructions">
+    First, a short tutorial teaches you how to turn binary into numbers and
+    numbers into binary. Then a 3-minute timed challenge: convert as many
+    numbers to binary as you can. The faster and more you solve, the higher
+    your score.
+  </p>
+  <button class="act" id="beginBtn">Begin Tutorial</button>
+</div>
+
+<!-- GAME INTRO OVERLAY -->
+<div class="overlay" id="gameIntroOverlay">
+  <strong>Timed Challenge</strong>
+  <p class="instructions">
+    A number appears. Type its binary form and press Enter (or Go). Correct
+    answers advance instantly. You have 3 minutes. Numbers get bigger as you
+    go. Speed counts — quick, correct answers score highest.
+  </p>
+  <button class="act" id="startGameBtn">Start · 3 min</button>
+</div>
+
+<!-- RESULT OVERLAY -->
+<div class="overlay" id="resultOverlay">
+  <strong>Time!</strong>
+  <div class="score" id="resultScoreText"></div>
+  <div class="btn-row">
+    <button class="act" id="resultDownloadBtn">Download my copy</button>
+    <a class="act ghost" style="text-decoration:none;" href="index.html">Back to Activities</a>
+  </div>
+  <div class="dl-note">Your score is saved on this device.</div>
+</div>
+
+<script>
+/* ============================================================
+   STORAGE — 4 layers: localStorage -> cookie -> IndexedDB (-> sessionStorage backfill)
+   ============================================================ */
+const RESULT_KEY    = 'itict_binary_result';
+const RESULT_COOKIE = 'itict_binary_result';
+const IDB_NAME  = 'itict_db';
+const IDB_STORE = 'results';
+const IDB_KEY   = 'binary_result';
+
+/* prior activity (Activity 3 = Pascaline) */
+const ACT3_KEY    = 'itict_pascaline_result';
+const ACT3_COOKIE = 'itict_pascaline_result';
+const ACT3_IDB_KEY = 'pascaline_result';
+
+const NAME_KEY = 'itict_student_name';
+
+function setCookie(name, value, days){
+  const expires = new Date(Date.now() + days*864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+}
+function getCookie(name){
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if(!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value){
+  try{
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  }catch(e){ return false; }
+}
+async function idbGet(key){
+  try{
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+
+async function loadPriorResult(){
+  let r = null;
+  const ls = localStorage.getItem(ACT3_KEY);
+  if(ls){ try{ r = JSON.parse(ls); }catch(e){} }
+  if(!r){ const c = getCookie(ACT3_COOKIE); if(c){ try{ r = JSON.parse(c); }catch(e){} } }
+  if(!r){ r = await idbGet(ACT3_IDB_KEY); }
+  return r;
+}
+
+async function loadResult(){
+  let r = null;
+  const ls = localStorage.getItem(RESULT_KEY);
+  if(ls){ try{ r = JSON.parse(ls); }catch(e){} }
+  if(!r){ const c = getCookie(RESULT_COOKIE); if(c){ try{ r = JSON.parse(c); }catch(e){} } }
+  if(!r){ r = await idbGet(IDB_KEY); }
+  if(!r){
+    const ss = sessionStorage.getItem(RESULT_KEY);
+    if(ss){ try{ r = JSON.parse(ss); }catch(e){} }
+  }
+  // backfill every layer on load
+  if(r){
+    const json = JSON.stringify(r);
+    try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+    try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+    setCookie(RESULT_COOKIE, json, 365);
+    idbSet(IDB_KEY, r);
+  }
+  return r;
+}
+async function saveResult(record){
+  const json = JSON.stringify(record);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+  setCookie(RESULT_COOKIE, json, 365);
+  await idbSet(IDB_KEY, record);
+}
+
+/* ============================================================
+   ENVIRONMENT GATES
+   ============================================================ */
+function isAndroid(){ return /Android/i.test(navigator.userAgent); }
+function isInAppBrowser(){
+  return /(FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Twitter)/i.test(navigator.userAgent || '');
+}
+function isChrome(){
+  const ua = navigator.userAgent;
+  return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
+}
+const browserBlocked = isInAppBrowser() || (isAndroid() && !isChrome());
+
+function show(el){ el.classList.add('show'); }
+function hide(el){ el.classList.remove('show'); }
+
+/* ============================================================
+   TUTORIAL
+   ============================================================ */
+const tutBody = document.getElementById('tutBody');
+const tutProgress = document.getElementById('tutProgress');
+
+function placeValues(bits){
+  // returns power-of-two values, high to low
+  const arr = [];
+  for(let i=bits-1;i>=0;i--) arr.push(1<<i);
+  return arr;
+}
+function toBinaryString(n, bits){
+  let s = (n >>> 0).toString(2);
+  while(s.length < bits) s = '0' + s;
+  return s;
+}
+
+/* Build an interactive place-value trainer: toggle bits to hit a target number */
+function buildTrainer(target, bits){
+  const wrap = document.createElement('div');
+  wrap.className = 'trainer';
+
+  const num = document.createElement('div');
+  num.className = 't-num';
+  num.textContent = 'Make ' + target;
+  wrap.appendChild(num);
+
+  const row = document.createElement('div');
+  row.className = 'bit-row';
+  const pv = placeValues(bits);
+  const btns = [];
+  pv.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'bit-cell';
+    const pval = document.createElement('div');
+    pval.className = 'pval';
+    pval.textContent = v;
+    const b = document.createElement('button');
+    b.className = 'bit-btn';
+    b.textContent = '0';
+    b.dataset.val = v;
+    b.addEventListener('click', () => {
+      const on = b.classList.toggle('on');
+      b.textContent = on ? '1' : '0';
+      update();
+    });
+    cell.appendChild(pval);
+    cell.appendChild(b);
+    row.appendChild(cell);
+    btns.push(b);
+  });
+  wrap.appendChild(row);
+
+  const readout = document.createElement('div');
+  readout.className = 't-readout';
+  wrap.appendChild(readout);
+
+  const fb = document.createElement('div');
+  fb.className = 't-feedback';
+  wrap.appendChild(fb);
+
+  function currentValue(){
+    return btns.reduce((sum,b) => sum + (b.classList.contains('on') ? parseInt(b.dataset.val,10) : 0), 0);
+  }
+  function currentBits(){
+    return btns.map(b => b.classList.contains('on') ? '1' : '0').join('');
+  }
+  function update(){
+    const val = currentValue();
+    readout.innerHTML = 'Binary <b>' + currentBits() + '</b> = <b>' + val + '</b>';
+    if(val === target){
+      fb.textContent = 'Correct — ' + currentBits() + ' = ' + target;
+      fb.className = 't-feedback ok';
+    }else{
+      fb.textContent = '';
+      fb.className = 't-feedback';
+    }
+  }
+  update();
+  return wrap;
+}
+
+/* Divide-by-2 worked example text */
+function divideBy2Steps(n){
+  let lines = [];
+  let x = n;
+  if(x === 0) return x + ' \u00f7 2 = 0  r 0';
+  while(x > 0){
+    const r = x % 2;
+    const q = Math.floor(x/2);
+    lines.push(String(x).padStart(3,' ') + ' \u00f7 2 = ' + String(q).padStart(3,' ') + '  r ' + r);
+    x = q;
+  }
+  return lines.join('\n');
+}
+
+/* Tutorial steps as builder functions */
+const tutSteps = [
+  /* STEP 1 — what binary is */
+  function(){
+    const d = document.createElement('div');
+    d.innerHTML = `
+      <h1>Reading Binary</h1>
+      <p class="lead">Binary uses only two digits: <span class="mono">0</span> and <span class="mono">1</span>.</p>
+      <p>Every position in a binary number stands for a power of two. Reading right to left, the positions are worth <span class="mono">1, 2, 4, 8, 16, 32, 64, 128</span> — each one double the last.</p>
+      <h2>Place values</h2>
+      <table class="pv-table">
+        <tr><th>128</th><th>64</th><th>32</th><th>16</th><th>8</th><th>4</th><th>2</th><th>1</th></tr>
+        <tr><td class="bit0">0</td><td class="bit1">1</td><td class="bit0">0</td><td class="bit0">0</td><td class="bit1">1</td><td class="bit1">1</td><td class="bit0">0</td><td class="bit1">1</td></tr>
+      </table>
+      <p>Wherever there is a <span class="mono">1</span>, add that position's value. Ignore the <span class="mono">0</span>s. Above, the <span class="mono">1</span>s sit under 64, 8, 4, and 1:</p>
+      <div class="callout"><strong>Add the ON positions</strong>64 + 8 + 4 + 1 = <b>77</b><br>So <span class="mono">01001101</span> = 77.</div>
+    `;
+    return d;
+  },
+  /* STEP 2 — interactive: build a number from bits */
+  function(){
+    const d = document.createElement('div');
+    d.innerHTML = `
+      <h1>Try It: Build a Number</h1>
+      <p class="lead">Tap the bits to switch them between 0 and 1.</p>
+      <p>Turn on the right positions so the binary adds up to the target. Watch the running total update as you go.</p>
+    `;
+    d.appendChild(buildTrainer(13, 4));
+    const p = document.createElement('p');
+    p.className = 'small';
+    p.style.marginTop = '14px';
+    p.textContent = 'Hint: 8 + 4 + 1 = 13. The positions here are worth 8, 4, 2, 1.';
+    d.appendChild(p);
+    return d;
+  },
+  /* STEP 3 — decimal to binary via divide by 2 */
+  function(){
+    const d = document.createElement('div');
+    d.innerHTML = `
+      <h1>Number to Binary</h1>
+      <p class="lead">To go the other way, divide by 2 and track the remainders.</p>
+      <p>Divide the number by 2. Write down the remainder — it is <span class="mono">1</span> if the number is odd, <span class="mono">0</span> if even. Then divide the result by 2 again. Keep going until you reach 0.</p>
+      <h2>Example: 77</h2>
+      <div class="steps">${divideBy2Steps(77)}</div>
+      <p>Now read the remainders from <b>bottom to top</b>:</p>
+      <div class="callout"><strong>Read remainders upward</strong>1001101 &rarr; pad to 8 bits &rarr; <span class="mono">01001101</span> = 77.</div>
+      <p class="small">Rule: divide by 2, the remainder is the next bit, repeat until the quotient is 0, then read the remainders in reverse.</p>
+    `;
+    return d;
+  },
+  /* STEP 4 — second worked divide-by-2 + practice trainer */
+  function(){
+    const d = document.createElement('div');
+    d.innerHTML = `
+      <h1>Try It: 22 to Binary</h1>
+      <p>Follow the same method for 22:</p>
+      <div class="steps">${divideBy2Steps(22)}</div>
+      <p>Reading the remainders upward gives <span class="mono">10110</span>. Check it by building 22 below:</p>
+    `;
+    d.appendChild(buildTrainer(22, 5));
+    const p = document.createElement('p');
+    p.className = 'small';
+    p.style.marginTop = '14px';
+    p.textContent = 'In the timed challenge you will type the binary string yourself. Leading zeros are optional — 10110 and 010110 both count.';
+    d.appendChild(p);
+    return d;
+  }
+];
+
+let tutIndex = 0;
+
+function renderTutProgress(){
+  tutProgress.innerHTML = '';
+  for(let i=0;i<tutSteps.length;i++){
+    const s = document.createElement('div');
+    s.className = 'seg' + (i <= tutIndex ? ' done' : '');
+    tutProgress.appendChild(s);
+  }
+}
+
+function renderTutStep(){
+  tutBody.innerHTML = '';
+  tutBody.appendChild(tutSteps[tutIndex]());
+
+  const row = document.createElement('div');
+  row.className = 'btn-row';
+  if(tutIndex > 0){
+    const back = document.createElement('button');
+    back.className = 'act ghost';
+    back.textContent = 'Back';
+    back.addEventListener('click', () => { tutIndex--; renderTutProgress(); renderTutStep(); tutBody.scrollTop = 0; });
+    row.appendChild(back);
+  }
+  const next = document.createElement('button');
+  next.className = 'act';
+  next.textContent = (tutIndex === tutSteps.length - 1) ? 'Start Challenge' : 'Next';
+  next.addEventListener('click', () => {
+    if(tutIndex === tutSteps.length - 1){
+      show(document.getElementById('gameIntroOverlay'));
+    }else{
+      tutIndex++; renderTutProgress(); renderTutStep(); tutBody.scrollTop = 0;
+    }
+  });
+  row.appendChild(next);
+  tutBody.appendChild(row);
+  renderTutProgress();
+}
+
+/* ============================================================
+   GAME
+   ============================================================ */
+const GAME_SECONDS = 180;
+
+/* difficulty ramp — advances by number of correct answers */
+const TIERS = [
+  { max:15,  minBits:4, label:'Range 0\u201315' },
+  { max:31,  minBits:5, label:'Range 0\u201331' },
+  { max:63,  minBits:6, label:'Range 0\u201363' },
+  { max:127, minBits:7, label:'Range 0\u2013127' }
+];
+function tierForCount(correctCount){
+  if(correctCount < 5) return 0;
+  if(correctCount < 10) return 1;
+  if(correctCount < 16) return 2;
+  return 3;
+}
+/* expected seconds to solve, scales with difficulty tier — used for speed factor */
+const EXPECTED_SEC = [4, 5.5, 7, 9];
+
+const gameView       = document.getElementById('gameView');
+const tutorialView   = document.getElementById('tutorialView');
+const timeVal        = document.getElementById('timeVal');
+const solvedVal      = document.getElementById('solvedVal');
+const scoreVal       = document.getElementById('scoreVal');
+const timerBar       = document.getElementById('timerBar');
+const promptDecimal  = document.getElementById('promptDecimal');
+const binInput       = document.getElementById('binInput');
+const gameFeedback   = document.getElementById('gameFeedback');
+const tierTag        = document.getElementById('tierTag');
+const bitGuide       = document.getElementById('bitGuide');
+const bitEcho        = document.getElementById('bitEcho');
+
+/* ---- adaptive place-value guide (Method B: columns match current tier) ---- */
+const ALL_GUIDE_VALUES = [128,64,32,16,8,4,2,1];
+let guideSlots = [];
+let guideBits = 8;   // current guide width, set per tier
+
+function buildGuide(bits){
+  guideBits = bits;
+  bitGuide.innerHTML = '';
+  guideSlots = [];
+  const values = ALL_GUIDE_VALUES.slice(8 - bits);  // e.g. bits=4 -> [8,4,2,1]
+  values.forEach(v => {
+    const col = document.createElement('div');
+    col.className = 'col';
+    const pv = document.createElement('div');
+    pv.className = 'pv';
+    pv.textContent = v;
+    const slot = document.createElement('div');
+    slot.className = 'slot empty';
+    slot.textContent = '0';
+    col.appendChild(pv);
+    col.appendChild(slot);
+    bitGuide.appendChild(col);
+    guideSlots.push(slot);
+  });
+}
+
+/* reflect the typed binary string into the guide, right-aligned */
+function updateGuide(raw){
+  const bits = (raw || '').replace(/[^01]/g,'').slice(-guideBits);
+  const padded = bits.padStart(guideBits, ' ');   // space = "no digit here yet"
+  for(let i=0;i<guideBits;i++){
+    const ch = padded[i];
+    const slot = guideSlots[i];
+    if(!slot) continue;
+    if(ch === '1'){
+      slot.textContent = '1'; slot.className = 'slot on';
+    }else if(ch === '0'){
+      slot.textContent = '0'; slot.className = 'slot';
+    }else{
+      slot.textContent = '0'; slot.className = 'slot empty';
+    }
+  }
+  // top echo: always full 8-bit padded form of the current typed value
+  updateEcho(raw);
+}
+function resetGuide(){ updateGuide(''); }
+
+/* fixed 8-bit padded echo at the very top of the game screen */
+function updateEcho(raw){
+  const bits = (raw || '').replace(/[^01]/g,'').slice(-8);
+  const val = bits.length ? parseInt(bits, 2) : 0;
+  bitEcho.textContent = (val >>> 0).toString(2).padStart(8, '0');
+}
+
+let gameActive = false;
+let correctCount = 0;
+let rawScore = 0;          // speed-weighted points
+let currentTarget = 0;
+let currentTier = 0;
+let questionStart = 0;
+let deadline = 0;
+let tickHandle = null;
+let solveTimes = [];       // seconds per correct answer
+
+function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function nextQuestion(){
+  currentTier = tierForCount(correctCount);
+  const t = TIERS[currentTier];
+  tierTag.textContent = t.label;
+  // avoid 0 (trivial) — range 1..max
+  currentTarget = randInt(1, t.max);
+  promptDecimal.textContent = currentTarget;
+  buildGuide(t.minBits);                       // adaptive: columns match this tier
+  binInput.value = '';
+  binInput.placeholder = '0'.repeat(t.minBits);
+  binInput.maxLength = t.minBits;              // can't type more bits than the tier needs
+  resetGuide();
+  questionStart = performance.now();
+  binInput.focus();
+}
+
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function submitAnswer(){
+  if(!gameActive) return;
+  const raw = binInput.value.trim();
+  if(!/^[01]+$/.test(raw)) {
+    flash('Use only 0 and 1');
+    return;
+  }
+  const val = parseInt(raw, 2);
+  if(val === currentTarget){
+    const secs = (performance.now() - questionStart) / 1000;
+    solveTimes.push(secs);
+    const expected = EXPECTED_SEC[currentTier];
+    const speedFactor = clamp(expected / Math.max(secs, 0.4), 0.5, 2.0);
+    const pts = Math.round(100 * speedFactor);
+    rawScore += pts;
+    correctCount++;
+    solvedVal.textContent = correctCount;
+    scoreVal.textContent = rawScore;
+    flash('+' + pts, true);
+    nextQuestion();
+  }else{
+    flash('Not ' + currentTarget + ' — try again');
+    binInput.select();
+  }
+}
+
+let flashHandle = null;
+function flash(msg, good){
+  gameFeedback.textContent = msg;
+  gameFeedback.style.color = '#000';
+  clearTimeout(flashHandle);
+  flashHandle = setTimeout(() => { gameFeedback.textContent = ''; }, good ? 700 : 1200);
+}
+
+function tick(){
+  const remainMs = deadline - performance.now();
+  const remain = Math.max(0, remainMs/1000);
+  timeVal.textContent = Math.ceil(remain);
+  timerBar.style.width = (remain / GAME_SECONDS * 100) + '%';
+  if(remainMs <= 0){
+    endGame();
+  }
+}
+
+function startGame(){
+  hide(document.getElementById('gameIntroOverlay'));
+  tutorialView.style.display = 'none';
+  gameView.classList.add('active');
+  gameActive = true;
+  correctCount = 0; rawScore = 0; solveTimes = [];
+  solvedVal.textContent = '0';
+  scoreVal.textContent = '0';
+  deadline = performance.now() + GAME_SECONDS*1000;
+  nextQuestion();
+  tickHandle = setInterval(tick, 200);
+  tick();
+}
+
+async function endGame(){
+  if(!gameActive) return;
+  gameActive = false;
+  clearInterval(tickHandle);
+  binInput.blur();
+
+  const avgSec = solveTimes.length ? (solveTimes.reduce((a,b)=>a+b,0)/solveTimes.length) : 0;
+  // maxScore is defined relative to the player's own pace: a nominal 100 per solve.
+  // "justice" scaling — speed pushes rawScore above the nominal, giving fast players
+  // a percentage over 100 that is then capped for display fairness.
+  const nominalMax = Math.max(correctCount, 1) * 100;
+  const percentage = Math.round((rawScore / nominalMax) * 100);
+
+  const record = {
+    score: rawScore,
+    maxScore: nominalMax,
+    percentage: percentage,
+    solved: correctCount,
+    avgSec: Math.round(avgSec * 100) / 100,
+    startTime: gameStartIso,
+    endTime: new Date().toISOString(),
+    name: localStorage.getItem(NAME_KEY) || ''
+  };
+  await saveResult(record);
+  showResult(record);
+}
+
+function fmtDateTime(iso){
+  if(!iso) return { datePart:'', timePart:'' };
+  const d = new Date(iso);
+  return {
+    datePart: d.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' }),
+    timePart: d.toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' })
+  };
+}
+
+function scoreLines(record){
+  const started = fmtDateTime(record.startTime);
+  const ended = fmtDateTime(record.endTime);
+  return 'Score: ' + record.score + ' pts' +
+    '<br>Solved: ' + record.solved + ' in 3 min' +
+    '<br>Avg time: ' + record.avgSec + ' s / answer' +
+    '<br>Rating: ' + record.percentage + '%' +
+    (record.name ? '<br>Name: ' + record.name : '') +
+    '<br>Date: ' + started.datePart +
+    '<br>Ended: ' + ended.timePart;
+}
+
+function showResult(record){
+  document.getElementById('resultScoreText').innerHTML = scoreLines(record);
+  show(document.getElementById('resultOverlay'));
+}
+
+/* ============================================================
+   SELF-DOWNLOAD — saves this activity's HTML as a file
+   ============================================================ */
+function downloadSelf(){
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type:'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'binary_activity.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+document.getElementById('resultDownloadBtn').addEventListener('click', downloadSelf);
+document.getElementById('doneDownloadBtn').addEventListener('click', downloadSelf);
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+let gameStartIso = null;
+
+document.getElementById('beginBtn').addEventListener('click', () => {
+  hide(document.getElementById('startOverlay'));
+  tutIndex = 0;
+  renderTutStep();
+});
+document.getElementById('startGameBtn').addEventListener('click', () => {
+  gameStartIso = new Date().toISOString();
+  startGame();
+});
+
+binInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){ e.preventDefault(); submitAnswer(); }
+});
+/* live: keep only 0/1, reflect into guide, then auto-submit on match */
+binInput.addEventListener('input', () => {
+  const cleaned = binInput.value.replace(/[^01]/g, '').slice(0, guideBits);
+  if(cleaned !== binInput.value){
+    binInput.value = cleaned;   // strip any non-binary keystroke immediately
+  }
+  updateGuide(cleaned);
+  if(cleaned.length && parseInt(cleaned, 2) === currentTarget){
+    submitAnswer();
+  }
+});
+/* block non-binary keys at source on physical keyboards */
+binInput.addEventListener('keydown', (e) => {
+  if(e.key.length === 1 && !/[01]/.test(e.key) && !e.ctrlKey && !e.metaKey){
+    e.preventDefault();
+  }
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(async function init(){
+  const stage = document.getElementById('stage');
+  const startOverlay = document.getElementById('startOverlay');
+
+  if(browserBlocked){
+    hide(startOverlay);
+    stage.style.display = 'none';
+    show(document.getElementById('blockOverlay'));
+    return;
+  }
+  const prior = await loadPriorResult();
+  if(!prior){
+    hide(startOverlay);
+    stage.style.display = 'none';
+    show(document.getElementById('lockedOverlay'));
+    return;
+  }
+  const existing = await loadResult();
+  if(existing){
+    hide(startOverlay);
+    stage.style.display = 'none';
+    document.getElementById('doneScoreText').innerHTML = scoreLines(existing);
+    show(document.getElementById('doneOverlay'));
+    return;
+  }
+  // fresh — start overlay already visible
+})();
+</script>
+
+</body>
+</html>
