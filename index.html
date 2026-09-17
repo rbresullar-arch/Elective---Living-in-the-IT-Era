@@ -151,6 +151,33 @@
     margin-top: 8px;
     min-height: 16px;
   }
+  #folderBar {
+    text-align: center;
+    margin-top: 10px;
+  }
+  #chooseFolderBtn {
+    background: #444;
+    font-size: 13px;
+    padding: 6px 16px;
+  }
+  #chooseFolderBtn:active { background: #222; }
+  #folderLabel {
+    display: block;
+    font-size: 12px;
+    color: #777;
+    margin-top: 6px;
+  }
+  #offlineBar {
+    text-align: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px dashed #999;
+  }
+  #saveOfflineBtn {
+    background: #000;
+    font-size: 15px;
+    padding: 10px 24px;
+  }
 </style>
 </head>
 <body>
@@ -230,6 +257,15 @@
     <input type="file" id="updateFileInput" accept="application/json" style="display:none;">
   </div>
   <div id="syncStatus"></div>
+
+  <div id="folderBar">
+    <button type="button" id="chooseFolderBtn">Choose sync folder</button>
+    <span id="folderLabel">No folder set — Save/Update will use file dialogs.</span>
+  </div>
+
+  <div id="offlineBar">
+    <button type="button" id="saveOfflineBtn">Save Offline</button>
+  </div>
 </div>
 
 <script>
@@ -258,6 +294,7 @@ const IDB_KEY4 = 'binary_result';
 const SYNC_KEY = 'ITEra2026';
 const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
 const SYNC_FILENAME = 'itict_sync.json';
+const SYNC_DIR_HANDLE_KEY = 'sync_dir_handle';
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
@@ -586,6 +623,65 @@ function setSyncStatus(msg, isError) {
   el.style.color = isError ? '#b00000' : '#555';
 }
 
+/* ===== Sync folder (File System Access API) ===== */
+
+async function verifyFolderPermission(handle, mode) {
+  const opts = { mode };
+  try {
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+  } catch (e) {}
+  return false;
+}
+
+async function getSyncFolderHandle() {
+  return await idbGet(SYNC_DIR_HANDLE_KEY);
+}
+
+function updateFolderLabel(handle) {
+  const el = document.getElementById('folderLabel');
+  if (handle && handle.name) {
+    el.textContent = `Sync folder: ${handle.name}`;
+  } else {
+    el.textContent = 'No folder set — Save/Update will use file dialogs.';
+  }
+}
+
+async function chooseSyncFolder() {
+  if (!('showDirectoryPicker' in window)) {
+    setSyncStatus('Folder access not supported in this browser.', true);
+    return;
+  }
+  try {
+    const handle = await window.showDirectoryPicker();
+    const ok = await verifyFolderPermission(handle, 'readwrite');
+    if (!ok) { setSyncStatus('Folder permission denied.', true); return; }
+    await idbSet(SYNC_DIR_HANDLE_KEY, handle);
+    updateFolderLabel(handle);
+    setSyncStatus('Sync folder set.');
+  } catch (e) {
+    /* user cancelled the picker */
+  }
+}
+
+async function restoreFolderLabel() {
+  const handle = await getSyncFolderHandle();
+  if (handle) updateFolderLabel(handle);
+}
+
+function saveSyncFileAsDownload(payload) {
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = SYNC_FILENAME;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+
 async function saveSyncFile() {
   try {
     const data = await collectSyncData();
@@ -594,15 +690,23 @@ async function saveSyncFile() {
     const plaintext = new TextEncoder().encode(JSON.stringify(data));
     const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
     const payload = { v: 1, iv: bufToB64(iv), data: bufToB64(ciphertext) };
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = SYNC_FILENAME;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    const dirHandle = await getSyncFolderHandle();
+    if (dirHandle && (await verifyFolderPermission(dirHandle, 'readwrite'))) {
+      try {
+        const fileHandle = await dirHandle.getFileHandle(SYNC_FILENAME, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(payload));
+        await writable.close();
+        localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
+        setSyncStatus('Saved to sync folder.');
+        return;
+      } catch (e) {
+        /* fall through to download */
+      }
+    }
+
+    saveSyncFileAsDownload(payload);
     localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
     setSyncStatus('Saved: ' + SYNC_FILENAME);
   } catch (e) {
@@ -632,6 +736,22 @@ async function applySyncData(data) {
     await idbSet(IDB_KEY4, data.activity4);
   }
   if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
+}
+
+async function updateFromFolder() {
+  const dirHandle = await getSyncFolderHandle();
+  if (dirHandle && (await verifyFolderPermission(dirHandle, 'read'))) {
+    try {
+      const fileHandle = await dirHandle.getFileHandle(SYNC_FILENAME);
+      const file = await fileHandle.getFile();
+      await updateFromFile(file);
+      return;
+    } catch (e) {
+      setSyncStatus('No sync file found in the folder yet.', true);
+      return;
+    }
+  }
+  document.getElementById('updateFileInput').click();
 }
 
 async function updateFromFile(file) {
@@ -668,15 +788,29 @@ async function updateFromFile(file) {
   }
 }
 
+async function saveOffline() {
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'IT_and_ICT_Activities.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 document.getElementById('saveBtn').addEventListener('click', saveSyncFile);
-document.getElementById('updateBtn').addEventListener('click', () => {
-  document.getElementById('updateFileInput').click();
-});
+document.getElementById('updateBtn').addEventListener('click', updateFromFolder);
 document.getElementById('updateFileInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (file) updateFromFile(file);
   e.target.value = '';
 });
+document.getElementById('chooseFolderBtn').addEventListener('click', chooseSyncFolder);
+document.getElementById('saveOfflineBtn').addEventListener('click', saveOffline);
+restoreFolderLabel();
 
 /* On load: if name already saved, skip the name form */
 (function init() {
