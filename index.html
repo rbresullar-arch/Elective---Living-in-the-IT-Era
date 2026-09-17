@@ -122,6 +122,35 @@
   }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
+
+  #syncBar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1.5px solid #000;
+    flex-wrap: wrap;
+  }
+  #syncBar button {
+    font-size: 15px;
+    padding: 10px 24px;
+  }
+  #saveBtn {
+    background: #1a7d1a;
+  }
+  #saveBtn:active { background: #145f14; }
+  #updateBtn {
+    background: #1a5bd6;
+  }
+  #updateBtn:active { background: #1345a3; }
+  #syncStatus {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    margin-top: 8px;
+    min-height: 16px;
+  }
 </style>
 </head>
 <body>
@@ -194,6 +223,13 @@
       <a class="activity-btn" href="finals_ITEra.html">Finals Read</a>
     </div>
   </div>
+
+  <div id="syncBar">
+    <button type="button" id="saveBtn">Save</button>
+    <button type="button" id="updateBtn">Update</button>
+    <input type="file" id="updateFileInput" accept="application/json" style="display:none;">
+  </div>
+  <div id="syncStatus"></div>
 </div>
 
 <script>
@@ -219,6 +255,10 @@ const RESULT4_KEY = 'itict_binary_result';
 const RESULT4_COOKIE = 'itict_binary_result';
 const IDB_KEY4 = 'binary_result';
 
+const SYNC_KEY = 'ITEra2026';
+const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
+const SYNC_FILENAME = 'itict_sync.json';
+
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
@@ -242,6 +282,18 @@ async function idbGet(key) {
       req.onerror = () => reject(req.error);
     });
   } catch (e) { return null; }
+}
+
+async function idbSet(key, value) {
+  try {
+    const db = await idbOpen();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const req = tx.objectStore(IDB_STORE).put(value, key);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  } catch (e) { return false; }
 }
 
 async function idbDelete(key) {
@@ -499,6 +551,132 @@ function isChrome() {
   return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
 }
 const browserBlocked = isAndroid() && !isChrome();
+
+/* ===== Encrypted sync (Save / Update) ===== */
+
+async function getSyncCryptoKey() {
+  const enc = new TextEncoder();
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(SYNC_KEY));
+  return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+function bufToB64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+function b64ToBuf(b64) {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+}
+
+async function collectSyncData() {
+  return {
+    name: localStorage.getItem(NAME_KEY),
+    createdDate: localStorage.getItem(DATE_KEY),
+    redoUsed: localStorage.getItem(REDO_FLAG_KEY) === '1',
+    activity1: await loadActivity1Result(),
+    activity2: await loadActivity2Result(),
+    activity3: await loadActivity3Result(),
+    activity4: await loadActivity4Result(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function setSyncStatus(msg, isError) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.color = isError ? '#b00000' : '#555';
+}
+
+async function saveSyncFile() {
+  try {
+    const data = await collectSyncData();
+    const key = await getSyncCryptoKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const plaintext = new TextEncoder().encode(JSON.stringify(data));
+    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+    const payload = { v: 1, iv: bufToB64(iv), data: bufToB64(ciphertext) };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = SYNC_FILENAME;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
+    setSyncStatus('Saved: ' + SYNC_FILENAME);
+  } catch (e) {
+    setSyncStatus('Save failed.', true);
+  }
+}
+
+async function applySyncData(data) {
+  if (data.name) localStorage.setItem(NAME_KEY, data.name);
+  if (data.createdDate) localStorage.setItem(DATE_KEY, data.createdDate);
+  if (data.redoUsed) localStorage.setItem(REDO_FLAG_KEY, '1');
+
+  if (data.activity1) {
+    localStorage.setItem(RESULT_KEY, JSON.stringify(data.activity1));
+    await idbSet(IDB_KEY, data.activity1);
+  }
+  if (data.activity2) {
+    localStorage.setItem(RESULT2_KEY, JSON.stringify(data.activity2));
+    await idbSet(IDB_KEY2, data.activity2);
+  }
+  if (data.activity3) {
+    localStorage.setItem(RESULT3_KEY, JSON.stringify(data.activity3));
+    await idbSet(IDB_KEY3, data.activity3);
+  }
+  if (data.activity4) {
+    localStorage.setItem(RESULT4_KEY, JSON.stringify(data.activity4));
+    await idbSet(IDB_KEY4, data.activity4);
+  }
+  if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
+}
+
+async function updateFromFile(file) {
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload || !payload.iv || !payload.data) throw new Error('bad-format');
+
+    const key = await getSyncCryptoKey();
+    const iv = b64ToBuf(payload.iv);
+    const ciphertext = b64ToBuf(payload.data);
+    const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+    const data = JSON.parse(new TextDecoder().decode(plainBuf));
+
+    const localTs = localStorage.getItem(SYNC_TIMESTAMP_KEY);
+    if (localTs && data.updatedAt && data.updatedAt <= localTs) {
+      setSyncStatus('Already up to date.');
+      return;
+    }
+
+    await applySyncData(data);
+    setSyncStatus('Updated from file.');
+    if (data.name) {
+      enterActivities(data.name);
+    } else {
+      refreshActivity1Status();
+      refreshActivity2Status();
+      refreshActivity3Status();
+      refreshActivity4Status();
+      refreshRedoButton();
+    }
+  } catch (e) {
+    setSyncStatus('Update failed — file is invalid or was tampered with.', true);
+  }
+}
+
+document.getElementById('saveBtn').addEventListener('click', saveSyncFile);
+document.getElementById('updateBtn').addEventListener('click', () => {
+  document.getElementById('updateFileInput').click();
+});
+document.getElementById('updateFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) updateFromFile(file);
+  e.target.value = '';
+});
 
 /* On load: if name already saved, skip the name form */
 (function init() {
