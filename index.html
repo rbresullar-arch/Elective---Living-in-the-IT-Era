@@ -81,6 +81,16 @@
     background: #999;
     cursor: default;
   }
+  .activity-row.exam-row {
+    border-color: #e06c00;
+    margin-top: 24px;
+  }
+  .activity-row a.activity-btn.exam-btn {
+    background: #e06c00;
+  }
+  .activity-row a.activity-btn.exam-btn:active {
+    background: #b85800;
+  }
   .status {
     font-size: 14px;
     min-width: 140px;
@@ -234,6 +244,11 @@
       <button type="button" class="activity-btn" id="redoBtn" style="cursor:pointer;">Redo Fast Play</button>
       <span class="status" id="redoStatus"></span>
     </div>
+
+    <div class="activity-row exam-row">
+      <a class="activity-btn exam-btn" id="midtermBtn" href="midterm_exam_ITEra.html">Midterm Examination</a>
+      <span class="status" id="midtermStatus">Checking...</span>
+    </div>
   </div>
 
   <div class="tab-panel" id="tab-reads">
@@ -290,6 +305,12 @@ const REDO_FLAG_KEY = 'itict_pascaline_redo_used';
 const RESULT4_KEY = 'itict_binary_result';
 const RESULT4_COOKIE = 'itict_binary_result';
 const IDB_KEY4 = 'binary_result';
+
+/* Midterm exam keys — must match midterm_exam_ITEra.html (CFG.prefix = 'itict_midterm') */
+const MID_SESSION_KEY = 'itict_midterm_session';
+const MID_RESULT_KEY = 'itict_midterm_result';
+const MID_IDB_NAME = 'itict_exam';
+const MID_IDB_STORE = 'kv';
 
 const SYNC_KEY = 'ITEra2026';
 const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
@@ -410,6 +431,67 @@ async function loadActivity4Result() {
     record = await idbGet(IDB_KEY4);
   }
   return record;
+}
+
+/* ===== Midterm exam status (read-only; exam page owns the data) ===== */
+
+function midIdbGet(key) {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(MID_IDB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(MID_IDB_STORE); };
+      req.onsuccess = () => {
+        try {
+          const q = req.result.transaction(MID_IDB_STORE, 'readonly').objectStore(MID_IDB_STORE).get(key);
+          q.onsuccess = () => resolve(q.result || null);
+          q.onerror = () => resolve(null);
+        } catch (e) { resolve(null); }
+      };
+      req.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+
+/* Same rule as the exam: newest copy across localStorage / sessionStorage / cookie / IndexedDB wins. */
+async function loadMidtermRecord(key) {
+  const copies = [];
+  try { const s = localStorage.getItem(key); if (s) copies.push(JSON.parse(s)); } catch (e) {}
+  try { const s = sessionStorage.getItem(key); if (s) copies.push(JSON.parse(s)); } catch (e) {}
+  try { const c = getCookie(key); if (c) copies.push(JSON.parse(c)); } catch (e) {}
+  const i = await midIdbGet(key);
+  if (i) copies.push(i);
+  let best = null;
+  copies.forEach(x => { if (x && (!best || (x.updated || 0) > (best.updated || 0))) best = x; });
+  return best;
+}
+
+async function refreshMidtermStatus() {
+  const statusEl = document.getElementById('midtermStatus');
+  const btnEl = document.getElementById('midtermBtn');
+  const result = await loadMidtermRecord(MID_RESULT_KEY);
+  const session = await loadMidtermRecord(MID_SESSION_KEY);
+
+  if (result || (session && session.submitted)) {
+    btnEl.textContent = 'Midterm Examination — View QR';
+    statusEl.textContent = 'Submitted';
+    statusEl.className = 'status done';
+    return;
+  }
+  if (session) {
+    const total = (session.order && session.order.length) || '?';
+    const item = (session.cur || 0) + 1;
+    btnEl.textContent = 'Midterm Examination — Resume';
+    if (session.endAt && Date.now() >= session.endAt) {
+      statusEl.textContent = 'Time expired — open to submit';
+    } else {
+      statusEl.textContent = `In progress — Item ${item} of ${total}`;
+    }
+    statusEl.className = 'status pending';
+    return;
+  }
+  btnEl.textContent = 'Midterm Examination';
+  statusEl.textContent = 'Not yet taken';
+  statusEl.className = 'status pending';
 }
 
 document.querySelectorAll('.tab-link').forEach(btn => {
@@ -567,6 +649,7 @@ function enterActivities(name) {
   refreshActivity3Status();
   refreshActivity4Status();
   refreshRedoButton();
+  refreshMidtermStatus();
 }
 
 document.getElementById('nameForm').addEventListener('submit', (e) => {
@@ -782,6 +865,7 @@ async function updateFromFile(file) {
       refreshActivity3Status();
       refreshActivity4Status();
       refreshRedoButton();
+      refreshMidtermStatus();
     }
   } catch (e) {
     setSyncStatus('Update failed — file is invalid or was tampered with.', true);
@@ -811,6 +895,13 @@ document.getElementById('updateFileInput').addEventListener('change', (e) => {
 document.getElementById('chooseFolderBtn').addEventListener('click', chooseSyncFolder);
 document.getElementById('saveOfflineBtn').addEventListener('click', saveOffline);
 restoreFolderLabel();
+
+/* Refresh statuses when returning via Back (bfcache restore) */
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted || browserBlocked) return;
+  const savedName = localStorage.getItem(NAME_KEY);
+  if (savedName) enterActivities(savedName);
+});
 
 /* On load: if name already saved, skip the name form */
 (function init() {
