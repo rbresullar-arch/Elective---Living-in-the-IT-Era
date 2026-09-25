@@ -355,8 +355,11 @@ body.done .results{display:block}
 
     const runScore = scoreFor(total);
     const prev = await loadRecord();
+    const locked = prev && (prev.score || 0) >= 100;
     let rec, bonusEarned = false;
-    if (!prev) {
+    if (locked) {
+      rec = prev;                         // already 100% — record is final, nothing stored
+    } else if (!prev) {
       rec = {
         firstScore: runScore, bonus: 0, retries: 0, resends: runResends,
         firstTime: total, bestTime: total
@@ -368,26 +371,29 @@ body.done .results{display:block}
       rec.bestTime = Math.min(prev.bestTime || Infinity, total);
       if (runScore > prev.firstScore) { rec.bonus = (prev.bonus || 0) + 1; bonusEarned = true; }
     }
-    rec.score = Math.min(100, rec.firstScore + (rec.bonus || 0));
-    rec.maxScore = 100;
-    rec.percentage = rec.score;
-    rec.lastTime = total;
-    rec.lastRunScore = runScore;
-    rec.bestTimeText = fmt(rec.bestTime);
-    rec.name = localStorage.getItem('itict_student_name') || '';
-    rec.updated = Date.now();
-    await saveRecord(rec);
+    if (!locked) {
+      rec.score = Math.min(100, rec.firstScore + (rec.bonus || 0));
+      rec.maxScore = 100;
+      rec.percentage = rec.score;
+      rec.lastTime = total;
+      rec.lastRunScore = runScore;
+      rec.bestTimeText = fmt(rec.bestTime);
+      rec.name = localStorage.getItem('itict_student_name') || '';
+      rec.updated = Date.now();
+      await saveRecord(rec);
+    }
 
     const sum = document.getElementById('summary');
     sum.innerHTML = '';
     const line = (t, cls) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); };
     line('Recorded score: ' + rec.score + '%', 'big');
     line('This run: ' + fmt(total) + ' = ' + runScore + '%');
-    if (!prev) line('First score saved. Beat ' + runScore + '% on a retry to add +1%.');
+    if (locked) line('Already at 100%. Practice run — not recorded.');
+    else if (!prev) line('First score saved. Beat ' + runScore + '% on a retry to add +1%.');
     else if (bonusEarned) line('Beat your first score (' + rec.firstScore + '%). +1% added.');
-    else if (rec.score >= 100) line('Score is at the 100% cap.');
+    else if (rec.score >= 100) line('Reached 100%. Further runs will not be recorded.');
     else line('Did not beat your first score (' + rec.firstScore + '%). No change.');
-    line('Retries: ' + rec.retries + ' · Resends this run: ' + runResends);
+    line('Retries: ' + (rec.retries || 0) + ' · Resends this run: ' + runResends);
 
     resultsBody.innerHTML = times.map((t, i) => '<tr><td>Puzzle ' + (i + 1) + ' (' + layersFor(i).length + ' layers)</td><td>' + fmt(t) + '</td></tr>').join('')
       + '<tr class="total"><td>Total</td><td>' + fmt(total) + '</td></tr>';
