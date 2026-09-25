@@ -53,14 +53,11 @@ svg{width:100%;height:100%;display:block}
 .node text{pointer-events:none;user-select:none;-webkit-user-select:none}
 .node text.tag{font-size:13px;fill:var(--muted);text-anchor:middle}
 .node{cursor:default}
-.node.broken{cursor:pointer}
 .node.broken circle.core{fill:var(--bad)}
 .node.targeted{cursor:pointer}
 .node-hit{fill:transparent}
 .edge{stroke:var(--line);stroke-width:2}
 .edge.on{stroke:var(--bolt);stroke-width:4}
-.edge.fiber{stroke:#7fe3ff}
-.edge.fiber.on{stroke:#00d5ff;filter:url(#glow)}
 .down-veil{fill:#000;opacity:0}
 svg.down .down-veil{opacity:.55}
 .down-text{font-size:26px;font-weight:700;fill:#fff;text-anchor:middle;opacity:0}
@@ -176,7 +173,7 @@ body.locked .gate{display:block}
 
 <script>
 window.PR6 = (() => {
-  const GOAL = 3000, BH_BASE = 0.05, BH_ROLL = 20, INTRUDE_P = 0.4, INTRUDE_ADD = 0.10, HACKATHON_COST = 100, HACKATHON_CUT = 0.15, BH_PENALTY = 200, FIBER_X = 2, QUEUE_X = 1.75, ORCA_HUNT = 20, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, BH_ORCAS = 2, LEVEL_STEP = 250, MAX_LEVEL = 12, SHARK_EAT = 1, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 2, ORCA_COST = 500, SHARK_PER = 400, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
+  const GOAL = 3000, BH_BASE = 0.05, BH_ROLL = 20, INTRUDE_P = 0.4, INTRUDE_ADD = 0.10, HACKATHON_COST = 100, HACKATHON_CUT = 0.15, BH_PENALTY = 200, FIBER_X = 2, QUEUE_X = 1.75, ORCA_HUNT = 5, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, BH_ORCAS = 2, LEVEL_STEP = 250, MAX_LEVEL = 12, SHARK_EAT = 1, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 2, ORCA_COST = 500, SHARK_PER = 400, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
     CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25];
   const HEAL_COST = 8;
   const UPGRADES = [
@@ -440,19 +437,18 @@ window.PR6 = (() => {
   function buyOrca(st) {
     if (!canBuyOrca(st)) return false;
     st.points -= ORCA_COST; st.orcas++;
-    st.orcaT.push(ORCA_HUNT);
+    st.orcaT.push(0);
     ev(st, 'orca', { n:st.orcas });
     return true;
   }
   function orcaHunt(st) {
-    const live = st.sharks.filter((s, k) => k < activeSharks(st));
-    if (!live.length) { ev(st, 'orcamiss'); return; }
-    const warned = live.filter(s => s.warn);
-    const prey = warned.length ? warned[0] : live.reduce((a, b) => (b.t < a.t ? b : a));
-    const at = prey.warn ? prey.warn.id : null;
+    const prey = st.sharks.find((s, k) => k < activeSharks(st) && s.warn);
+    if (!prey) return false;
+    const at = prey.warn.id;
     prey.warn = null; prey.t = sharkInterval(st);
     st.stats.hunts = (st.stats.hunts || 0) + 1;
     ev(st, 'orcahunt', { at });
+    return true;
   }
 
   const isDown = st => st.shutdown > 0 || !!(st.bh && st.bh.phase === 'active');
@@ -510,13 +506,22 @@ window.PR6 = (() => {
   function quickBuy(st) {
     const list = UPGRADES.filter(u => !st.owned[u.id] && u.req.every(r => st.owned[r])).map((u, k) => ({ kind:'inv', id:u.id, cost:u.cost, order:UPGRADES.indexOf(u) }));
     if (st.owned.baran && st.clients < MAX_CLIENTS) list.push({ kind:'client', id:'client', cost:clientCost(st), order:0.5 });
+    if (brokenList(st).length) list.push({ kind:'heal', id:'heal', cost:healCost(st), order:-1, need:healUnit(st) });
+    if (st.tls >= 1 && st.tls < TLS_MAX) list.push({ kind:'tls', id:'tls', cost:tlsCost(st), order:0.6 });
+    if (st.owned.baran && st.orcas < MAX_ORCAS) list.push({ kind:'orca', id:'orca', cost:ORCA_COST, order:50 });
+    list.push({ kind:'hack', id:'hack', cost:HACKATHON_COST, order:60 });
     list.sort((a, b) => a.cost - b.cost || a.order - b.order);
     return list[0] || null;
   }
   function buyQuick(st, rng) {
     const q = quickBuy(st);
-    if (!q || st.points < q.cost) return false;
-    return q.kind === 'client' ? addClient(st) : buy(st, q.id, rng);
+    if (!q || st.points < (q.need || q.cost)) return false;
+    if (q.kind === 'client') return addClient(st);
+    if (q.kind === 'heal') return heal(st) > 0;
+    if (q.kind === 'tls') return updateTls(st);
+    if (q.kind === 'orca') return buyOrca(st);
+    if (q.kind === 'hack') return hackathon(st);
+    return buy(st, q.id, rng);
   }
 
   function step(st, dt, rng) {
@@ -533,7 +538,7 @@ window.PR6 = (() => {
     }
     brokenList(st).forEach(n => { if (st.t - n.brokenAt >= crewTime(st)) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
 
-    if (!isDown(st)) st.orcaT.forEach((t, k) => { st.orcaT[k] -= dt; if (st.orcaT[k] <= 0) { st.orcaT[k] = ORCA_HUNT; orcaHunt(st); } });
+    if (!isDown(st)) st.orcaT.forEach((t, k) => { st.orcaT[k] = Math.max(0, st.orcaT[k] - dt); if (st.orcaT[k] <= 0 && orcaHunt(st)) st.orcaT[k] = ORCA_HUNT; });
     if (st.sharkOn) {
       const n0 = st.lastSharks || 0, n1 = activeSharks(st);
       if (n1 > n0 && n0 > 0) ev(st, 'sharkspawn', { n:n1 });
@@ -749,7 +754,7 @@ window.PR6 = (() => {
       const core = el('circle', { class:'core', cx:p.x, cy:p.y, r:15, fill:'#222' }, g);
       g.addEventListener('pointerdown', ev => {
         if (phase !== 'play') return;
-        if (E.tapShark(st, n.id) || E.healNode(st, n.id)) { ev.preventDefault(); handleEvents(); render(); renderUi(); }
+        if (E.tapShark(st, n.id)) { ev.preventDefault(); handleEvents(); render(); renderUi(); }
       });
       const d = el('text', { class:'tag', x:p.x, y:p.y + 34 }, g);
       const x = el('text', { x:p.x, y:p.y + 7, 'text-anchor':'middle', 'font-size':'20', 'font-weight':'700', fill:'#fff' }, g);
@@ -784,19 +789,15 @@ window.PR6 = (() => {
     a.onfinish = () => t.remove();
   }
 
-  function swimOrca(target) {
-    const H = +svg.getAttribute('viewBox').split(' ')[3];
-    const to = target && pos[target] ? pos[target] : { x:W / 2, y:H - 30 };
-    const o = el('text', { class:'pop', x:-30, y:H - 20 }, popLayer);
+  function orcaStrike(target) {
+    const p = pos[target];
+    if (!p) return;
+    const o = el('text', { class:'pop', x:p.x, y:p.y + 10, 'font-size':'40' }, popLayer);
     o.textContent = '🐋';
-    const t0 = performance.now(), dur = reduce ? 300 : 1400;
-    const stepA = now => {
-      const k = Math.min(1, (now - t0) / dur), ez = 1 - Math.pow(1 - k, 3);
-      o.setAttribute('x', -30 + (to.x + 30) * ez); o.setAttribute('y', (H - 20) + (to.y - (H - 20)) * ez);
-      if (k < 1) requestAnimationFrame(stepA);
-      else { pop(target || 'R', '💥'); setTimeout(() => o.remove(), 600); }
-    };
-    requestAnimationFrame(stepA);
+    if (o.animate) o.animate([{ opacity:0, transform:'scale(.4)' }, { opacity:1, transform:'scale(1.15)', offset:.3 }, { opacity:1, transform:'scale(1)', offset:.7 }, { opacity:0, transform:'scale(1)' }], { duration: reduce ? 400 : 1100, easing:'ease-out' });
+    setTimeout(() => o.remove(), reduce ? 400 : 1100);
+    o.style.transformBox = 'fill-box'; o.style.transformOrigin = 'center';
+    pop(target, '💥');
   }
 
   function addLog(text) {
@@ -834,8 +835,8 @@ window.PR6 = (() => {
         case 'hackwarn': addLog('Hacker probing. Attack in 5 s: strength ' + e.s + ' vs protection ' + e.p + '.'); break;
         case 'sharkspawn': addLog('Another shark joined (' + e.n + ' circling). Hoarded points attract sharks.'); break;
         case 'sharkleave': addLog('A shark swam off (' + e.n + ' circling).'); break;
-        case 'orca': addLog('Orca ' + e.n + ' joined. It hunts a shark every ' + E.ORCA_HUNT + ' s.'); break;
-        case 'orcahunt': swimOrca(e.at); addLog('🐋 Orca hunt: a shark was chased off.'); break;
+        case 'orca': addLog('Orca ' + e.n + ' joined. It stops a shark attack every ' + E.ORCA_HUNT + ' s.'); break;
+        case 'orcahunt': orcaStrike(e.at); addLog('🐋 Orca stopped a shark attack.'); break;
         case 'orcamiss': break;
         case 'client': addLog('Client ' + e.n + ' connected. More traffic, more points.'); break;
         case 'tls': addLog('HTTPS updated to ' + e.name + '.'); break;
@@ -860,7 +861,6 @@ window.PR6 = (() => {
     edgeEls.forEach(e => {
       const broken = (E.isRouter(e.a) && st.nodes[e.a].broken) || (E.isRouter(e.b) && st.nodes[e.b].broken);
       e.l.classList.toggle('on', on.has(e.a + '>' + e.b));
-      e.l.classList.toggle('fiber', !!st.owned.fiber);
       e.l.setAttribute('stroke-dasharray', broken ? '6 6' : '');
     });
     const warnIds = new Set(E.sharkWarns(st).map(w => w.id));
@@ -870,13 +870,6 @@ window.PR6 = (() => {
       ne.g.classList.toggle('targeted', warnIds.has(n.id));
       ne.x.textContent = n.broken ? '✕' : '';
       ne.d.textContent = n.broken ? (st.owned.baran ? 'cut ' : 'heals ') + Math.max(0, Math.ceil(E.crewTime(st) - (st.t - n.brokenAt))) + 's' : n.d + ' ms';
-    });
-    while (orcaLayer.children.length < st.orcas) { const o = el('text', { class:'pop' }, orcaLayer); o.textContent = '🐋'; }
-    const Hh = +svg.getAttribute('viewBox').split(' ')[3];
-    [...orcaLayer.children].forEach((o, k) => {
-      const ph = st.t * 0.35 + k * 1.6;
-      o.setAttribute('x', W / 2 + Math.sin(ph) * (W / 2 - 40));
-      o.setAttribute('y', Hh - 18 + Math.sin(ph * 2.3) * 4);
     });
     const warns = E.sharkWarns(st);
     warnEls.forEach((w, k) => {
@@ -910,13 +903,17 @@ window.PR6 = (() => {
     bannerEl.className = cls || '';
     bannerEl.disabled = cls !== 'action';
   }
+  const bhShow = { next:12, until:-1 };
   function bannerState() {
     if (st.bh && st.bh.phase === 'active') return ['BLACK HAT!', 'action', (E.canWhiteHat(st) ? 'Tap: hire white hat ' : 'Need ') + E.WHITE_COST + ' pts. ' + Math.ceil(st.bh.left) + ' s left'];
     if (st.bh) return ['BLACK HAT!', 'action', 'Incoming in ' + Math.ceil(st.bh.left) + ' s. Tap: hire white hat ' + E.WHITE_COST + ' pts'];
     if (st.shutdown > 0) return ['SYSTEM DOWN', 'danger', 'Back in ' + Math.ceil(st.shutdown) + ' s'];
     if (st.hackWarn) { const s = E.hackStrength(st), p = E.protLevel(st); return ['HACKERS!', s > p ? 'danger' : 'warn', 'Strength ' + s + ' vs protection ' + p + (s > p ? ': update HTTPS' : ': blocked')]; }
     if (E.sharkWarns(st).length) return ['SHARKS!', 'warn', 'Tap the ringed node'];
-    if (E.brokenList(st).length) return ['LEVEL ' + E.level(st), '', 'Tap a cut node to heal (' + E.healUnit(st) + ' pts)'];
+    if (st.owned.http && st.t >= bhShow.next) { bhShow.until = st.t + 3; bhShow.next = st.t + 8 + Math.random() * 7; }
+    if (st.owned.http && st.t < bhShow.until) return ['LEVEL ' + E.level(st), '', 'Black hat chance ' + Math.round(st.bhP * 100) + '%' + (E.bhUnlocked(st) ? '' : ' (active after 2 orcas)')];
+    const nb = E.brokenList(st).length;
+    if (nb) return ['LEVEL ' + E.level(st), '', nb + (nb === 1 ? ' node' : ' nodes') + ' cut'];
     return ['LEVEL ' + E.level(st), '', st.sharkOn ? E.activeSharks(st) + (E.activeSharks(st) === 1 ? ' shark' : ' sharks') + ' circling' : 'Direct line open'];
   }
   const CLIENT_INFO = { title:'New client', year:'Client–server networking', info:'Another sender joins the network and sends its own messages.' };
@@ -924,10 +921,14 @@ window.PR6 = (() => {
     const q = E.quickBuy(st);
     if (!q) { qName.textContent = 'All discovered'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Open Discoveries for HTTPS, orcas and hackathons.'; btn.textContent = 'Discover'; btn.disabled = true; return; }
     if (q.kind === 'client') { qName.textContent = CLIENT_INFO.title + ' ' + (st.clients + 1); qYear.textContent = CLIENT_INFO.year; qDesc.textContent = CLIENT_INFO.info; }
+    else if (q.kind === 'heal') { const nb = E.brokenList(st).length; qName.textContent = 'Heal ' + nb + (nb === 1 ? ' node' : ' nodes'); qYear.textContent = 'Repair'; qDesc.textContent = 'Fix cut nodes now instead of waiting ' + E.crewTime(st) + ' s for the free repair.'; }
+    else if (q.kind === 'tls') { qName.textContent = 'Update HTTPS'; qYear.textContent = E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1]; qDesc.textContent = 'Protection +1 (now ' + E.protLevel(st) + '). Hacker strength ' + E.hackStrength(st) + '.'; }
+    else if (q.kind === 'orca') { qName.textContent = 'Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')'; qYear.textContent = 'Shark hunter'; qDesc.textContent = 'Appears at a node under shark attack and stops it. Strikes every ' + E.ORCA_HUNT + ' s.'; }
+    else if (q.kind === 'hack') { qName.textContent = 'Cyber Hackathon'; qYear.textContent = 'Security community'; qDesc.textContent = 'Black hat chance −15% (now ' + Math.round(st.bhP * 100) + '%).'; }
     else { const u = E.U[q.id]; qName.textContent = u.title; qYear.textContent = u.year + ', ' + u.name; qDesc.textContent = u.effect; }
     qCost.textContent = q.cost + ' Pts';
     btn.textContent = 'Discover';
-    btn.disabled = st.points < q.cost;
+    btn.disabled = st.points < (q.need || q.cost);
   }
   function renderUi() {
     timerEl.textContent = fmt(st.t);
@@ -1017,7 +1018,7 @@ window.PR6 = (() => {
   }
 
   function start() {
-    st = E.create(rng);
+    st = E.create(rng); bhShow.next = 12; bhShow.until = -1;
     document.body.classList.remove('done');
     log.innerHTML = '';
     buildBoard();
@@ -1109,7 +1110,7 @@ window.PR6 = (() => {
     const best = mine ? 'Best time ' + (mine.bestTimeText || '–') + ' over ' + (mine.runs || 1) + (mine.runs === 1 ? ' run' : ' runs') + '. Beat it!' : 'Reach ' + E.GOAL + ' points as fast as you can.';
     hintEl.textContent = best;
     qName.textContent = 'Press Start'; qCost.textContent = ''; qYear.textContent = mine ? 'Best ' + (mine.bestTimeText || '–') : '';
-    qDesc.textContent = 'Sending is automatic. Tap ringed nodes to block sharks, tap cut nodes to heal.';
+    qDesc.textContent = 'Sending is automatic. Tap ringed nodes to block sharks. Buy from the suggestion card.';
     pointsEl.textContent = '0/' + E.GOAL;
     setBanner('READY', '', mine ? best : 'Reach ' + E.GOAL + ' points');
     bannerEl.disabled = true;
