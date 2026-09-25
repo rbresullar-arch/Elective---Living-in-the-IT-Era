@@ -45,6 +45,9 @@ svg{width:100%;height:auto;max-height:62vh;display:block}
 .inv.locked{border-style:dashed;color:var(--muted)}
 .edge{stroke:var(--line);stroke-width:2}
 .edge.on{stroke:var(--bolt);stroke-width:4}
+.edge.fiber{stroke:#7fe3ff}
+.edge.fiber.on{stroke:#00d5ff;filter:url(#glow)}
+#main-btn.alarm{background:var(--bad)}
 .node.broken circle.core{fill:var(--bad)}
 .down-veil{fill:#000;opacity:0}
 svg.down .down-veil{opacity:.55}
@@ -52,10 +55,10 @@ svg.down .down-veil{opacity:.55}
 svg.down .down-text{opacity:1}
 .pop{font-size:30px;text-anchor:middle;pointer-events:none}
 .countdown{display:flex;align-items:center;gap:12px;border:2px solid var(--ink);border-radius:4px;padding:6px 12px;margin:0 0 6px}
-.countdown .cd-time{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;min-width:4.2ch}
+.countdown .cd-time{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
 .countdown .cd-label{font-size:.9rem;line-height:1.3}
 .countdown.idle{border-color:#aaa;color:#888}
-.countdown.run{background:#000;color:#fff;border-color:#000}
+.countdown.run{color:#fff;border-color:#000;background:linear-gradient(90deg,#000 var(--pct,0%),#555 var(--pct,0%))}
 .countdown.grace{background:var(--bad);color:#fff;border-color:var(--bad)}
 .alert{min-height:0;font-weight:700;font-size:.95rem;border-radius:4px}
 .alert:not(:empty){padding:8px 12px;margin:0 0 6px;border:2px solid var(--ink)}
@@ -110,19 +113,19 @@ body.locked .gate{display:block}
   </div>
   <header>
     <h1>Packet Auto-Route</h1>
-    <div class="stats"><span>Time <b id="timer">0:00</b></span><span>Points <b id="points">0</b></span><span>Clients <b id="clients">1</b></span></div>
+    <div class="stats"><span>Time <b id="timer">0:00</b></span><span>Points <b id="points">0</b></span><span>Level <b id="clients">1</b></span></div>
   </header>
 
-  <p class="task" id="task">Press Start. The network sends messages on its own.</p>
+  <p class="task" id="task">Press Start. The network sends messages on its own. Reach 3000 points.</p>
 
   <div class="play">
     <p class="hint" id="hint"></p>
     <div class="threat" id="threat"></div>
-    <div class="countdown idle" id="countdown"><span class="cd-time" id="cd-time">3:00</span><span class="cd-label" id="cd-label">Buy DNS to start the 3-minute hold.</span></div>
+    <div class="countdown run" id="countdown"><span class="cd-time" id="cd-time">0 / 3000</span><span class="cd-label" id="cd-label">Level 1.</span></div>
     <div class="alert" id="alert" aria-live="assertive"></div>
     <svg id="board" viewBox="0 0 540 440" role="img" aria-label="Network grid"></svg>
     <p class="msg" id="msg" aria-live="polite"></p>
-    <div class="log" id="log" aria-live="polite"><p>Deliveries earn points. Spend them on inventions. Hoarded points bring more sharks (1 per 100 pts, up to 4) and stronger hackers.</p></div>
+    <div class="log" id="log" aria-live="polite"><p>Deliveries earn points. Spend them on inventions. Reach 3000 points to win. Held points bring more sharks (1 per 400 pts, up to 4) and stronger hackers.</p></div>
     <section class="shop">
       <h2>Inventions</h2>
       <div id="shop-list"></div>
@@ -154,8 +157,8 @@ body.locked .gate{display:block}
 
 <script>
 window.PR6 = (() => {
-  const HOLD_GOAL = 180, GRACE = 5, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 4, ORCA_COST = 500, SHARK_PER = 100, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
-    CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25], PERFECT = 540, STEP = 20;
+  const GOAL = 3000, BH_CHANCE = 0.01, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, BH_ORCAS = 2, LEVEL_STEP = 500, MAX_LEVEL = 6, SHARK_EAT = 2, HOLD_GOAL = 180, GRACE = 5, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 4, ORCA_COST = 500, SHARK_PER = 400, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
+    CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25], PERFECT = 600, STEP = 20;
   const HEAL_COST = 8;
   const UPGRADES = [
     { id:'baran', group:'net', cost:15, req:[], name:'Paul Baran', year:'1964', title:'Distributed network',
@@ -176,6 +179,9 @@ window.PR6 = (() => {
     { id:'roberts', group:'net', cost:30, req:['baran'], name:'Lawrence Roberts', year:'1967–1969', title:'ARPANET',
       info:'Planned and managed ARPANET, the first working packet-switching network and ancestor of the internet.',
       effect:'Widens the grid from 3 to 5 routers per row. More alternate paths.' },
+    { id:'fiber', group:'net', cost:1000, req:['kleinrock'], name:'Charles Kao', year:'1966', title:'Fiber optics',
+      info:'Showed that pure glass fiber can carry data as pulses of light over long distances. Fiber now carries almost all internet traffic. Nobel Prize, 2009.',
+      effect:'Messages travel and send 4× faster. Router delays drop by 1 ms.' },
     { id:'cerfkahn', group:'net', cost:35, req:['baran'], name:'Vint Cerf & Bob Kahn', year:'1974', title:'TCP/IP',
       info:'IP addresses and routes each packet. TCP numbers packets, confirms them with ACKs, and resends lost ones.',
       effect:'Lost messages are resent at once with no point penalty.' },
@@ -193,7 +199,7 @@ window.PR6 = (() => {
       effect:'+1 protection.' },
     { id:'dns', group:'dns', cost:50, req:['https'], name:'Paul Mockapetris & Jon Postel', year:'1983', title:'Domain Name System',
       info:'Mockapetris designed DNS; Postel coordinated internet names and addresses (IANA). DNS turns names into addresses so traffic finds its destination.',
-      effect:'The network always resolves the fastest working route. Starts the 3-minute hold timer.' }
+      effect:'The network always resolves the fastest working route. Lower delay means faster deliveries.' }
   ];
   const U = {}; UPGRADES.forEach(u => U[u.id] = u);
 
@@ -204,7 +210,7 @@ window.PR6 = (() => {
   function create(rng) {
     const st = { t:0, points:0, earned:0, owned:{}, order:[], nodes:{}, rows:0, cols:0,
       clients:1, tls:0, hackStart:0, sharks:[0,1,2,3].map(k => ({ t: 6 + k * 4, warn:null })), orcas:0, lastSharks:0, hackWarn:null, routes:{}, msgs:[], launchT:{ S0:0.3 }, sharkOn:false, hackOn:false, sharkT:0, hackT:0,
-      shutdown:0, hold:0, degraded:0, won:false, driftT:45, nextMsgId:1,
+      shutdown:0, bh:null, failed:false, hold:0, degraded:0, peak:0, won:false, driftT:45, nextMsgId:1,
       stats:{ delivered:0, lost:0, bites:0, blocked:0, hacks:0, heals:0, healed:0, crew:0, resets:0 },
       events:[] };
     buildGrid(st, rng);
@@ -239,7 +245,7 @@ window.PR6 = (() => {
     for (let r = st.rows - 1; r >= 0; r--) Object.values(st.nodes).filter(n => n.row === r).forEach(n => {
       if (!ignoreBroken && n.broken) { cost[n.id] = Infinity; return; }
       const best = Math.min(...next(st, n.id).map(k => cost[k]));
-      cost[n.id] = n.d + best;
+      cost[n.id] = effD(st, n) + best;
     });
     clientIds(st).forEach(s => { cost[s] = Math.min(...next(st, s).map(k => cost[k])); });
     return cost;
@@ -265,17 +271,21 @@ window.PR6 = (() => {
     }
     return path;
   }
-  const pathCost = (st, p) => p ? p.filter(isRouter).reduce((s, id) => s + st.nodes[id].d, 0) : Infinity;
+  const effD = (st, n) => Math.max(1, n.d - (st.owned.fiber ? 1 : 0));
+  const pathCost = (st, p) => p ? p.filter(isRouter).reduce((s, id) => s + effD(st, st.nodes[id]), 0) : Infinity;
+  const level = st => Math.min(MAX_LEVEL, 1 + Math.floor(st.peak / LEVEL_STEP));
+  const sharkEat = st => SHARK_EAT * level(st);
   const pathOk = (st, p) => !!p && p.every(id => (!isRouter(id) || st.nodes[id]) && works(st, id));
   const protLevel = st => st.tls + (st.owned.dh ? 1 : 0) + (st.owned.rsa ? 1 : 0);
-  const sharkInterval = st => clamp(28 - st.points / 3, 5, 28) * (st.owned.dns ? DNS_SHARK : 1);
-  const hackInterval = st => clamp(40 - st.points / 4, 14, 40);
-  const hackStrength = st => Math.min(HACK_CAP, 1 + Math.floor(st.points / 40) + Math.floor(Math.max(0, st.t - st.hackStart) / 300));
+  const sharkInterval = st => clamp(28 - st.points / 100, 8, 28) * (st.owned.dns ? DNS_SHARK : 1);
+  const hackInterval = st => clamp(40 - st.points / 40, 14, 40);
+  const hackStrength = st => Math.min(HACK_CAP, 1 + Math.floor(st.points / 250) + Math.floor(Math.max(0, st.t - st.hackStart) / 300));
   const healUnit = st => st.owned.metcalfe ? HEAL_COST / 2 : HEAL_COST;
   const brokenList = st => Object.values(st.nodes).filter(n => n.broken);
   const healCost = st => brokenList(st).length * healUnit(st);
-  const launchInterval = st => st.owned.kleinrock ? 1.0 : 2.0;
-  const hopTime = st => st.owned.kleinrock ? 0.2 : 0.4;
+  const launchInterval = st => (st.owned.kleinrock ? 1.0 : 2.0) / (st.owned.fiber ? 4 : 1);
+  const hopTime = st => (st.owned.kleinrock ? 0.2 : 0.4) / (st.owned.fiber ? 4 : 1);
+  const hopDur = (st, id) => hopTime(st) * (isRouter(id) && st.nodes[id] ? 0.5 + effD(st, st.nodes[id]) / 4 : 0.6);
   const ev = (st, type, data) => st.events.push(Object.assign({ type, t:st.t }, data || {}));
 
   function loseMsg(st, m, why) {
@@ -302,7 +312,9 @@ window.PR6 = (() => {
     if (!n || n.broken) return;
     n.broken = true; n.brokenAt = st.t;
     st.stats.bites++;
-    ev(st, 'bite', { id:n.id });
+    const eat = Math.min(st.points, sharkEat(st));
+    st.points -= eat; st.stats.eaten = (st.stats.eaten || 0) + eat;
+    ev(st, 'bite', { id:n.id, eat });
     st.msgs = st.msgs.filter(m => {
       if (m.path.slice(m.i + 1).indexOf(n.id) < 0 && !(m.path[m.i] === n.id)) return true;
       if (st.owned.pouzin && m.path[m.i] !== n.id) {
@@ -389,8 +401,35 @@ window.PR6 = (() => {
     return true;
   }
 
+  const isDown = st => st.shutdown > 0 || !!(st.bh && st.bh.phase === 'active');
+  const bhUnlocked = st => st.orcas >= BH_ORCAS;
+  const canWhiteHat = st => !!st.bh && st.points >= WHITE_COST;
+  function whiteHat(st) {
+    if (!canWhiteHat(st)) return false;
+    st.points -= WHITE_COST; st.bh = null;
+    st.stats.whitehats = (st.stats.whitehats || 0) + 1;
+    ev(st, 'whitehat');
+    return true;
+  }
+  function blackHat(st, dt, rng) {
+    if (!st.bh) {
+      if (bhUnlocked(st) && rng() < BH_CHANCE * dt) { st.bh = { phase:'warn', left:BH_WARN }; ev(st, 'bhwarn'); }
+      return;
+    }
+    st.bh.left -= dt;
+    if (st.bh.phase === 'warn' && st.bh.left <= 0) {
+      st.bh = { phase:'active', left:BH_FAIL };
+      const n = st.msgs.length;
+      st.msgs.forEach(m => loseMsg(st, m, 'hack')); st.msgs = [];
+      st.stats.blackhats = (st.stats.blackhats || 0) + 1;
+      ev(st, 'bhdown', { lostMsgs:n });
+    } else if (st.bh.phase === 'active' && st.bh.left <= 0) {
+      st.bh.left = 0; st.failed = true; ev(st, 'failed');
+    }
+  }
+
   function step(st, dt, rng) {
-    if (st.won) return;
+    if (st.won || st.failed) return;
     st.t += dt;
     if (!st.sharkOn && st.earned >= 6) { st.sharkOn = true; ev(st, 'era', { era:'shark' }); }
     if (!st.hackOn && st.owned.http) { st.hackOn = true; st.hackStart = st.t; st.hackT = 20; ev(st, 'era', { era:'hacker' }); }
@@ -411,7 +450,7 @@ window.PR6 = (() => {
       st.sharks.forEach((sh, k) => {
         const on = k >= st.orcas && k < st.orcas + n1;
         if (!on) { sh.warn = null; if (sh.t < 6) sh.t = 6 + rng() * 6; return; }
-        if (st.shutdown > 0) return;
+        if (isDown(st)) return;
         if (sh.warn) {
           sh.warn.left -= dt;
           if (!st.nodes[sh.warn.id]) sh.warn = null;
@@ -427,7 +466,10 @@ window.PR6 = (() => {
         }
       });
     }
-    if (st.hackWarn) {
+    blackHat(st, dt, rng);
+    if (st.failed) return;
+    if (st.bh && st.bh.phase === 'active') { /* hackers wait while the black hat holds the system */ }
+    else if (st.hackWarn) {
       st.hackWarn.left -= dt;
       if (st.hackWarn.left <= 0) { st.hackWarn = null; attack(st); st.hackT = hackInterval(st) * (0.8 + 0.4 * rng()); }
     } else if (st.hackOn) {
@@ -436,20 +478,22 @@ window.PR6 = (() => {
     }
 
     clientIds(st).forEach(s => {
-      if (st.shutdown > 0) st.routes[s] = null;
+      if (isDown(st)) st.routes[s] = null;
       else if (st.owned.dns) st.routes[s] = bestFrom(st, s, false);
       else if (!pathOk(st, st.routes[s])) st.routes[s] = randomFrom(st, s, rng);
       if (st.launchT[s] == null) st.launchT[s] = 0.5;
-      if (st.shutdown <= 0 && st.routes[s]) {
+      if (!isDown(st) && st.routes[s]) {
         st.launchT[s] -= dt;
         if (st.launchT[s] <= 0) { st.msgs.push({ id:st.nextMsgId++, path:st.routes[s].slice(), i:0, p:0 }); st.launchT[s] = launchInterval(st); }
       }
     });
-    const h = hopTime(st);
     st.msgs = st.msgs.filter(m => {
-      m.p += dt / h;
-      while (m.p >= 1) {
-        m.p -= 1; m.i++;
+      let left = dt;
+      while (left > 0) {
+        const hd = hopDur(st, m.path[m.i + 1]);
+        const need = (1 - m.p) * hd;
+        if (left < need) { m.p += left / hd; break; }
+        left -= need; m.p = 0; m.i++;
         if (m.i >= m.path.length - 1) {
           const gain = st.owned.http ? 2 : 1;
           st.points += gain; st.earned += gain; st.stats.delivered++;
@@ -460,18 +504,16 @@ window.PR6 = (() => {
       return true;
     });
 
-    if (st.owned.dns) {
-      const ok = st.shutdown <= 0 && clientIds(st).every(s => st.routes[s] && pathCost(st, st.routes[s]) === pathCost(st, bestFrom(st, s, true)));
-      if (ok) { st.degraded = 0; st.hold += dt; }
-      else if (st.shutdown > 0) { if (st.hold > 0) { st.stats.resets++; ev(st, 'reset', { why:'shutdown' }); } st.hold = 0; }
-      else { st.degraded += dt; if (st.degraded > GRACE && st.hold > 0) { st.stats.resets++; ev(st, 'reset', { why:'slow' }); st.hold = 0; } }
-      if (st.hold >= HOLD_GOAL) { st.hold = HOLD_GOAL; st.won = true; ev(st, 'won'); }
-    }
+    st.peak = Math.max(st.peak, st.points);
+    const lv = level(st);
+    if (lv > (st.lastLevel || 1)) { ev(st, 'level', { level:lv, eat:sharkEat(st) }); }
+    st.lastLevel = lv;
+    if (st.points >= GOAL) { st.won = true; ev(st, 'won'); }
   }
 
   const runScore = t => t <= PERFECT ? 100 : Math.max(0, 100 - Math.floor((t - PERFECT) / STEP));
 
-  return { HOLD_GOAL, GRACE, CREW, PERFECT, STEP, UPGRADES, U, create, step, heal, buy, canBuy,
+  return { BH_FAIL, WHITE_COST, BH_ORCAS, isDown, bhUnlocked, canWhiteHat, whiteHat, GOAL, LEVEL_STEP, MAX_LEVEL, level, sharkEat, effD, HOLD_GOAL, GRACE, CREW, PERFECT, STEP, UPGRADES, U, create, step, heal, buy, canBuy,
     next, bestFrom, pathCost, protLevel, hackStrength, sharkInterval, hackInterval, healCost, healUnit,
     brokenList, runScore, isRouter, isClient, crewTime, clientIds, anchorCol,
     MAX_CLIENTS, MAX_SHARKS, MAX_ORCAS, ORCA_COST, sharkCount, activeSharks, sharkWarns, canBuyOrca, buyOrca, TLS_MAX, TLS_NAMES, HACK_CAP, clientCost, canAddClient, addClient, tlsCost, canUpdateTls, updateTls };
@@ -564,12 +606,12 @@ window.PR6 = (() => {
   const fmt = s => { const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s - m * 60)).padStart(2, '0'); };
 
   let st = null, phase = 'idle', lastFrame = 0, lastUi = 0, gridSig = '';
-  let pos = {}, nodeEls = {}, edgeEls = [], msgLayer, popLayer, downText, warnEls = [];
+  let pos = {}, nodeEls = {}, edgeEls = [], orcaLayer, msgLayer, popLayer, downText, warnEls = [];
   const rng = Math.random;
 
   function layout() {
     pos = {};
-    const H = TOP + (st.rows + 1) * GAP + 50;
+    const H = TOP + (st.rows + 1) * GAP + 80;
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     pos.R = { x:W / 2, y:TOP };
     E.clientIds(st).forEach((s, k) => { pos[s] = { x: st.cols === 1 ? W / 2 : XL + (XR - XL) * ANCHOR[k], y:TOP + (st.rows + 1) * GAP }; });
@@ -618,6 +660,7 @@ window.PR6 = (() => {
       w.fin.textContent = '🦈';
       return w;
     });
+    orcaLayer = el('g', {}, svg);
     msgLayer = el('g', {}, svg);
     popLayer = el('g', {}, svg);
     el('rect', { class:'down-veil', x:0, y:0, width:W, height:H }, svg);
@@ -634,6 +677,21 @@ window.PR6 = (() => {
     a.onfinish = () => t.remove();
   }
 
+  function swimOrca(target) {
+    const H = +svg.getAttribute('viewBox').split(' ')[3];
+    const to = target && pos[target] ? pos[target] : { x:W / 2, y:H - 30 };
+    const o = el('text', { class:'pop', x:-30, y:H - 20 }, popLayer);
+    o.textContent = '🐋';
+    const t0 = performance.now(), dur = reduce ? 300 : 1400;
+    const stepA = now => {
+      const k = Math.min(1, (now - t0) / dur), ez = 1 - Math.pow(1 - k, 3);
+      o.setAttribute('x', -30 + (to.x + 30) * ez); o.setAttribute('y', (H - 20) + (to.y - (H - 20)) * ez);
+      if (k < 1) requestAnimationFrame(stepA);
+      else { pop(target || 'R', '💥'); setTimeout(() => o.remove(), 600); }
+    };
+    requestAnimationFrame(stepA);
+  }
+
   function addLog(text) {
     const p = document.createElement('p'); p.textContent = fmt(st.t) + '  ' + text;
     log.prepend(p);
@@ -648,7 +706,7 @@ window.PR6 = (() => {
           if (e.era === 'shark') addLog('A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.');
           else addLog('HTTP opened the network to the Web. Hackers found it. A hack shuts the whole system down. HTTPS protects it.');
           break;
-        case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node. Heal it, or wait ' + E.crewTime(st) + ' s for the ' + (st.owned.baran ? 'repair crew.' : 'auto-heal.')); break;
+        case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node' + (e.eat ? ' and ate ' + e.eat + ' pts' : '') + '. Heal it, or wait ' + E.crewTime(st) + ' s for the ' + (st.owned.baran ? 'repair crew.' : 'auto-heal.')); break;
         case 'lost':
           if (e.why === 'cut') addLog('Message lost at the cut.' + (e.resent ? ' TCP resends it.' : ' −' + e.pen + ' pts.'));
           break;
@@ -666,9 +724,14 @@ window.PR6 = (() => {
         case 'hackwarn': addLog('Hacker probing. Attack in 5 s: strength ' + e.s + ' vs protection ' + e.p + '.'); break;
         case 'sharkspawn': addLog('Another shark joined (' + e.n + ' circling). Hoarded points attract sharks.'); break;
         case 'sharkleave': addLog('A shark swam off (' + e.n + ' circling).'); break;
-        case 'orca': pop(e.at || 'R', '🐋'); addLog('Orca ' + e.n + ' hunted down a shark for good.'); break;
+        case 'orca': swimOrca(e.at); addLog('Orca ' + e.n + ' hunted down a shark for good.'); break;
         case 'client': addLog('Client ' + e.n + ' connected. More traffic, more points.'); break;
         case 'tls': addLog('HTTPS updated to ' + e.name + '.'); break;
+        case 'level': addLog('Level ' + e.level + '. Shark bites now eat ' + e.eat + ' pts.'); break;
+        case 'bhwarn': addLog('🎩 Black hat detected. It ignores all security.'); break;
+        case 'bhdown': addLog('🎩 Black hat took the system down. ' + E.BH_FAIL + ' s to hire a white hat.'); break;
+        case 'whitehat': pop('R', '🤍'); addLog('White hat hired. Black hat removed; system restored.'); break;
+        case 'failed': break;
         case 'won': break;
       }
     });
@@ -677,14 +740,15 @@ window.PR6 = (() => {
 
   function render() {
     if (st.rows + 'x' + st.cols + 'c' + st.clients !== gridSig) buildBoard();
-    const down = st.shutdown > 0;
+    const down = E.isDown(st);
     svg.classList.toggle('down', down);
-    downText.textContent = down ? 'SYSTEM DOWN ' + Math.ceil(st.shutdown) + ' s' : '';
+    downText.textContent = !down ? '' : (st.bh && st.bh.phase === 'active') ? '🎩 BLACK HAT ' + Math.ceil(st.bh.left) + ' s' : 'SYSTEM DOWN ' + Math.ceil(st.shutdown) + ' s';
     const on = new Set();
     Object.values(st.routes).forEach(r => { if (r) for (let i = 0; i < r.length - 1; i++) on.add(r[i] + '>' + r[i + 1]); });
     edgeEls.forEach(e => {
       const broken = (E.isRouter(e.a) && st.nodes[e.a].broken) || (E.isRouter(e.b) && st.nodes[e.b].broken);
       e.l.classList.toggle('on', on.has(e.a + '>' + e.b));
+      e.l.classList.toggle('fiber', !!st.owned.fiber);
       e.l.setAttribute('stroke-dasharray', broken ? '6 6' : '');
     });
     Object.values(st.nodes).forEach(n => {
@@ -692,6 +756,13 @@ window.PR6 = (() => {
       ne.g.classList.toggle('broken', n.broken);
       ne.x.textContent = n.broken ? '✕' : '';
       ne.d.textContent = n.broken ? (st.owned.baran ? 'cut ' : 'heals ') + Math.max(0, Math.ceil(E.crewTime(st) - (st.t - n.brokenAt))) + 's' : n.d + ' ms';
+    });
+    while (orcaLayer.children.length < st.orcas) { const o = el('text', { class:'pop' }, orcaLayer); o.textContent = '🐋'; }
+    const Hh = +svg.getAttribute('viewBox').split(' ')[3];
+    [...orcaLayer.children].forEach((o, k) => {
+      const ph = st.t * 0.35 + k * 1.6;
+      o.setAttribute('x', W / 2 + Math.sin(ph) * (W / 2 - 40));
+      o.setAttribute('y', Hh - 18 + Math.sin(ph * 2.3) * 4);
     });
     const warns = E.sharkWarns(st);
     warnEls.forEach((w, k) => {
@@ -720,14 +791,16 @@ window.PR6 = (() => {
     if (!st.owned.baran) return st.sharkOn ? 'One line only. A single cut stops everything. Buy the distributed network.' : 'Direct line open. Each delivered message earns 1 point.';
     if (st.hackOn && !st.owned.https) return 'Plain HTTP is exposed. Buy HTTPS to protect the system.';
     if (!st.owned.http) return 'Buy HTTP to open the Web: more points, but hackers follow.';
-    if (!st.owned.dns) return 'Buy DNS to resolve the fastest route and start the hold timer.';
-    return 'Hold the fastest route for 3:00. Heal cuts on it within ' + E.GRACE + ' s.';
+    if (!st.owned.dns) return 'Buy DNS to always use the fastest route.';
+    if (!st.owned.fiber) return 'Reach ' + E.GOAL + ' points. Fiber optics (1000 pts) makes it possible.';
+    if (E.bhUnlocked(st) && st.points < E.WHITE_COST) return 'Keep ' + E.WHITE_COST + ' pts in reserve for a white hat.';
+    return 'Reach ' + E.GOAL + ' points held.';
   }
 
   function renderUi() {
     timerEl.textContent = fmt(st.t);
     pointsEl.textContent = st.points;
-    clientsEl.textContent = st.clients;
+    clientsEl.textContent = E.level(st);
     taskEl.textContent = taskText();
     const parts = [];
     parts.push('<span>Sharks <b>' + (st.sharkOn ? E.activeSharks(st) + ' (~' + Math.round(E.sharkInterval(st)) + ' s)' : 'asleep') + '</b></span>');
@@ -738,22 +811,31 @@ window.PR6 = (() => {
     parts.push('<span>Delivered <b>' + st.stats.delivered + '</b></span>');
     threatEl.innerHTML = parts.join('');
     const broken = E.brokenList(st).length;
-    if (!broken) { btn.textContent = 'Network intact'; btn.disabled = true; }
+    if (st.bh) {
+      btn.textContent = 'Hire white hat (' + E.WHITE_COST + ' pts)';
+      btn.disabled = !E.canWhiteHat(st);
+      btn.classList.add('alarm');
+    } else if (!broken) { btn.textContent = 'Network intact'; btn.disabled = true; }
     else {
       const cost = E.healCost(st);
       btn.textContent = 'Heal ' + broken + (broken === 1 ? ' node' : ' nodes') + ' (' + cost + ' pts)';
       btn.disabled = st.points < E.healUnit(st);
     }
+    if (!st.bh) btn.classList.remove('alarm');
     msgEl.textContent = '';
-    // countdown panel
-    const left = E.HOLD_GOAL - st.hold;
-    cdTime.textContent = fmt(Math.ceil(left));
-    if (!st.owned.dns) { cdEl.className = 'countdown idle'; cdLabel.textContent = 'Buy DNS to start the 3-minute hold.'; }
-    else if (st.shutdown > 0) { cdEl.className = 'countdown grace'; cdLabel.textContent = 'System down. Hold reset.'; }
-    else if (st.degraded > 0) { cdEl.className = 'countdown grace'; cdLabel.textContent = 'Off the fastest route. Heal within ' + Math.max(0, Math.ceil(E.GRACE - st.degraded)) + ' s or the hold resets.'; }
-    else { cdEl.className = 'countdown run'; cdLabel.textContent = 'All clients on the fastest route. Hold to 0:00.'; }
+    // goal progress panel
+    const pct = Math.min(100, st.points / E.GOAL * 100);
+    cdTime.textContent = st.points + ' / ' + E.GOAL;
+    cdEl.className = 'countdown run';
+    cdEl.style.setProperty('--pct', pct + '%');
+    cdLabel.textContent = 'Level ' + E.level(st) + ' of ' + E.MAX_LEVEL + '. Shark bites eat ' + E.sharkEat(st) + ' pts.';
     // hacker alert
-    if (st.hackWarn) {
+    if (st.bh) {
+      alertEl.className = 'alert danger';
+      alertEl.textContent = st.bh.phase === 'warn'
+        ? '🎩 BLACK HAT incoming in ' + Math.ceil(st.bh.left) + ' s. Security cannot stop it. Hire a white hat.'
+        : '🎩 BLACK HAT holds the system. ' + Math.ceil(st.bh.left) + ' s until total failure. Hire a white hat (' + E.WHITE_COST + ' pts).';
+    } else if (st.hackWarn) {
       const through = E.hackStrength(st) > E.protLevel(st);
       alertEl.className = 'alert ' + (through ? 'danger' : 'safe');
       alertEl.textContent = '💀 Hacker attack in ' + Math.ceil(st.hackWarn.left) + ' s: strength ' + E.hackStrength(st) + ' vs protection ' + E.protLevel(st) + (through ? '. It will get through.' : '. It will be blocked.');
@@ -798,10 +880,12 @@ window.PR6 = (() => {
     lastFrame = now;
     while (dt > 0) { const d = Math.min(0.05, dt); E.step(st, d, rng); dt -= d; }
     const won = st.events.some(e => e.type === 'won');
+    const failed = st.events.some(e => e.type === 'failed');
     handleEvents();
     render();
     if (now - lastUi > 200 || won) { renderUi(); lastUi = now; }
     if (won) { finish(); return; }
+    if (failed) { failRun(); return; }
     requestAnimationFrame(frame);
   }
 
@@ -816,6 +900,20 @@ window.PR6 = (() => {
     renderUi();
     lastFrame = performance.now();
     requestAnimationFrame(frame);
+  }
+
+  function failRun() {
+    phase = 'done';
+    $('results-body').innerHTML = [
+      ['Time', fmt(st.t)], ['Points held', st.points], ['Peak points', st.peak], ['Black hats', st.stats.blackhats || 0]
+    ].map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+    const sum = $('summary'); sum.innerHTML = '';
+    const p1 = document.createElement('p'); p1.className = 'big'; p1.textContent = 'FAILED: system lost to the black hat.'; sum.appendChild(p1);
+    const p2 = document.createElement('p'); p2.textContent = 'This run is not saved. Keep ' + E.WHITE_COST + ' pts in reserve after your second orca, then retry.'; sum.appendChild(p2);
+    taskEl.textContent = 'System lost. Retry.';
+    document.body.classList.add('done');
+    btn.classList.remove('alarm');
+    btn.disabled = false; btn.textContent = 'Retry';
   }
 
   async function finish() {
@@ -843,7 +941,8 @@ window.PR6 = (() => {
     const rows = [
       ['Time to win', fmt(total)], ['Messages delivered', st.stats.delivered], ['Messages lost', st.stats.lost],
       ['Shark cuts', st.stats.bites], ['Nodes healed', st.stats.healed], ['Crew repairs', st.stats.crew],
-      ['Hacks blocked', st.stats.blocked], ['Shutdowns', st.stats.hacks], ['Hold resets', st.stats.resets],
+      ['Points eaten by sharks', st.stats.eaten || 0], ['Hacks blocked', st.stats.blocked], ['Shutdowns', st.stats.hacks],
+      ['Black hats', st.stats.blackhats || 0], ['White hats hired', st.stats.whitehats || 0],
       ['Clients', st.clients], ['Orcas', st.orcas], ['HTTPS level', E.TLS_NAMES[st.tls]],
       ['Inventions bought', st.order.length + ' of ' + E.UPGRADES.length]
     ];
@@ -857,7 +956,7 @@ window.PR6 = (() => {
     else if (rec.score >= 100) line('Score is at the 100% cap.');
     else line('Did not beat your first score (' + rec.firstScore + '%). No change.');
     line('Order bought: ' + (st.order.map(id => E.U[id].title).join(', ') || 'none') + '.');
-    taskEl.textContent = 'Fastest route held for 3:00. The network is stable.';
+    taskEl.textContent = E.GOAL + ' points reached. The network is built.';
     document.body.classList.add('done');
     btn.disabled = false; btn.textContent = 'Retry';
   }
@@ -867,7 +966,7 @@ window.PR6 = (() => {
   tlsBtn.addEventListener('click', () => { if (phase === 'play' && E.updateTls(st)) { handleEvents(); render(); renderUi(); } });
   btn.addEventListener('click', () => {
     if (phase === 'idle' || phase === 'done') start();
-    else if (phase === 'play') { E.heal(st); handleEvents(); render(); renderUi(); }
+    else if (phase === 'play') { if (st.bh) E.whiteHat(st); else E.heal(st); handleEvents(); render(); renderUi(); }
   });
 
   /* ===== self-download ===== */
@@ -887,7 +986,7 @@ window.PR6 = (() => {
     if (!prev5) { document.body.classList.add('locked'); return; }
     const mine = await load(RESULT_KEY, IDB_KEY, true);
     st = E.create(rng); buildBoard(); render();
-    hintEl.textContent = mine ? 'Recorded score: ' + mine.score + '%. Best time ' + (mine.bestTimeText || '–') + '. Retry to add +1%.' : 'Win by holding the fastest route for 3 minutes.';
+    hintEl.textContent = mine ? 'Recorded score: ' + mine.score + '%. Best time ' + (mine.bestTimeText || '–') + '. Retry to add +1%.' : 'Win by holding ' + E.GOAL + ' points.';
     btn.disabled = false; btn.textContent = 'Start';
     window.__A6 = { get st(){ return st; }, E };
   })();
