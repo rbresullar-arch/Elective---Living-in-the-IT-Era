@@ -3,289 +3,353 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IT and ICT Activities</title>
+<title>Living in the IT Era</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --ink: #000;
+    --blue: #3b6690;
+    --yellow: #fbb52f;
+    --coral: #ff6f4f;
+    --cream: #fdf3dc;
+    --green: #bde3b8;
+    --cyan: #4fd3e3;
+    --white: #fff;
+    --bw: 4px;
+  }
   * { box-sizing: border-box; }
   body {
-    background: #ffffff;
-    color: #000000;
-    font-family: Georgia, 'Times New Roman', serif;
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 40px 16px 80px;
-    line-height: 1.5;
+    margin: 0;
+    background: #fff;
+    color: var(--ink);
+    font-family: 'League Spartan', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 20px 12px 40px;
+    min-height: 100vh;
   }
-  h1 {
-    font-size: 22px;
-    text-align: center;
-    margin-bottom: 24px;
-  }
-  .section { display: none; }
-  .section.active { display: block; }
+  button, input { font-family: inherit; color: var(--ink); }
+  a { color: var(--ink); }
+  :focus-visible { outline: 3px dashed var(--ink); outline-offset: 3px; }
 
-  #nameForm {
-    text-align: center;
+  /* Phone-style panel */
+  .panel {
+    width: 100%;
+    max-width: 380px;
+    min-height: 580px;
+    border: 5px solid var(--ink);
+    border-radius: 38px;
+    padding: 22px 18px 28px;
+    background: var(--blue);
+    transition: background-color .25s;
   }
-  #nameForm label {
+  .panel.blue   { background: var(--blue); }
+  .panel.yellow { background: var(--yellow); }
+  .panel.coral  { background: var(--coral); }
+  .panel.cream  { background: var(--cream); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .box {
+    border: var(--bw) solid var(--ink);
+    border-radius: 18px;
+  }
+
+  /* Title / header pill */
+  .title {
     display: block;
-    font-size: 15px;
-    margin-bottom: 10px;
+    width: 100%;
+    background: var(--white);
+    text-align: center;
+    font-size: 23px;
+    font-weight: 800;
+    padding: 11px 12px 8px;
+    position: relative;
   }
-  #nameInput {
-    font-family: Georgia, serif;
-    font-size: 15px;
-    padding: 8px 10px;
-    border: 1.5px solid #000;
-    width: 260px;
-    max-width: 80%;
+  button.title { cursor: pointer; }
+  .title .chev {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-52%);
+    font-size: 28px;
+    line-height: 1;
   }
-  button {
-    font-family: Georgia, serif;
-    font-size: 16px;
-    padding: 10px 26px;
-    background: #000;
-    color: #fff;
-    border: none;
+  .greeting {
+    color: var(--white);
+    text-align: center;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 10px 0 0;
+    min-height: 18px;
+  }
+
+  /* Home menu */
+  .menu-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 24px 12px 20px;
+    font-size: 23px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
     cursor: pointer;
   }
-  button:active { background: #333; }
+  .menu-btn.yellow { background: var(--yellow); }
+  .menu-btn.coral  { background: var(--coral); }
+  .menu-btn.cream  { background: var(--cream); }
+  .menu-btn:active { transform: translateY(2px); }
 
-  #greeting {
+  .small-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 22px;
+  }
+  .small-btn {
+    padding: 10px 18px 7px;
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  #saveBtn   { background: var(--green); }
+  #updateBtn { background: var(--cyan); font-size: 17px; }
+  .small-btn:active { transform: translateY(2px); }
+
+  #syncStatus {
+    color: var(--white);
+    font-size: 13px;
     text-align: center;
-    font-size: 15px;
-    margin-bottom: 30px;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+  #syncStatus.error { color: #ffd2c7; }
+
+  .tools {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--white);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 2px;
+  }
+  #folderLabel {
+    color: #d6e3ef;
+    font-size: 12px;
+    text-align: center;
   }
 
-  .activity-row {
+  /* Activity rows */
+  .caption {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 14px 0 3px 4px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .row + .note + .row { margin-top: 0; }
+  .score {
+    flex: 0 0 58px;
+    min-height: 58px;
+    background: var(--white);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    border: 1.5px solid #000;
-    padding: 16px;
-    margin-bottom: 14px;
+    font-size: 15px;
+    font-weight: 800;
+    text-align: center;
   }
-  .activity-row a.activity-btn,
-  .activity-row button.activity-btn {
-    font-family: Georgia, serif;
-    font-size: 16px;
-    padding: 10px 26px;
-    background: #000;
-    color: #fff;
+  .pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--white);
+    padding: 0 0 0 14px;
+    font-size: 20px;
+    font-weight: 700;
     text-decoration: none;
-    display: inline-block;
-    border: none;
-  }
-  .activity-row button.activity-btn:disabled {
-    background: #999;
-    cursor: default;
-  }
-  .activity-row.exam-row {
-    border-color: #e06c00;
-    margin-top: 24px;
-  }
-  .activity-row a.activity-btn.exam-btn {
-    background: #e06c00;
-  }
-  .activity-row a.activity-btn.exam-btn:active {
-    background: #b85800;
-  }
-  .status {
-    font-size: 14px;
-    min-width: 140px;
+    cursor: pointer;
     text-align: left;
   }
-  .status.done { color: #000; }
-  .status.pending { color: #777; }
+  .pill-label { padding-top: 3px; }
+  .pill-end {
+    flex: 0 0 62px;
+    align-self: stretch;
+    margin: calc(-1 * var(--bw)) calc(-1 * var(--bw)) calc(-1 * var(--bw)) 8px;
+    border: var(--bw) solid var(--ink);
+    border-radius: 18px;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .pill.done .pill-end { background: var(--green); }
+  .pill.locked { opacity: .5; cursor: default; }
+  .pill:not(.locked):active { transform: translateY(2px); }
+  .note {
+    font-size: 12.5px;
+    font-weight: 500;
+    margin: 4px 0 12px 70px;
+    min-height: 15px;
+  }
+  .reads .pill { justify-content: center; padding: 18px 12px 14px; margin-top: 16px; }
+
+  /* Name form + block */
+  .name-box {
+    background: var(--white);
+    margin-top: 24px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .name-box label { display: block; font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+  #nameInput {
+    width: 100%;
+    font-size: 17px;
+    padding: 10px 12px 7px;
+    border: var(--bw) solid var(--ink);
+    border-radius: 14px;
+  }
+  .name-box .small-btn { margin-top: 16px; background: var(--yellow); }
+
   #blockOverlay {
     display: none;
+    background: var(--white);
+    margin-top: 24px;
+    padding: 24px 16px;
     text-align: center;
-    padding: 60px 20px;
     font-size: 16px;
   }
-  #blockOverlay strong {
-    display: block;
-    font-size: 19px;
-    margin-bottom: 12px;
-  }
+  #blockOverlay strong { display: block; font-size: 19px; margin-bottom: 10px; }
 
-  .tab-bar {
-    display: flex;
-    justify-content: center;
-    gap: 0;
-    margin-bottom: 24px;
-    border-bottom: 1.5px solid #000;
-  }
-  .tab-bar button {
-    background: #fff;
-    color: #000;
-    border: 1.5px solid #000;
-    border-bottom: none;
-    padding: 8px 22px;
-    font-size: 15px;
-    margin: 0 2px -1.5px 2px;
-  }
-  .tab-bar button.active {
-    background: #000;
-    color: #fff;
-  }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  #syncBar {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1.5px solid #000;
-    flex-wrap: wrap;
-  }
-  #syncBar button {
-    font-size: 15px;
-    padding: 10px 24px;
-  }
-  #saveBtn {
-    background: #1a7d1a;
-  }
-  #saveBtn:active { background: #145f14; }
-  #updateBtn {
-    background: #1a5bd6;
-  }
-  #updateBtn:active { background: #1345a3; }
-  #syncStatus {
-    text-align: center;
-    font-size: 13px;
-    color: #555;
-    margin-top: 8px;
-    min-height: 16px;
-  }
-  #folderBar {
-    text-align: center;
-    margin-top: 10px;
-  }
-  #chooseFolderBtn {
-    background: #444;
-    font-size: 13px;
-    padding: 6px 16px;
-  }
-  #chooseFolderBtn:active { background: #222; }
-  #folderLabel {
-    display: block;
-    font-size: 12px;
-    color: #777;
-    margin-top: 6px;
-  }
-  #offlineBar {
-    text-align: center;
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px dashed #999;
-  }
-  #saveOfflineBtn {
-    background: #000;
-    font-size: 15px;
-    padding: 10px 24px;
+  @media (prefers-reduced-motion: reduce) {
+    .panel { transition: none; }
   }
 </style>
 </head>
 <body>
 
-<h1>IT and ICT Activities</h1>
+<main class="panel blue" id="panel">
 
-<div id="blockOverlay">
-  <strong>This activity requires Google Chrome on Android.</strong>
-  Please open this page in Google Chrome and try again.
-</div>
-
-<!-- NAME CAPTURE -->
-<div class="section active" id="section-name">
-  <form id="nameForm">
-    <label for="nameInput">Enter your full name to begin:</label>
-    <input type="text" id="nameInput" required>
-    <div style="margin-top:16px;">
-      <button type="submit">Continue</button>
-    </div>
-  </form>
-</div>
-
-<!-- ACTIVITY LIST -->
-<div class="section" id="section-activities">
-  <div id="greeting"></div>
-
-  <div class="tab-bar">
-    <button type="button" class="tab-link active" data-tab="tab-activities">Activities</button>
-    <button type="button" class="tab-link" data-tab="tab-reads">Reads</button>
+  <div class="box" id="blockOverlay">
+    <strong>This activity requires Google Chrome on Android.</strong>
+    Open this page in Google Chrome and try again.
   </div>
 
-  <div class="tab-panel active" id="tab-activities">
-    <div class="activity-row">
-      <a class="activity-btn" href="it_ict_sentence_order_v2.html">Activity 1</a>
-      <span class="status" id="activity1Status">Checking...</span>
-    </div>
+  <!-- NAME -->
+  <section class="screen active" id="screen-name">
+    <div class="box title">Living in the IT Era</div>
+    <form class="box name-box" id="nameForm">
+      <label for="nameInput">Enter your full name to begin</label>
+      <input type="text" id="nameInput" required autocomplete="name">
+      <button type="submit" class="box small-btn">Continue</button>
+    </form>
+  </section>
 
-    <div class="activity-row">
-      <a class="activity-btn" id="activity2Btn" href="abacus_addition_activity.html">Activity 2</a>
-      <span class="status" id="activity2Status">Checking...</span>
-    </div>
+  <!-- HOME -->
+  <section class="screen" id="screen-home">
+    <div class="box title">Living in the IT Era</div>
+    <p class="greeting" id="greeting"></p>
 
-    <div class="activity-row">
-      <a class="activity-btn" id="activity3Btn" href="pascaline.html">Activity 3</a>
-      <span class="status" id="activity3Status">Checking...</span>
-    </div>
+    <button type="button" class="box menu-btn yellow" data-go="activities">Activities</button>
+    <button type="button" class="box menu-btn coral" data-go="exam">Examination</button>
+    <button type="button" class="box menu-btn cream" data-go="reads">Reads</button>
 
-    <div class="activity-row">
-      <a class="activity-btn" id="activity4Btn" href="binary_activity.html">Activity 4</a>
-      <span class="status" id="activity4Status">Checking...</span>
+    <div class="small-row">
+      <button type="button" class="box small-btn" id="saveBtn">Save</button>
+      <button type="button" class="box small-btn" id="updateBtn">Update</button>
     </div>
-
-    <div class="activity-row" id="redoRow" style="display:none;">
-      <button type="button" class="activity-btn" id="redoBtn" style="cursor:pointer;">Redo Fast Play</button>
-      <span class="status" id="redoStatus"></span>
-    </div>
-
-    <div class="activity-row exam-row">
-      <a class="activity-btn exam-btn" id="midtermBtn" href="midterm_exam_ITEra.html">Midterm Examination</a>
-      <span class="status" id="midtermStatus">Checking...</span>
-    </div>
-  </div>
-
-  <div class="tab-panel" id="tab-reads">
-    <div class="activity-row">
-      <a class="activity-btn" href="prelim_ITEra.html">Prelim Read</a>
-    </div>
-    <div class="activity-row">
-      <a class="activity-btn" href="midterm_ITEra.html">Midterm Read</a>
-    </div>
-    <div class="activity-row">
-      <a class="activity-btn" href="prefinals_ITEra.html">Prefinals Read</a>
-    </div>
-    <div class="activity-row">
-      <a class="activity-btn" href="finals_ITEra.html">Finals Read</a>
-    </div>
-  </div>
-
-  <div id="syncBar">
-    <button type="button" id="saveBtn">Save</button>
-    <button type="button" id="updateBtn">Update</button>
     <input type="file" id="updateFileInput" accept="application/json" style="display:none;">
-  </div>
-  <div id="syncStatus"></div>
+    <div id="syncStatus"></div>
 
-  <div id="folderBar">
-    <button type="button" id="chooseFolderBtn">Choose sync folder</button>
-    <span id="folderLabel">No folder set — Save/Update will use file dialogs.</span>
-  </div>
+    <div class="tools">
+      <button type="button" class="link-btn" id="chooseFolderBtn">Choose sync folder</button>
+      <span id="folderLabel">No folder set — Save/Update will use file dialogs.</span>
+      <button type="button" class="link-btn" id="saveOfflineBtn">Save offline copy</button>
+    </div>
+  </section>
 
-  <div id="offlineBar">
-    <button type="button" id="saveOfflineBtn">Save Offline</button>
-  </div>
-</div>
+  <!-- ACTIVITIES -->
+  <section class="screen" id="screen-activities">
+    <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Activities</button>
+
+    <div class="caption">Score</div>
+    <div class="row">
+      <div class="box score" id="activity1Score">—</div>
+      <a class="box pill" id="activity1Btn" href="it_ict_sentence_order_v2.html"><span class="pill-label">Activity 1</span><span class="pill-end" id="activity1End">›</span></a>
+    </div>
+    <div class="note" id="activity1Note">Checking...</div>
+
+    <div class="row">
+      <div class="box score" id="activity2Score">—</div>
+      <a class="box pill" id="activity2Btn" href="abacus_addition_activity.html"><span class="pill-label">Activity 2</span><span class="pill-end" id="activity2End">›</span></a>
+    </div>
+    <div class="note" id="activity2Note">Checking...</div>
+
+    <div class="row">
+      <div class="box score" id="activity3Score">—</div>
+      <a class="box pill" id="activity3Btn" href="pascaline.html"><span class="pill-label">Activity 3</span><span class="pill-end" id="activity3End">›</span></a>
+    </div>
+    <div class="note" id="activity3Note">Checking...</div>
+
+    <div id="redoRow" style="display:none;">
+      <div class="row">
+        <div class="box score">↺</div>
+        <button type="button" class="box pill" id="redoBtn"><span class="pill-label">Redo Fast Play</span><span class="pill-end" id="redoEnd">1</span></button>
+      </div>
+      <div class="note" id="redoStatus"></div>
+    </div>
+
+    <div class="row">
+      <div class="box score" id="activity4Score">—</div>
+      <a class="box pill" id="activity4Btn" href="binary_activity.html"><span class="pill-label">Activity 4</span><span class="pill-end" id="activity4End">›</span></a>
+    </div>
+    <div class="note" id="activity4Note">Checking...</div>
+  </section>
+
+  <!-- EXAMINATION -->
+  <section class="screen" id="screen-exam">
+    <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Examination</button>
+
+    <div class="caption">Status</div>
+    <div class="row">
+      <div class="box score" id="midtermScore">—</div>
+      <a class="box pill" id="midtermBtn" href="midterm_exam_ITEra.html"><span class="pill-label" id="midtermLabel">Midterm</span><span class="pill-end" id="midtermEnd">›</span></a>
+    </div>
+    <div class="note" id="midtermNote">Checking...</div>
+  </section>
+
+  <!-- READS -->
+  <section class="screen reads" id="screen-reads">
+    <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Reads</button>
+    <a class="box pill" href="prelim_ITEra.html"><span class="pill-label">Prelim</span></a>
+    <a class="box pill" href="midterm_ITEra.html"><span class="pill-label">Midterm</span></a>
+    <a class="box pill" href="prefinals_ITEra.html"><span class="pill-label">Prefinals</span></a>
+    <a class="box pill" href="finals_ITEra.html"><span class="pill-label">Finals</span></a>
+  </section>
+
+</main>
 
 <script>
 const NAME_KEY = 'itict_student_name';
 const DATE_KEY = 'itict_created_date';
+const SCREEN_KEY = 'itict_last_screen';
 
 const RESULT_KEY = 'itict_essay_result';
 const RESULT_COOKIE = 'itict_essay_result';
@@ -317,6 +381,47 @@ const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
 const SYNC_FILENAME = 'itict_sync.json';
 const SYNC_DIR_HANDLE_KEY = 'sync_dir_handle';
 
+const ACT_HREFS = {
+  activity1: 'it_ict_sentence_order_v2.html',
+  activity2: 'abacus_addition_activity.html',
+  activity3: 'pascaline.html',
+  activity4: 'binary_activity.html',
+  midterm: 'midterm_exam_ITEra.html'
+};
+
+/* ===== Screens ===== */
+const SCREEN_COLORS = { name: 'blue', home: 'blue', activities: 'yellow', exam: 'coral', reads: 'cream' };
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  const panel = document.getElementById('panel');
+  panel.className = 'panel ' + (SCREEN_COLORS[id] || 'blue');
+  if (id !== 'name') { try { sessionStorage.setItem(SCREEN_KEY, id); } catch (e) {} }
+}
+
+document.querySelectorAll('[data-go]').forEach(el => {
+  el.addEventListener('click', () => showScreen(el.dataset.go));
+});
+
+/* ===== Row rendering ===== */
+function setRow(key, { score = '—', end = '›', note = '', locked = false, done = false }) {
+  const btn = document.getElementById(key + 'Btn');
+  document.getElementById(key + 'Score').textContent = score;
+  document.getElementById(key + 'End').textContent = end;
+  document.getElementById(key + 'Note').textContent = note;
+  btn.classList.toggle('locked', locked);
+  btn.classList.toggle('done', done);
+  if (locked) {
+    btn.removeAttribute('href');
+    btn.setAttribute('aria-disabled', 'true');
+  } else {
+    btn.setAttribute('href', ACT_HREFS[key]);
+    btn.removeAttribute('aria-disabled');
+  }
+}
+
+/* ===== Storage helpers ===== */
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
@@ -341,7 +446,6 @@ async function idbGet(key) {
     });
   } catch (e) { return null; }
 }
-
 async function idbSet(key, value) {
   try {
     const db = await idbOpen();
@@ -353,7 +457,6 @@ async function idbSet(key, value) {
     });
   } catch (e) { return false; }
 }
-
 async function idbDelete(key) {
   try {
     const db = await idbOpen();
@@ -377,64 +480,23 @@ async function clearActivity3Result() {
   await idbDelete(IDB_KEY3);
 }
 
-async function loadActivity1Result() {
+async function loadResult(lsKey, cookieKey, idbKey) {
   let record = null;
-  const lsRaw = localStorage.getItem(RESULT_KEY);
+  const lsRaw = localStorage.getItem(lsKey);
   if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
   if (!record) {
-    const cookieRaw = getCookie(RESULT_COOKIE);
+    const cookieRaw = getCookie(cookieKey);
     if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
   }
-  if (!record) {
-    record = await idbGet(IDB_KEY);
-  }
+  if (!record) record = await idbGet(idbKey);
   return record;
 }
-
-async function loadActivity2Result() {
-  let record = null;
-  const lsRaw = localStorage.getItem(RESULT2_KEY);
-  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
-  if (!record) {
-    const cookieRaw = getCookie(RESULT2_COOKIE);
-    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
-  }
-  if (!record) {
-    record = await idbGet(IDB_KEY2);
-  }
-  return record;
-}
-
-async function loadActivity3Result() {
-  let record = null;
-  const lsRaw = localStorage.getItem(RESULT3_KEY);
-  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
-  if (!record) {
-    const cookieRaw = getCookie(RESULT3_COOKIE);
-    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
-  }
-  if (!record) {
-    record = await idbGet(IDB_KEY3);
-  }
-  return record;
-}
-
-async function loadActivity4Result() {
-  let record = null;
-  const lsRaw = localStorage.getItem(RESULT4_KEY);
-  if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
-  if (!record) {
-    const cookieRaw = getCookie(RESULT4_COOKIE);
-    if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
-  }
-  if (!record) {
-    record = await idbGet(IDB_KEY4);
-  }
-  return record;
-}
+const loadActivity1Result = () => loadResult(RESULT_KEY, RESULT_COOKIE, IDB_KEY);
+const loadActivity2Result = () => loadResult(RESULT2_KEY, RESULT2_COOKIE, IDB_KEY2);
+const loadActivity3Result = () => loadResult(RESULT3_KEY, RESULT3_COOKIE, IDB_KEY3);
+const loadActivity4Result = () => loadResult(RESULT4_KEY, RESULT4_COOKIE, IDB_KEY4);
 
 /* ===== Midterm exam status (read-only; exam page owns the data) ===== */
-
 function midIdbGet(key) {
   return new Promise((resolve) => {
     try {
@@ -452,7 +514,7 @@ function midIdbGet(key) {
   });
 }
 
-/* Same rule as the exam: newest copy across localStorage / sessionStorage / cookie / IndexedDB wins. */
+/* Newest copy across localStorage / sessionStorage / cookie / IndexedDB wins. */
 async function loadMidtermRecord(key) {
   const copies = [];
   try { const s = localStorage.getItem(key); if (s) copies.push(JSON.parse(s)); } catch (e) {}
@@ -466,165 +528,112 @@ async function loadMidtermRecord(key) {
 }
 
 async function refreshMidtermStatus() {
-  const statusEl = document.getElementById('midtermStatus');
-  const btnEl = document.getElementById('midtermBtn');
+  const label = document.getElementById('midtermLabel');
   const result = await loadMidtermRecord(MID_RESULT_KEY);
   const session = await loadMidtermRecord(MID_SESSION_KEY);
 
   if (result || (session && session.submitted)) {
-    btnEl.textContent = 'Midterm Examination — View QR';
-    statusEl.textContent = 'Submitted';
-    statusEl.className = 'status done';
+    label.textContent = 'Midterm';
+    setRow('midterm', { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
   }
   if (session) {
     const total = (session.order && session.order.length) || '?';
     const item = (session.cur || 0) + 1;
-    btnEl.textContent = 'Midterm Examination — Resume';
-    if (session.endAt && Date.now() >= session.endAt) {
-      statusEl.textContent = 'Time expired — open to submit';
-    } else {
-      statusEl.textContent = `In progress — Item ${item} of ${total}`;
-    }
-    statusEl.className = 'status pending';
+    label.textContent = 'Midterm';
+    const expired = session.endAt && Date.now() >= session.endAt;
+    setRow('midterm', {
+      score: `${item}/${total}`,
+      end: '›',
+      note: expired ? 'Time expired — open to submit' : `In progress — tap to resume`
+    });
     return;
   }
-  btnEl.textContent = 'Midterm Examination';
-  statusEl.textContent = 'Not yet taken';
-  statusEl.className = 'status pending';
+  label.textContent = 'Midterm';
+  setRow('midterm', { note: 'Not yet taken' });
 }
 
-document.querySelectorAll('.tab-link').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.tab).classList.add('active');
-  });
-});
-
-function showSection(id) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
+/* ===== Activity statuses ===== */
 async function refreshActivity1Status() {
-  const statusEl = document.getElementById('activity1Status');
   const record = await loadActivity1Result();
   if (record) {
     const pct = Math.round((record.totalScore / record.totalMax) * 100);
-    statusEl.textContent = `Score: ${record.totalScore}/${record.totalMax} (${pct}%)`;
-    statusEl.className = 'status done';
+    setRow('activity1', { score: pct + '%', end: '✓', note: `${record.totalScore}/${record.totalMax}`, done: true });
   } else {
-    statusEl.textContent = 'Not yet attempted';
-    statusEl.className = 'status pending';
+    setRow('activity1', { note: 'Not yet attempted' });
   }
 }
 
 async function refreshActivity2Status() {
-  const statusEl = document.getElementById('activity2Status');
-  const btnEl = document.getElementById('activity2Btn');
   const act1Record = await loadActivity1Result();
   if (!act1Record) {
-    statusEl.textContent = 'Locked — complete Activity 1 first';
-    statusEl.className = 'status pending';
-    btnEl.removeAttribute('href');
-    btnEl.style.opacity = '0.4';
-    btnEl.style.cursor = 'default';
+    setRow('activity2', { end: '🔒', note: 'Complete Activity 1 first', locked: true });
     return;
   }
-  btnEl.setAttribute('href', 'abacus_addition_activity.html');
-  btnEl.style.opacity = '';
-  btnEl.style.cursor = '';
   const record = await loadActivity2Result();
   if (record) {
-    statusEl.textContent = `Score: ${record.score}/${record.maxScore} (${record.percentage}%)`;
-    statusEl.className = 'status done';
+    setRow('activity2', { score: record.percentage + '%', end: '✓', note: `${record.score}/${record.maxScore}`, done: true });
   } else {
-    statusEl.textContent = 'Not yet attempted';
-    statusEl.className = 'status pending';
+    setRow('activity2', { note: 'Not yet attempted' });
   }
 }
 
 async function refreshActivity3Status() {
-  const statusEl = document.getElementById('activity3Status');
-  const btnEl = document.getElementById('activity3Btn');
   const act1Record = await loadActivity1Result();
   const act2Record = await loadActivity2Result();
   if (!act1Record || !act2Record) {
-    statusEl.textContent = 'Locked — complete Activities 1 & 2 first';
-    statusEl.className = 'status pending';
-    btnEl.removeAttribute('href');
-    btnEl.style.opacity = '0.4';
-    btnEl.style.cursor = 'default';
+    setRow('activity3', { end: '🔒', note: 'Complete Activities 1 and 2 first', locked: true });
     return;
   }
-  btnEl.setAttribute('href', 'pascaline.html');
-  btnEl.style.opacity = '';
-  btnEl.style.cursor = '';
   const record = await loadActivity3Result();
   if (record) {
     const max = record.maxScore || 100;
     const pct = record.percentage != null ? record.percentage : Math.round((record.score / max) * 100);
-    statusEl.textContent = `Score (Fast Play): ${record.score}/${max} (${pct}%)`;
-    statusEl.className = 'status done';
+    setRow('activity3', { score: pct + '%', end: '✓', note: `Fast Play: ${record.score}/${max}`, done: true });
   } else {
-    statusEl.textContent = 'Not yet attempted';
-    statusEl.className = 'status pending';
+    setRow('activity3', { note: 'Not yet attempted' });
   }
 }
 
 async function refreshActivity4Status() {
-  const statusEl = document.getElementById('activity4Status');
-  const btnEl = document.getElementById('activity4Btn');
   const act3Record = await loadActivity3Result();
   if (!act3Record) {
-    statusEl.textContent = 'Locked — complete Activity 3 first';
-    statusEl.className = 'status pending';
-    btnEl.removeAttribute('href');
-    btnEl.style.opacity = '0.4';
-    btnEl.style.cursor = 'default';
+    setRow('activity4', { end: '🔒', note: 'Complete Activity 3 first', locked: true });
     return;
   }
-  btnEl.setAttribute('href', 'binary_activity.html');
-  btnEl.style.opacity = '';
-  btnEl.style.cursor = '';
   const record = await loadActivity4Result();
   if (record) {
     const max = record.maxScore || 100;
     const pct = record.percentage != null ? record.percentage : Math.round((record.score / max) * 100);
-    statusEl.textContent = `Score: ${record.score} pts · ${record.solved} solved (${pct}%)`;
-    statusEl.className = 'status done';
+    setRow('activity4', { score: pct + '%', end: '✓', note: `${record.score} pts, ${record.solved} solved`, done: true });
   } else {
-    statusEl.textContent = 'Not yet attempted';
-    statusEl.className = 'status pending';
+    setRow('activity4', { note: 'Not yet attempted' });
   }
 }
 
 async function refreshRedoButton() {
   const row = document.getElementById('redoRow');
   const btn = document.getElementById('redoBtn');
+  const end = document.getElementById('redoEnd');
   const st = document.getElementById('redoStatus');
   const used = localStorage.getItem(REDO_FLAG_KEY) === '1';
   const record = await loadActivity3Result();
 
-  // Only relevant once a Fast Play score exists.
-  if (!record && !used) {
-    row.style.display = 'none';
-    return;
-  }
+  if (!record && !used) { row.style.display = 'none'; return; }
   row.style.display = '';
 
   if (used) {
     btn.disabled = true;
+    btn.classList.add('locked');
+    end.textContent = '0';
     st.textContent = 'Redo already used';
-    st.className = 'status pending';
     return;
   }
   if (record) {
     btn.disabled = false;
-    st.textContent = 'One redo available';
-    st.className = 'status pending';
+    btn.classList.remove('locked');
+    end.textContent = '1';
+    st.textContent = 'One redo available — clears your Activity 3 score';
   } else {
     row.style.display = 'none';
   }
@@ -641,15 +650,22 @@ document.getElementById('redoBtn').addEventListener('click', async () => {
   await refreshRedoButton();
 });
 
-function enterActivities(name) {
-  document.getElementById('greeting').textContent = `Hello, ${name}!`;
-  showSection('section-activities');
+function refreshAll() {
   refreshActivity1Status();
   refreshActivity2Status();
   refreshActivity3Status();
   refreshActivity4Status();
   refreshRedoButton();
   refreshMidtermStatus();
+}
+
+function enterActivities(name) {
+  document.getElementById('greeting').textContent = `Hello, ${name}!`;
+  let last = 'home';
+  try { last = sessionStorage.getItem(SCREEN_KEY) || 'home'; } catch (e) {}
+  if (!SCREEN_COLORS[last] || last === 'name') last = 'home';
+  showScreen(last);
+  refreshAll();
 }
 
 document.getElementById('nameForm').addEventListener('submit', (e) => {
@@ -673,13 +689,11 @@ function isChrome() {
 const browserBlocked = isAndroid() && !isChrome();
 
 /* ===== Encrypted sync (Save / Update) ===== */
-
 async function getSyncCryptoKey() {
   const enc = new TextEncoder();
   const digest = await crypto.subtle.digest('SHA-256', enc.encode(SYNC_KEY));
   return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
-
 function bufToB64(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }
@@ -703,11 +717,10 @@ async function collectSyncData() {
 function setSyncStatus(msg, isError) {
   const el = document.getElementById('syncStatus');
   el.textContent = msg;
-  el.style.color = isError ? '#b00000' : '#555';
+  el.classList.toggle('error', !!isError);
 }
 
 /* ===== Sync folder (File System Access API) ===== */
-
 async function verifyFolderPermission(handle, mode) {
   const opts = { mode };
   try {
@@ -716,20 +729,15 @@ async function verifyFolderPermission(handle, mode) {
   } catch (e) {}
   return false;
 }
-
 async function getSyncFolderHandle() {
   return await idbGet(SYNC_DIR_HANDLE_KEY);
 }
-
 function updateFolderLabel(handle) {
   const el = document.getElementById('folderLabel');
-  if (handle && handle.name) {
-    el.textContent = `Sync folder: ${handle.name}`;
-  } else {
-    el.textContent = 'No folder set — Save/Update will use file dialogs.';
-  }
+  el.textContent = (handle && handle.name)
+    ? `Sync folder: ${handle.name}`
+    : 'No folder set — Save/Update will use file dialogs.';
 }
-
 async function chooseSyncFolder() {
   if (!('showDirectoryPicker' in window)) {
     setSyncStatus('Folder access not supported in this browser.', true);
@@ -742,11 +750,8 @@ async function chooseSyncFolder() {
     await idbSet(SYNC_DIR_HANDLE_KEY, handle);
     updateFolderLabel(handle);
     setSyncStatus('Sync folder set.');
-  } catch (e) {
-    /* user cancelled the picker */
-  }
+  } catch (e) { /* cancelled */ }
 }
-
 async function restoreFolderLabel() {
   const handle = await getSyncFolderHandle();
   if (handle) updateFolderLabel(handle);
@@ -763,7 +768,6 @@ function saveSyncFileAsDownload(payload) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
 
 async function saveSyncFile() {
   try {
@@ -784,9 +788,7 @@ async function saveSyncFile() {
         localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
         setSyncStatus('Saved to sync folder.');
         return;
-      } catch (e) {
-        /* fall through to download */
-      }
+      } catch (e) { /* fall through to download */ }
     }
 
     saveSyncFileAsDownload(payload);
@@ -801,23 +803,10 @@ async function applySyncData(data) {
   if (data.name) localStorage.setItem(NAME_KEY, data.name);
   if (data.createdDate) localStorage.setItem(DATE_KEY, data.createdDate);
   if (data.redoUsed) localStorage.setItem(REDO_FLAG_KEY, '1');
-
-  if (data.activity1) {
-    localStorage.setItem(RESULT_KEY, JSON.stringify(data.activity1));
-    await idbSet(IDB_KEY, data.activity1);
-  }
-  if (data.activity2) {
-    localStorage.setItem(RESULT2_KEY, JSON.stringify(data.activity2));
-    await idbSet(IDB_KEY2, data.activity2);
-  }
-  if (data.activity3) {
-    localStorage.setItem(RESULT3_KEY, JSON.stringify(data.activity3));
-    await idbSet(IDB_KEY3, data.activity3);
-  }
-  if (data.activity4) {
-    localStorage.setItem(RESULT4_KEY, JSON.stringify(data.activity4));
-    await idbSet(IDB_KEY4, data.activity4);
-  }
+  if (data.activity1) { localStorage.setItem(RESULT_KEY, JSON.stringify(data.activity1)); await idbSet(IDB_KEY, data.activity1); }
+  if (data.activity2) { localStorage.setItem(RESULT2_KEY, JSON.stringify(data.activity2)); await idbSet(IDB_KEY2, data.activity2); }
+  if (data.activity3) { localStorage.setItem(RESULT3_KEY, JSON.stringify(data.activity3)); await idbSet(IDB_KEY3, data.activity3); }
+  if (data.activity4) { localStorage.setItem(RESULT4_KEY, JSON.stringify(data.activity4)); await idbSet(IDB_KEY4, data.activity4); }
   if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
 }
 
@@ -857,16 +846,8 @@ async function updateFromFile(file) {
 
     await applySyncData(data);
     setSyncStatus('Updated from file.');
-    if (data.name) {
-      enterActivities(data.name);
-    } else {
-      refreshActivity1Status();
-      refreshActivity2Status();
-      refreshActivity3Status();
-      refreshActivity4Status();
-      refreshRedoButton();
-      refreshMidtermStatus();
-    }
+    if (data.name) enterActivities(data.name);
+    else refreshAll();
   } catch (e) {
     setSyncStatus('Update failed — file is invalid or was tampered with.', true);
   }
@@ -903,17 +884,15 @@ window.addEventListener('pageshow', (e) => {
   if (savedName) enterActivities(savedName);
 });
 
-/* On load: if name already saved, skip the name form */
+/* On load */
 (function init() {
   if (browserBlocked) {
     document.getElementById('blockOverlay').style.display = 'block';
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     return;
   }
   const savedName = localStorage.getItem(NAME_KEY);
-  if (savedName) {
-    enterActivities(savedName);
-  }
+  if (savedName) enterActivities(savedName);
 })();
 </script>
 
