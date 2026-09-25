@@ -20,14 +20,12 @@
     --bw: 4px;
   }
   * { box-sizing: border-box; }
+  html, body { background: var(--blue); }
   body {
     margin: 0;
-    background: #fff;
     color: var(--ink);
     font-family: 'League Spartan', 'Nunito', 'Segoe UI', system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    padding: 20px 12px 40px;
+    padding: 0;
     min-height: 100vh;
   }
   button, input { font-family: inherit; color: var(--ink); }
@@ -37,13 +35,17 @@
   /* Phone-style panel */
   .panel {
     width: 100%;
-    max-width: 380px;
-    min-height: 580px;
-    border: 5px solid var(--ink);
-    border-radius: 38px;
-    padding: 22px 18px 28px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 22px 18px 40px;
     background: var(--blue);
     transition: background-color .25s;
+  }
+  .panel > .screen,
+  .panel > #blockOverlay {
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
   }
   .panel.blue   { background: var(--blue); }
   .panel.yellow { background: var(--yellow); }
@@ -396,7 +398,11 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
   const panel = document.getElementById('panel');
-  panel.className = 'panel ' + (SCREEN_COLORS[id] || 'blue');
+  const color = SCREEN_COLORS[id] || 'blue';
+  panel.className = 'panel ' + color;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--' + color);
+  document.documentElement.style.background = bg;
+  document.body.style.background = bg;
   if (id !== 'name') { try { sessionStorage.setItem(SCREEN_KEY, id); } catch (e) {} }
 }
 
