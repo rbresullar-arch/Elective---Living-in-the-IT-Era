@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Packet Route: IP and TCP</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#000000; --muted:#555555; --label:#7a0000;
+  --dot:#222222; --ok:#15933a; --bad:#d4151b; --line:#9a9a9a; --panel:#f3f3f3;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#ffffff; --ink:#000000; }
+}
+:root[data-theme="dark"]{ --bg:#ffffff; --ink:#000000; }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.45}
+main{max-width:640px;margin:0 auto;padding:16px 16px 24px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-size:1.4rem;margin:0}
+.stats{display:flex;gap:18px;font-size:1rem}
+.stats b{font-variant-numeric:tabular-nums}
+.task{font-size:1.15rem;margin:12px 0 4px;min-height:1.6em}
+.hint{color:var(--muted);font-size:.9rem;margin:0 0 8px}
+svg{width:100%;height:auto;max-height:66vh;display:block;touch-action:manipulation}
+.node{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.node text{pointer-events:none;user-select:none;-webkit-user-select:none}
+.node .hit{fill:transparent}
+.node:active .hit{fill:rgba(0,0,0,.06)}
+.node text.lbl{font-size:30px;font-weight:700;fill:var(--label);text-anchor:middle;font-family:"Segoe UI",system-ui,sans-serif}
+.node text.tag{font-size:13px;fill:var(--muted);text-anchor:middle}
+.node .ring{fill:none;stroke:var(--ink);stroke-width:2.5;opacity:0}
+.node.sel .ring{opacity:1}
+.node:focus{outline:none}
+.node:focus-visible .ring{opacity:1;stroke-dasharray:4 3}
+.msg{min-height:1.4em;margin:6px 0 0;font-size:.95rem}
+.msg.err{color:var(--bad)}
+.log{background:var(--panel);border-radius:4px;padding:10px 12px;margin-top:10px;max-height:150px;overflow:auto;font-size:.92rem}
+.log p{margin:0 0 4px}
+.log p:first-child{font-weight:600}
+.results{display:none;margin-top:14px}
+.results table{border-collapse:collapse;width:100%;font-size:1.05rem}
+.results td,.results th{padding:6px 8px;border-bottom:1px solid #ccc;text-align:left}
+.results td:last-child,.results th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.results tr.total td{font-weight:700;border-bottom:none;border-top:2px solid var(--ink)}
+.bar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(8px + env(safe-area-inset-bottom,0px));margin-top:12px}
+#main-btn{width:100%;font:inherit;font-size:1.25rem;font-weight:700;padding:14px;border:none;border-radius:4px;background:var(--ink);color:#fff;cursor:pointer}
+#main-btn:disabled{background:#888;cursor:default}
+#main-btn:focus-visible{outline:3px solid #7aa7ff;outline-offset:3px}
+@media (max-width:600px){
+  main{padding:10px 8px 16px}
+  h1{font-size:1.2rem}
+  .task{font-size:1.05rem}
+  svg{max-height:none}
+  #main-btn{padding:16px;font-size:1.2rem}
+}
+.summary{margin:12px 0 0;padding:12px;background:var(--panel);border-radius:4px;font-size:1rem}
+.summary p{margin:0 0 4px}
+.summary .big{font-size:1.5rem;font-weight:700}
+.back{display:inline-block;margin-top:12px;color:var(--ink);font-weight:600}
+body.done .play{display:none}
+body.done .results{display:block}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Packet Route</h1>
+    <div class="stats"><span>Puzzle <b id="puzzle-no">0</b>/5</span><span>Time <b id="timer">0:00.0</b></span></div>
+  </header>
+
+  <p class="task" id="task">Press Start to open a connection.</p>
+
+  <div class="play">
+    <p class="hint" id="hint"></p>
+    <svg id="board" viewBox="0 0 540 440" role="group" aria-label="Network grid"></svg>
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <div class="log" id="log" aria-live="polite"><p>IP moves the packet hop by hop. TCP waits for an ACK and resends until the packet arrives.</p></div>
+  </div>
+
+  <section class="results" aria-live="polite">
+    <h2>Results</h2>
+    <table><thead><tr><th>Puzzle</th><th>Time</th></tr></thead><tbody id="results-body"></tbody></table>
+    <div class="summary" id="summary"></div>
+    <a class="back" href="index.html">‹ Back to activities</a>
+  </section>
+
+  <div class="bar"><button id="main-btn" type="button">Start</button></div>
+</main>
+
+<script>
+(() => {
+  const SRC = ['A','B','C','D'];
+  const DST = ['W','X','Y','Z'];
+  const MIDDLE = [['E','F','G','H'],['1','2','3','4'],['I','J','K','L'],['5','6','7','8'],['M','N','O','P'],['Q','R','S','T']];
+  const XS = [70, 200, 330, 460];
+  const GAP = 92, TOP = 70, BOTTOM = 52;
+  const COLORS = { dot:'#222222', ok:'#15933a', bad:'#d4151b', bolt:'#00b4ff', wire:'#9a9a9a' };
+  const FADE_MS = 1500;
+  const TOTAL = 5;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const HOP_MS = reduce ? 60 : 110;
+  const PAUSE_MS = reduce ? 20 : 45;
+  const NS = 'http://www.w3.org/2000/svg';
+
+  /* ===== Scoring & storage (must match index.html ACTIVITIES entry #5) ===== */
+  const PERFECT_MS = 120000;        // 2:00 or faster = 100%
+  const STEP_MS = 3000;             // -1% per full 3 s over 2:00
+  const RESULT_KEY = 'itict_activity5_result';
+  const IDB_NAME = 'itict_db', IDB_STORE = 'results', IDB_KEY = 'activity5_result';
+
+  const scoreFor = ms => ms <= PERFECT_MS ? 100 : Math.max(0, 100 - Math.floor((ms - PERFECT_MS) / STEP_MS));
+
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function idbOpen() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(IDB_NAME, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbGet(key) {
+    try {
+      const db = await idbOpen();
+      return await new Promise(res => {
+        const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+        q.onsuccess = () => res(q.result || null);
+        q.onerror = () => res(null);
+      });
+    } catch (e) { return null; }
+  }
+  async function idbSet(key, val) {
+    try {
+      const db = await idbOpen();
+      return await new Promise(res => {
+        const q = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(val, key);
+        q.onsuccess = () => res(true);
+        q.onerror = () => res(false);
+      });
+    } catch (e) { return false; }
+  }
+  async function loadRecord() {
+    try { const s = localStorage.getItem(RESULT_KEY); if (s) return JSON.parse(s); } catch (e) {}
+    try { const c = getCookie(RESULT_KEY); if (c) return JSON.parse(c); } catch (e) {}
+    return await idbGet(IDB_KEY);
+  }
+  async function saveRecord(rec) {
+    const json = JSON.stringify(rec);
+    try { localStorage.setItem(RESULT_KEY, json); } catch (e) {}
+    try { document.cookie = RESULT_KEY + '=' + encodeURIComponent(json) + '; max-age=31536000; path=/'; } catch (e) {}
+    await idbSet(IDB_KEY, rec);
+  }
+
+  const svg = document.getElementById('board');
+  const btn = document.getElementById('main-btn');
+  const msg = document.getElementById('msg');
+  const log = document.getElementById('log');
+  const hintEl = document.getElementById('hint');
+  const taskEl = document.getElementById('task');
+  const timerEl = document.getElementById('timer');
+  const puzzleNoEl = document.getElementById('puzzle-no');
+  const resultsBody = document.getElementById('results-body');
+
+  const el = (tag, attrs = {}, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+
+  let layers = [], nodes = {}, linkLayer, packet;
+  let phase = 'idle';          // idle | ready | anim | done
+  let puzzles = [], idx = 0, route = [], choice = [];
+  let attempts = 0, gameStart = 0, puzzleStart = 0, times = [], tick = null, runResends = 0;
+
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+  const fmt = ms => { const s = ms / 1000; const m = Math.floor(s / 60); return m + ':' + (s - m * 60).toFixed(1).padStart(4, '0'); };
+  const canEdit = () => phase === 'ready';
+  const layersFor = n => [SRC, ...MIDDLE.slice(0, 2 + n), DST];
+  const range = l => l[0] + '–' + l[3];
+
+  function buildBoard() {
+    svg.innerHTML = '';
+    nodes = {};
+    const L = layers.length;
+    const H = TOP + (L - 1) * GAP + BOTTOM;
+    svg.setAttribute('viewBox', '0 0 540 ' + H);
+    const defs = el('defs', {}, svg);
+    const f = el('filter', { id:'glow', x:'-200%', y:'-200%', width:'500%', height:'500%' }, defs);
+    el('feGaussianBlur', { stdDeviation:'4', result:'b' }, f);
+    const m = el('feMerge', {}, f);
+    el('feMergeNode', { in:'b' }, m); el('feMergeNode', { in:'b' }, m); el('feMergeNode', { in:'SourceGraphic' }, m);
+    linkLayer = el('g', {}, svg);
+    const nodeLayer = el('g', {}, svg);
+    layers.forEach((layer, l) => layer.forEach((ch, i) => {
+      const x = XS[i], y = TOP + (L - 1 - l) * GAP;
+      const g = el('g', { class:'node', tabindex:'0', role:'button', 'aria-label':'Node ' + ch }, nodeLayer);
+      el('rect', { class:'hit', x: x - 65, y: y - 54, width:130, height:GAP, fill:'transparent', 'pointer-events':'all' }, g);
+      el('text', { class:'lbl', x, y: y - 24 }, g).textContent = ch;
+      el('circle', { class:'ring', cx:x, cy:y, r:21 }, g);
+      const dot = el('circle', { cx:x, cy:y, r:14, fill:COLORS.dot }, g);
+      const tag = el('text', { class:'tag', x, y: y + 34 }, g);
+      nodes[ch] = { ch, l, i, x, y, g, dot, tag };
+      const pick = () => { if (canEdit()) { choice[l] = ch; syncInput(); markSelection(); } };
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    }));
+    packet = el('circle', { r:7, fill:'#e8f8ff', stroke:COLORS.bolt, 'stroke-width':3, filter:'url(#glow)', opacity:0 }, svg);
+    hintEl.textContent = 'Tap one node per row, bottom to top: ' + layers.map(range).join(', ') + '.';
+  }
+
+  function syncInput() {
+    msg.className = 'msg';
+    msg.textContent = 'Path: ' + choice.map(c => c || '_').join(' ');
+  }
+  function markSelection() {
+    Object.values(nodes).forEach(n => n.g.classList.toggle('sel', choice[n.l] === n.ch));
+  }
+
+  function resetBoard() {
+    Object.values(nodes).forEach(n => {
+      n.dot.getAnimations().forEach(a => a.cancel());
+      n.dot.setAttribute('fill', COLORS.dot);
+      n.tag.textContent = '';
+    });
+    linkLayer.innerHTML = '';
+    packet.setAttribute('opacity', 0);
+    nodes[route[0]].tag.textContent = 'from';
+    nodes[route[route.length - 1]].tag.textContent = 'to';
+  }
+
+  function flash(n, color) {
+    n.dot.getAnimations().forEach(a => a.cancel());
+    n.dot.setAttribute('fill', COLORS.dot);
+    n.dot.animate([{ fill:color }, { fill:color, offset:0.15 }, { fill:COLORS.dot }], { duration:FADE_MS, easing:'ease-out' });
+  }
+  const flashRed = n => flash(n, COLORS.bad);
+
+  function addLog(text, fresh) {
+    const p = document.createElement('p'); p.textContent = text;
+    if (fresh) log.innerHTML = '';
+    log.prepend(p);
+  }
+
+  function setButton(label, enabled) { btn.textContent = label; btn.disabled = !enabled; }
+
+  function newGame() {
+    document.body.classList.remove('done');
+    puzzles = Array.from({ length: TOTAL }, (_, n) => layersFor(n).map(rand));
+    idx = 0; times = []; runResends = 0;
+    gameStart = performance.now();
+    clearInterval(tick);
+    tick = setInterval(() => { timerEl.textContent = fmt(performance.now() - gameStart); }, 100);
+    loadPuzzle();
+  }
+
+  function loadPuzzle() {
+    layers = layersFor(idx);
+    route = puzzles[idx];
+    buildBoard();
+    attempts = 0;
+    choice = layers.map(() => null);
+    resetBoard(); markSelection(); syncInput();
+    puzzleNoEl.textContent = idx + 1;
+    const src = route[0], dst = route[route.length - 1];
+    taskEl.textContent = 'Deliver the packet from ' + src + ' to ' + dst + '.';
+    addLog('Connection open. ' + layers.length + ' layers. Waiting for a path from ' + src + ' to ' + dst + '.', true);
+    if (idx > 0) addLog('New router row added: ' + range(layers[layers.length - 2]) + '.');
+    puzzleStart = performance.now();
+    phase = 'ready';
+    setButton('Send', true);
+  }
+
+  const tween = (from, to, line) => new Promise(res => {
+    const t0 = performance.now();
+    const step = now => {
+      const k = Math.min(1, (now - t0) / HOP_MS);
+      const e = k * k;
+      const x = from.x + (to.x - from.x) * e, y = from.y + (to.y - from.y) * e;
+      packet.setAttribute('cx', x); packet.setAttribute('cy', y);
+      line.setAttribute('x2', x); line.setAttribute('y2', y);
+      k < 1 ? requestAnimationFrame(step) : res();
+    };
+    requestAnimationFrame(step);
+  });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  function judge(k) {
+    const n = nodes[choice[k]];
+    if (choice[k] === route[k]) { flash(n, COLORS.ok); return true; }
+    flashRed(n);
+    const others = layers[k].filter(c => c !== route[k] && c !== choice[k]);
+    if (others.length) flashRed(nodes[rand(others)]);
+    return false;
+  }
+
+  async function send() {
+    if (choice.some(c => !c)) {
+      msg.textContent = 'Incomplete path. Select one node in every row.';
+      msg.className = 'msg err';
+      return;
+    }
+    const val = choice.join('');
+    phase = 'anim'; setButton('Sending…', false);
+    attempts++;
+    resetBoard();
+
+    let wrong = 0;
+    const first = nodes[choice[0]];
+    packet.setAttribute('cx', first.x); packet.setAttribute('cy', first.y); packet.setAttribute('opacity', 1);
+    if (!judge(0)) wrong++;
+    for (let k = 1; k < layers.length; k++) {
+      await wait(PAUSE_MS);
+      const a = nodes[choice[k - 1]], b = nodes[choice[k]];
+      const line = el('line', { x1:a.x, y1:a.y, x2:a.x, y2:a.y, stroke:COLORS.bolt, 'stroke-width':4, 'stroke-linecap':'round', filter:'url(#glow)' }, linkLayer);
+      await tween(a, b, line);
+      line.animate([{ stroke:COLORS.bolt, strokeWidth:4 }, { stroke:COLORS.wire, strokeWidth:3 }], { duration:500, fill:'forwards' });
+      line.removeAttribute('filter');
+      if (!judge(k)) wrong++;
+    }
+    await wait(reduce ? 60 : 120);
+    packet.setAttribute('opacity', 0);
+
+    if (wrong === 0) {
+      const t = performance.now() - puzzleStart;
+      times.push(t);
+      addLog('Attempt ' + attempts + ': ' + val + '. ACK received. Delivered in ' + fmt(t) + '.');
+      setButton('Delivered', false);
+      await wait(1100);
+      idx++;
+      idx < TOTAL ? loadPuzzle() : finish();
+    } else {
+      addLog('Attempt ' + attempts + ': ' + val + '. ' + wrong + (wrong === 1 ? ' hop' : ' hops') + ' wrong. No ACK. Retransmit.');
+      runResends++;
+      phase = 'ready';
+      setButton('Resend', true);
+    }
+  }
+
+  async function finish() {
+    clearInterval(tick);
+    const total = performance.now() - gameStart;
+    timerEl.textContent = fmt(total);
+    phase = 'done';
+    setButton('Saving…', false);
+
+    const runScore = scoreFor(total);
+    const prev = await loadRecord();
+    let rec, bonusEarned = false;
+    if (!prev) {
+      rec = {
+        firstScore: runScore, bonus: 0, retries: 0, resends: runResends,
+        firstTime: total, bestTime: total
+      };
+    } else {
+      rec = Object.assign({}, prev);
+      rec.retries = (prev.retries || 0) + 1;
+      rec.resends = (prev.resends || 0) + runResends;
+      rec.bestTime = Math.min(prev.bestTime || Infinity, total);
+      if (runScore > prev.firstScore) { rec.bonus = (prev.bonus || 0) + 1; bonusEarned = true; }
+    }
+    rec.score = Math.min(100, rec.firstScore + (rec.bonus || 0));
+    rec.maxScore = 100;
+    rec.percentage = rec.score;
+    rec.lastTime = total;
+    rec.lastRunScore = runScore;
+    rec.bestTimeText = fmt(rec.bestTime);
+    rec.name = localStorage.getItem('itict_student_name') || '';
+    rec.updated = Date.now();
+    await saveRecord(rec);
+
+    const sum = document.getElementById('summary');
+    sum.innerHTML = '';
+    const line = (t, cls) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); };
+    line('Recorded score: ' + rec.score + '%', 'big');
+    line('This run: ' + fmt(total) + ' = ' + runScore + '%');
+    if (!prev) line('First score saved. Beat ' + runScore + '% on a retry to add +1%.');
+    else if (bonusEarned) line('Beat your first score (' + rec.firstScore + '%). +1% added.');
+    else if (rec.score >= 100) line('Score is at the 100% cap.');
+    else line('Did not beat your first score (' + rec.firstScore + '%). No change.');
+    line('Retries: ' + rec.retries + ' · Resends this run: ' + runResends);
+
+    resultsBody.innerHTML = times.map((t, i) => '<tr><td>Puzzle ' + (i + 1) + ' (' + layersFor(i).length + ' layers)</td><td>' + fmt(t) + '</td></tr>').join('')
+      + '<tr class="total"><td>Total</td><td>' + fmt(total) + '</td></tr>';
+    taskEl.textContent = 'All 5 packets delivered.';
+    document.body.classList.add('done');
+    setButton('Retry', true);
+  }
+
+  // initial preview board
+  layers = layersFor(0); route = ['A','E','1','W']; buildBoard();
+  hintEl.textContent = 'Press Start. Each solved puzzle adds a router row.';
+
+  btn.addEventListener('click', () => {
+    if (phase === 'idle' || phase === 'done') newGame();
+    else if (phase === 'ready') send();
+  });
+
+})();
+</script>
+</body>
+</html>
