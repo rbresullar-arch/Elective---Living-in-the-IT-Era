@@ -1,1 +1,1129 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Internet: Packet Auto-Route</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=League+Spartan:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#000000; --muted:#555555; --fill:#f1f1f1; --fill2:#e6e6e6;
+  --ok:#15933a; --bad:#d4151b; --line:#a8a8a8; --bolt:#00b4ff;
+  --log:#8bc34a; --disc:#4fd3e3; --go:#bde3b8; --label:#7a0000; --dot:#222;
+  --display:'Bebas Neue','Anton',Impact,'Arial Narrow',sans-serif;
+  --body:'League Spartan','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#ffffff; --ink:#000000; } }
+:root[data-theme="dark"]{ --bg:#ffffff; --ink:#000000; }
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.3}
+button{font-family:inherit;color:inherit}
+main{max-width:480px;height:100%;margin:0 auto;padding:12px 14px 12px;display:flex;flex-direction:column;gap:10px}
 
+.top{display:flex;align-items:baseline;justify-content:space-between}
+h1{font-family:var(--body);font-weight:800;font-size:1.7rem;margin:0;letter-spacing:-.01em}
+.clock{font-size:.9rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+
+.hud{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px}
+.sq{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;padding:0;cursor:pointer}
+.sq .lbl{font-family:var(--display);font-size:1.05rem;letter-spacing:.02em;line-height:1}
+.sq .box{width:40px;height:34px;border-radius:6px;display:block}
+.sq.log .box{background:var(--log)}
+.sq.disc .box{background:var(--disc)}
+.pts{text-align:center;line-height:1}
+.pts small{display:block;font-size:.62rem;font-weight:800;letter-spacing:.06em;color:#1a2aa0}
+.pts b{font-family:var(--display);font-size:2.6rem;font-weight:400;font-variant-numeric:tabular-nums}
+
+#banner{font-family:var(--display);font-size:2.5rem;line-height:1;letter-spacing:.02em;text-align:center;padding:10px 12px 6px;border:none;border-radius:14px;background:var(--fill);cursor:default;width:100%}
+#banner.warn{background:#ffe7a8}
+#banner.danger{background:var(--bad);color:#fff}
+#banner.action{background:var(--bad);color:#fff;cursor:pointer;animation:pulse 1s ease-in-out infinite}
+#banner small{display:block;font-family:var(--body);font-size:.85rem;font-weight:700;letter-spacing:0;margin-top:2px}
+@keyframes pulse{50%{filter:brightness(1.25)}}
+
+.board-box{flex:1;min-height:0;background:var(--fill);border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+svg{width:100%;height:100%;display:block}
+.node text{pointer-events:none;user-select:none;-webkit-user-select:none}
+.node text.tag{font-size:13px;fill:var(--muted);text-anchor:middle}
+.node{cursor:default}
+.node.broken circle.core{fill:var(--bad)}
+.node.targeted{cursor:pointer}
+.node-hit{fill:transparent}
+.edge{stroke:var(--line);stroke-width:2}
+.edge.on{stroke:var(--bolt);stroke-width:4}
+.down-veil{fill:#000;opacity:0}
+svg.down .down-veil{opacity:.55}
+.down-text{font-size:26px;font-weight:700;fill:#fff;text-anchor:middle;opacity:0}
+svg.down .down-text{opacity:1}
+.pop{font-size:30px;text-anchor:middle;pointer-events:none}
+.down-veil,.down-text,.no-hit{pointer-events:none}
+.warn{cursor:pointer}
+.warn-hit{fill:transparent}
+.warn-ring{fill:none;stroke:var(--bad);stroke-width:4}
+.warn-fin{font-size:26px;text-anchor:middle}
+.warn-tag{font-size:14px;font-weight:700;fill:var(--bad);text-anchor:middle}
+
+.bottom{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.quick{background:var(--fill);border-radius:14px;padding:10px 12px;min-height:84px}
+.quick .row1{display:flex;justify-content:space-between;gap:8px;font-weight:800;font-size:1rem}
+.quick .row1 .cost{white-space:nowrap}
+.quick .yr{font-size:.82rem;font-weight:700;color:var(--muted);margin:1px 0 3px}
+.quick .desc{font-size:.85rem;line-height:1.25}
+#discover{font-weight:800;font-size:1rem;background:var(--go);border:none;border-radius:18px;padding:16px 14px;cursor:pointer;min-width:96px}
+#discover:disabled{opacity:.45;cursor:default}
+.go-col{display:flex;gap:8px;align-items:center}
+.home-start{display:none;font-weight:800;font-size:1rem;color:#000;text-decoration:none;background:var(--fill2);border-radius:18px;padding:16px 14px;min-width:80px;text-align:center}
+body.idle .home-start{display:block}
+#discover:focus-visible,#banner:focus-visible,.sq:focus-visible{outline:3px solid #7aa7ff;outline-offset:3px}
+
+.panel{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 100px calc(24px + env(safe-area-inset-bottom,0px)) 16px}
+.panel[hidden]{display:none}
+.panel h2{font-family:var(--display);font-weight:400;font-size:2rem;margin:0 0 4px;letter-spacing:.02em}
+.panel .sub{margin:0 0 12px;color:var(--muted)}
+.log p{margin:0 0 6px;font-size:.95rem}
+.log p:first-child{font-weight:700}
+.panel-links{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+.panel-links a,.panel-links button{font:inherit;font-weight:700;font-size:.95rem;color:var(--ink);background:var(--fill);border:none;border-radius:10px;padding:10px 14px;text-decoration:none;cursor:pointer}
+.inv-row{background:var(--fill);border-radius:12px;margin:0 0 8px;padding:8px 10px}
+.inv-row.have{background:#e3f3e1}
+.inv-row.locked{background:#f7f7f7;color:var(--muted)}
+.inv-row.act{background:#e8f6fa}
+.inv-head{display:flex;align-items:center;gap:8px}
+.inv-name{flex:1;font:inherit;font-weight:800;font-size:1rem;text-align:left;background:none;border:none;padding:4px 0;color:inherit;cursor:pointer}
+.inv-name small{display:block;font-weight:500;color:var(--muted);font-size:.82rem}
+.inv-get{font:inherit;font-weight:800;font-size:.92rem;padding:8px 12px;border:none;border-radius:14px;background:var(--go);color:#000;cursor:pointer;white-space:nowrap}
+.inv-get:disabled{opacity:.45;cursor:default}
+.inv-state{font-size:.85rem;font-weight:700;white-space:nowrap}
+.inv-detail{font-size:.9rem;margin:6px 0 2px}
+.inv-detail p{margin:0 0 4px}
+.back{position:fixed;z-index:21;right:0;top:50%;transform:translateY(-50%);width:84px;height:46vh;min-height:220px;border:none;border-radius:14px 0 0 14px;background:#000;color:#fff;font-family:var(--display);font-size:1.6rem;letter-spacing:.04em;cursor:pointer}
+.back span{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}
+.back[hidden]{display:none}
+
+.results,.gate{display:none;flex:1;overflow:auto;background:var(--fill);border-radius:16px;padding:14px}
+.results h2,.gate h2{font-family:var(--display);font-weight:400;font-size:2rem;margin:0 0 8px}
+.results table{border-collapse:collapse;width:100%;font-size:.95rem}
+.results td,.results th{padding:5px 6px;border-bottom:1px solid #d6d6d6;text-align:left}
+.results td:not(:first-child),.results th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.results tr.total td{font-weight:800;border-bottom:none}
+.summary{margin:12px 0 0;font-size:1rem}
+.summary p{margin:0 0 4px}
+.summary .big{font-family:var(--display);font-size:2.2rem;line-height:1}
+.back-link{display:inline-block;margin-top:12px;color:var(--ink);font-weight:700}
+body.done .board-box{display:none}
+body.done .results{display:block}
+body.locked .board-box,body.locked .bottom,body.locked .hud,body.locked #banner{display:none}
+body.locked .gate{display:block}
+@media (max-height:640px){ .pts b{font-size:2.1rem} #banner{font-size:2rem} h1{font-size:1.4rem} }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><h1>The Internet</h1><span class="clock" id="timer">0:00</span></div>
+
+  <div class="hud">
+    <button type="button" class="sq log" id="log-open" aria-label="Open log"><span class="lbl">Log</span><span class="box"></span></button>
+    <div class="pts"><small>POINTS</small><b id="points">0/3000</b></div>
+    <button type="button" class="sq disc" id="inv-open" aria-label="Open discoveries"><span class="lbl">Discoveries</span><span class="box"></span></button>
+  </div>
+
+  <button type="button" id="banner" disabled>READY</button>
+
+  <div class="board-box"><svg id="board" viewBox="0 0 540 440" role="img" aria-label="Network grid"></svg></div>
+
+  <section class="results" aria-live="polite">
+    <h2>Results</h2>
+    <table><thead><tr><th>Measure</th><th>Value</th></tr></thead><tbody id="results-body"></tbody></table>
+    <div class="summary" id="summary"></div>
+    <a class="back-link" href="index.html">‹ Back to activities</a>
+  </section>
+
+  <section class="gate">
+    <h2>Locked</h2>
+    <p>Finish Activity 5 (Packet Route) first. This activity opens once its result is saved on this device.</p>
+    <a class="back-link" href="index.html">‹ Back to activities</a>
+  </section>
+
+  <div class="bottom">
+    <div class="quick" id="quick" aria-live="polite">
+      <div class="row1"><span id="q-name">Press Start</span><span class="cost" id="q-cost"></span></div>
+      <div class="yr" id="q-year"></div>
+      <div class="desc" id="q-desc">Sending is automatic. Reach 3000 points as fast as you can.</div>
+    </div>
+    <div class="go-col"><button type="button" id="discover" disabled>Loading…</button><a class="home-start" id="home-start" href="index.html">Home</a></div>
+  </div>
+</main>
+
+<div class="panel" id="log-panel" role="dialog" aria-modal="true" aria-labelledby="log-title" hidden>
+  <h2 id="log-title">Log</h2>
+  <p class="sub" id="hint"></p>
+  <div class="log" id="log" aria-live="polite"><p>Deliveries earn points. Reach 3000 to win.</p></div>
+  <div class="panel-links"><a href="index.html" id="home-btn">‹ Home</a><button type="button" id="downloadBtn">Download this activity</button></div>
+</div>
+<div class="panel" id="inv-panel" role="dialog" aria-modal="true" aria-labelledby="inv-title" hidden>
+  <h2 id="inv-title">Discoveries</h2>
+  <p class="sub">Points: <b id="inv-points">0</b>. The game keeps running.</p>
+  <div id="shop-list"></div>
+</div>
+<button type="button" class="back" id="back" hidden aria-label="Back to game"><span>‹ Back to game</span></button>
+
+<script>
+window.PR6 = (() => {
+  const GOAL = 3000, BH_BASE = 0.05, BH_ROLL = 20, INTRUDE_P = 0.4, INTRUDE_ADD = 0.10, HACKATHON_COST = 100, HACKATHON_CUT = 0.15, BH_PENALTY = 200, FIBER_X = 2, QUEUE_X = 1.75, ORCA_HUNT = 5, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, BH_ORCAS = 2, LEVEL_STEP = 250, MAX_LEVEL = 12, SHARK_EAT = 1, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 3, BH_LEVEL = 7, BH_LEVEL_ADD = 0.20, BIG_EAT_AT = 2500, BIG_EAT = 500, ORCA_COST = 500, SHARK_PER = 400, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
+    CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25];
+  const HEAL_COST = 8;
+  const UPGRADES = [
+    { id:'baran', group:'net', cost:15, req:[], name:'Paul Baran', year:'1964', title:'Distributed network',
+      info:'At RAND he designed a mesh with many redundant links and no central hub, so messages survive when links are destroyed.',
+      effect:'Replaces the single line with a grid of routers. Messages route around cut nodes.' },
+    { id:'kleinrock', group:'net', cost:20, req:['baran'], name:'Leonard Kleinrock', year:'1961–1969', title:'Queuing theory',
+      info:'Modeled how data waits and flows through network nodes. His UCLA lab sent the first ARPANET message ("LO") in 1969.',
+      effect:'Messages send and travel 1.75× faster.' },
+    { id:'metcalfe', group:'net', cost:20, req:['baran'], name:'Bob Metcalfe', year:'1973', title:'Ethernet',
+      info:'Invented Ethernet at Xerox PARC. Collision detection senses a failed transmission and retries it.',
+      effect:'Break detection. Heal cost drops by half.' },
+    { id:'davies', group:'net', cost:25, req:['baran'], name:'Donald Davies', year:'1965', title:'The "packet"',
+      info:'At the UK National Physical Laboratory he split messages into small blocks and named them "packets".',
+      effect:'A cut loses one packet, not the whole message. Loss penalty drops from 2 to 1.' },
+    { id:'pouzin', group:'net', cost:25, req:['baran'], name:'Louis Pouzin', year:'1973', title:'CYCLADES datagrams',
+      info:'Built France\'s CYCLADES network. Each packet travels independently; the end hosts handle reliability.',
+      effect:'A message in flight reroutes around a new cut instead of being lost.' },
+    { id:'roberts', group:'net', cost:30, req:['baran'], name:'Lawrence Roberts', year:'1967–1969', title:'ARPANET',
+      info:'Planned and managed ARPANET, the first working packet-switching network and ancestor of the internet.',
+      effect:'Widens the grid from 3 to 5 routers per row. More alternate paths.' },
+    { id:'fiber', group:'net', cost:1000, req:['kleinrock'], name:'Charles Kao', year:'1966', title:'Fiber optics',
+      info:'Showed that pure glass fiber can carry data as pulses of light over long distances. Fiber now carries almost all internet traffic. Nobel Prize, 2009.',
+      effect:'Messages travel and send 2× faster. Each delivery is worth 3 pts. Router delays drop by 1 ms.' },
+    { id:'cerfkahn', group:'net', cost:35, req:['baran'], name:'Vint Cerf & Bob Kahn', year:'1974', title:'TCP/IP',
+      info:'IP addresses and routes each packet. TCP numbers packets, confirms them with ACKs, and resends lost ones.',
+      effect:'Lost messages are resent at once with no point penalty.' },
+    { id:'http', group:'prot', cost:20, req:['baran'], name:'Tim Berners-Lee', year:'1989–1991', title:'HTTP',
+      info:'At CERN he created HTTP, the protocol the World Wide Web uses to request and deliver pages. HTTP sends everything as plain text.',
+      effect:'+1 point per delivery. Opens the network to the Web, and hackers find it.' },
+    { id:'https', group:'prot', cost:30, req:['http'], name:'Netscape / Taher Elgamal', year:'1995', title:'HTTPS (SSL)',
+      info:'Netscape, with Elgamal leading the work, built SSL so HTTP traffic travels encrypted. Its successor is TLS.',
+      effect:'Protection 1 (SSL 2.0). Unlocks Update HTTPS, up to TLS 1.3.' },
+    { id:'dh', group:'prot', cost:45, req:['https'], name:'Whitfield Diffie & Martin Hellman', year:'1976', title:'Public-key exchange',
+      info:'Showed two parties can agree on a secret key over an open network without meeting first.',
+      effect:'+1 protection.' },
+    { id:'rsa', group:'prot', cost:60, req:['dh'], name:'Rivest, Shamir & Adleman', year:'1977', title:'RSA encryption',
+      info:'The first practical public-key system for both encryption and digital signatures.',
+      effect:'+1 protection.' },
+    { id:'dns', group:'dns', cost:50, req:['https'], name:'Paul Mockapetris & Jon Postel', year:'1983', title:'Domain Name System',
+      info:'Mockapetris designed DNS; Postel coordinated internet names and addresses (IANA). DNS turns names into addresses so traffic finds its destination.',
+      effect:'The network always resolves the fastest working route. Lower delay means faster deliveries.' }
+  ];
+  const U = {}; UPGRADES.forEach(u => U[u.id] = u);
+
+  const crewTime = st => st.owned.baran ? CREW : CREW_EARLY;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
+
+  function create(rng) {
+    const st = { t:0, points:0, earned:0, owned:{}, order:[], nodes:{}, rows:0, cols:0,
+      clients:1, tls:0, hackStart:0, sharks:[0,1,2,3].map(k => ({ t: 6 + k * 4, warn:null })), orcas:0, orcaT:[], lastSharks:0, hackWarn:null, routes:{}, msgs:[], launchT:{ S0:0.3 }, sharkOn:false, hackOn:false, sharkT:0, hackT:0,
+      shutdown:0, bh:null, bhP:BH_BASE, bhRollT:BH_ROLL, intrusions:0, failed:false, peak:0, won:false, driftT:45, nextMsgId:1,
+      stats:{ delivered:0, lost:0, bites:0, blocked:0, hacks:0, heals:0, healed:0, crew:0, resets:0 },
+      events:[] };
+    buildGrid(st, rng);
+    return st;
+  }
+
+  function buildGrid(st, rng) {
+    st.nodes = {};
+    if (!st.owned.baran) { st.rows = 1; st.cols = 1; }
+    else { st.rows = 3; st.cols = st.owned.roberts ? 5 : 3; }
+    for (let r = 0; r < st.rows; r++) for (let c = 0; c < st.cols; c++) {
+      const id = 'n' + r + c;
+      st.nodes[id] = { id, row:r, col:c, d: st.rows === 1 ? 2 : 1 + Math.floor(rng() * 4), broken:false, brokenAt:0 };
+    }
+    st.routes = {}; st.msgs = [];
+  }
+
+  const isClient = id => id.charAt(0) === 'S';
+  const isRouter = id => !isClient(id) && id !== 'R';
+  const clientIds = st => Array.from({ length:st.clients }, (_, k) => 'S' + k);
+  const anchorCol = (st, k) => Math.round(CLIENT_ANCHOR[k] * (st.cols - 1));
+  const works = (st, id) => !isRouter(id) || !st.nodes[id].broken;
+  function next(st, id) {
+    if (isClient(id)) { const a = anchorCol(st, +id.slice(1)); return Object.values(st.nodes).filter(n => n.row === 0 && Math.abs(n.col - a) <= 1).map(n => n.id); }
+    const n = st.nodes[id];
+    if (n.row === st.rows - 1) return ['R'];
+    return Object.values(st.nodes).filter(m => m.row === n.row + 1 && Math.abs(m.col - n.col) <= 1).map(m => m.id);
+  }
+  // cost-to-R table; ignoreBroken = treat all nodes as intact
+  function costTable(st, ignoreBroken) {
+    const cost = { R:0 };
+    for (let r = st.rows - 1; r >= 0; r--) Object.values(st.nodes).filter(n => n.row === r).forEach(n => {
+      if (!ignoreBroken && n.broken) { cost[n.id] = Infinity; return; }
+      const best = Math.min(...next(st, n.id).map(k => cost[k]));
+      cost[n.id] = effD(st, n) + best;
+    });
+    clientIds(st).forEach(s => { cost[s] = Math.min(...next(st, s).map(k => cost[k])); });
+    return cost;
+  }
+  function bestFrom(st, from, ignoreBroken) {
+    const cost = costTable(st, ignoreBroken);
+    if (!isFinite(cost[from])) return null;
+    const path = [from]; let cur = from;
+    while (cur !== 'R') {
+      const opts = next(st, cur);
+      cur = opts.reduce((a, b) => cost[b] < cost[a] ? b : a);
+      path.push(cur);
+    }
+    return path;
+  }
+  function randomFrom(st, from, rng) {
+    const cost = costTable(st, false);
+    if (!isFinite(cost[from])) return null;
+    const path = [from]; let cur = from;
+    while (cur !== 'R') {
+      cur = pick(next(st, cur).filter(k => isFinite(cost[k])), rng);
+      path.push(cur);
+    }
+    return path;
+  }
+  const effD = (st, n) => Math.max(1, n.d - (st.owned.fiber ? 1 : 0));
+  // replies travel downward: cost from each node back to one sender
+  function prevOf(st, id, sender) {
+    if (id === 'R') return Object.values(st.nodes).filter(n => n.row === st.rows - 1).map(n => n.id);
+    const n = st.nodes[id];
+    if (n.row === 0) return next(st, sender).indexOf(id) >= 0 ? [sender] : [];
+    return Object.values(st.nodes).filter(o => o.row === n.row - 1 && Math.abs(o.col - n.col) <= 1).map(o => o.id);
+  }
+  function bestBack(st, from, sender) {
+    const cost = {}; cost[sender] = 0;
+    for (let r = 0; r < st.rows; r++) Object.values(st.nodes).filter(n => n.row === r).forEach(n => {
+      if (n.broken) { cost[n.id] = Infinity; return; }
+      const pv = prevOf(st, n.id, sender).map(k => cost[k] == null ? Infinity : cost[k]);
+      cost[n.id] = effD(st, n) + (pv.length ? Math.min(...pv) : Infinity);
+    });
+    cost.R = Math.min(...prevOf(st, 'R', sender).map(k => cost[k]));
+    if (!isFinite(cost[from])) return null;
+    const path = [from]; let cur = from;
+    while (cur !== sender) { const opts = prevOf(st, cur, sender); cur = opts.reduce((a, b) => (cost[b] < cost[a] ? b : a)); path.push(cur); }
+    return path;
+  }
+  const pathCost = (st, p) => p ? p.filter(isRouter).reduce((s, id) => s + effD(st, st.nodes[id]), 0) : Infinity;
+  const level = st => Math.min(MAX_LEVEL, 1 + Math.floor(st.points / LEVEL_STEP));
+  const sharkEat = st => !st.owned.baran ? 0 : st.points >= BIG_EAT_AT ? BIG_EAT : SHARK_EAT * level(st);
+  const pathOk = (st, p) => !!p && p.every(id => (!isRouter(id) || st.nodes[id]) && works(st, id));
+  const protLevel = st => st.tls + (st.owned.dh ? 1 : 0) + (st.owned.rsa ? 1 : 0);
+  const sharkInterval = st => clamp(12 - st.points / 300, 6, 12) * (st.owned.dns ? DNS_SHARK : 1);
+  const hackInterval = st => clamp(40 - st.points / 40, 14, 40);
+  const hackStrength = st => Math.min(HACK_CAP, 1 + Math.floor(st.points / 250) + Math.floor(Math.max(0, st.t - st.hackStart) / 300));
+  const healUnit = st => !st.owned.baran ? 2 : st.owned.metcalfe ? HEAL_COST / 2 : HEAL_COST;
+  const brokenList = st => Object.values(st.nodes).filter(n => n.broken);
+  const healCost = st => brokenList(st).length * healUnit(st);
+  const launchInterval = st => 2.0 / (st.owned.kleinrock ? QUEUE_X : 1) / (st.owned.fiber ? FIBER_X : 1);
+  const hopTime = st => 0.4 / (st.owned.kleinrock ? QUEUE_X : 1) / (st.owned.fiber ? FIBER_X : 1);
+  const hopDur = (st, id) => hopTime(st) * (isRouter(id) && st.nodes[id] ? 0.5 + effD(st, st.nodes[id]) / 4 : 0.6);
+  const ev = (st, type, data) => st.events.push(Object.assign({ type, t:st.t }, data || {}));
+
+  function loseMsg(st, m, why) {
+    st.stats.lost++;
+    const pen = st.owned.cerfkahn ? 0 : st.owned.davies ? 1 : 2;
+    st.points = Math.max(0, st.points - pen);
+    if (st.owned.cerfkahn) st.launchT[m.src] = 0;
+    ev(st, 'lost', { why, pen, resent: !!st.owned.cerfkahn, id:m.id });
+  }
+
+  function chooseTarget(st, rng, taken) {
+    const intact = Object.values(st.nodes).filter(n => !n.broken && (!taken || taken.indexOf(n.id) < 0));
+    if (!intact.length) return null;
+    let pool = intact;
+    const fast = [].concat(...clientIds(st).map(s => bestFrom(st, s, false) || []));
+    const onFast = intact.filter(n => fast.indexOf(n.id) >= 0);
+    if (onFast.length) pool = onFast;
+    return pick(pool, rng);
+  }
+  function bite(st, rng, id) {
+    const n = st.nodes[id];
+    if (!n || n.broken) return;
+    n.broken = true; n.brokenAt = st.t;
+    st.stats.bites++;
+    const eat = Math.min(st.points, sharkEat(st));
+    st.points -= eat; st.stats.eaten = (st.stats.eaten || 0) + eat;
+    ev(st, 'bite', { id:n.id, eat });
+    st.msgs = st.msgs.filter(m => {
+      if (m.path.slice(m.i + 1).indexOf(n.id) < 0 && !(m.path[m.i] === n.id)) return true;
+      if (st.owned.pouzin && m.path[m.i] !== n.id) {
+        const here = m.path[m.i];
+        const sub = m.back ? bestBack(st, here, m.src) : st.owned.dns ? bestFrom(st, here, false) : randomFrom(st, here, rng);
+        if (sub) { m.path = m.path.slice(0, m.i + 1).concat(sub.slice(1)); ev(st, 'reroute', { id:m.id }); return true; }
+      }
+      loseMsg(st, m, 'cut'); return false;
+    });
+  }
+
+  function attack(st, rng) {
+    if (rng() < INTRUDE_P) { st.bhP = Math.min(1, st.bhP + INTRUDE_ADD); st.intrusions++; ev(st, 'intrusion', { p:st.bhP }); }
+    const s = hackStrength(st), p = protLevel(st);
+    if (s <= p) { st.stats.blocked++; ev(st, 'blocked', { s, p }); return; }
+    const dur = 6 * (s - p);
+    st.shutdown = Math.max(st.shutdown, dur);
+    st.stats.hacks++;
+    const n = st.msgs.length;
+    st.msgs.forEach(m => loseMsg(st, m, 'hack'));
+    st.msgs = [];
+    ev(st, 'hack', { s, p, dur, lostMsgs:n });
+  }
+
+  function heal(st) {
+    const list = brokenList(st);
+    if (!list.length) return 0;
+    const unit = healUnit(st);
+    const afford = Math.floor(st.points / unit);
+    if (afford < 1) { ev(st, 'healfail', { need:unit }); return 0; }
+    const best = [].concat(...clientIds(st).map(s => bestFrom(st, s, true) || []));
+    list.sort((a, b) => (best.indexOf(b.id) >= 0) - (best.indexOf(a.id) >= 0));
+    const fix = list.slice(0, afford);
+    fix.forEach(n => { n.broken = false; });
+    st.points -= fix.length * unit;
+    st.stats.heals++; st.stats.healed += fix.length;
+    ev(st, 'heal', { n:fix.length, cost:fix.length * unit, left:list.length - fix.length });
+    return fix.length;
+  }
+
+  function healNode(st, id) {
+    const n = st.nodes[id];
+    if (!n || !n.broken || st.points < healUnit(st)) return false;
+    n.broken = false; st.points -= healUnit(st);
+    st.stats.heals++; st.stats.healed++;
+    ev(st, 'heal', { n:1, cost:healUnit(st), left:brokenList(st).length });
+    return true;
+  }
+  function canBuy(st, id) {
+    const u = U[id];
+    return !st.owned[id] && u.req.every(r => st.owned[r]) && st.points >= u.cost;
+  }
+  function buy(st, id, rng) {
+    if (!canBuy(st, id)) return false;
+    const u = U[id];
+    st.points -= u.cost; st.owned[id] = true; st.order.push(id);
+    if (id === 'https') st.tls = 1;
+    if (id === 'baran' || id === 'roberts') buildGrid(st, rng);
+    ev(st, 'buy', { id });
+    return true;
+  }
+
+  const clientCost = st => st.clients < MAX_CLIENTS ? CLIENT_COST[st.clients - 1] : Infinity;
+  const canAddClient = st => !!st.owned.baran && st.clients < MAX_CLIENTS && st.points >= clientCost(st);
+  function addClient(st) {
+    if (!canAddClient(st)) return false;
+    st.points -= clientCost(st);
+    const id = 'S' + st.clients;
+    st.clients++; st.launchT[id] = 0.5;
+    ev(st, 'client', { id, n:st.clients });
+    return true;
+  }
+  const tlsCost = st => st.tls >= 1 && st.tls < TLS_MAX ? TLS_COST[st.tls - 1] : Infinity;
+  const canUpdateTls = st => st.tls >= 1 && st.tls < TLS_MAX && st.points >= tlsCost(st);
+  function updateTls(st) {
+    if (!canUpdateTls(st)) return false;
+    st.points -= tlsCost(st); st.tls++;
+    ev(st, 'tls', { level:st.tls, name:TLS_NAMES[st.tls] });
+    return true;
+  }
+
+  const sharkCount = st => st.sharkOn ? Math.min(MAX_SHARKS, level(st)) : 0;
+  const activeSharks = st => sharkCount(st);
+  const sharkWarns = st => st.sharks.filter(s => s.warn).map(s => s.warn);
+  const canBuyOrca = st => !!st.owned.baran && st.orcas < MAX_ORCAS && st.points >= ORCA_COST;
+  function buyOrca(st) {
+    if (!canBuyOrca(st)) return false;
+    st.points -= ORCA_COST; st.orcas++;
+    st.orcaT.push(0);
+    ev(st, 'orca', { n:st.orcas });
+    return true;
+  }
+  function orcaHunt(st) {
+    const prey = st.sharks.find((s, k) => k < activeSharks(st) && s.warn);
+    if (!prey) return false;
+    const at = prey.warn.id;
+    prey.warn = null; prey.t = sharkInterval(st);
+    st.stats.hunts = (st.stats.hunts || 0) + 1;
+    ev(st, 'orcahunt', { at });
+    return true;
+  }
+
+  const isDown = st => st.shutdown > 0 || !!(st.bh && st.bh.phase === 'active');
+  const bhUnlocked = st => level(st) >= BH_LEVEL;
+  const bhEff = st => Math.min(1, st.bhP + (level(st) >= BH_LEVEL ? BH_LEVEL_ADD : 0));
+  const canWhiteHat = st => !!st.bh && st.points >= WHITE_COST;
+  function whiteHat(st) {
+    if (!canWhiteHat(st)) return false;
+    st.points -= WHITE_COST; st.bh = null;
+    st.stats.whitehats = (st.stats.whitehats || 0) + 1;
+    ev(st, 'whitehat');
+    return true;
+  }
+  function blackHat(st, dt, rng) {
+    if (!st.bh) {
+      if (!bhUnlocked(st)) return;
+      st.bhRollT -= dt;
+      if (st.bhRollT <= 0) {
+        st.bhRollT = BH_ROLL;
+        if (rng() < bhEff(st)) { st.bh = { phase:'warn', left:BH_WARN }; ev(st, 'bhwarn'); }
+      }
+      return;
+    }
+    st.bh.left -= dt;
+    if (st.bh.phase === 'warn' && st.bh.left <= 0) {
+      st.bh = { phase:'active', left:BH_FAIL };
+      const pen = Math.min(st.points, BH_PENALTY); st.points -= pen; st.bhP = BH_BASE;
+      st.stats.bhEaten = (st.stats.bhEaten || 0) + pen;
+      const n = st.msgs.length;
+      st.msgs.forEach(m => loseMsg(st, m, 'hack')); st.msgs = [];
+      st.stats.blackhats = (st.stats.blackhats || 0) + 1;
+      ev(st, 'bhdown', { lostMsgs:n, pen });
+    } else if (st.bh.phase === 'active' && st.bh.left <= 0) {
+      st.bh.left = 0; st.failed = true; ev(st, 'failed');
+    }
+  }
+
+  const canHackathon = st => st.points >= HACKATHON_COST;
+  function hackathon(st) {
+    if (!canHackathon(st)) return false;
+    st.points -= HACKATHON_COST; st.bhP = Math.max(0, st.bhP - HACKATHON_CUT);
+    st.stats.hackathons = (st.stats.hackathons || 0) + 1;
+    ev(st, 'hackathon', { p:st.bhP });
+    return true;
+  }
+  function tapShark(st, nodeId) {
+    const sh = st.sharks.find(s => s.warn && s.warn.id === nodeId);
+    if (!sh) return false;
+    sh.warn = null; sh.t = sharkInterval(st) * 0.8;
+    st.stats.tapped = (st.stats.tapped || 0) + 1;
+    ev(st, 'tapped', { id:nodeId });
+    return true;
+  }
+
+  // cheapest discovery available now (inventions + next client)
+  function quickBuy(st) {
+    const list = UPGRADES.filter(u => !st.owned[u.id] && u.req.every(r => st.owned[r])).map((u, k) => ({ kind:'inv', id:u.id, cost:u.cost, order:UPGRADES.indexOf(u) }));
+    if (st.owned.baran && st.clients < MAX_CLIENTS) list.push({ kind:'client', id:'client', cost:clientCost(st), order:0.5 });
+    if (brokenList(st).length) list.push({ kind:'heal', id:'heal', cost:healCost(st), order:-1, need:healUnit(st) });
+    if (st.tls >= 1 && st.tls < TLS_MAX) list.push({ kind:'tls', id:'tls', cost:tlsCost(st), order:0.6 });
+    if (st.owned.baran && st.orcas < MAX_ORCAS) list.push({ kind:'orca', id:'orca', cost:ORCA_COST, order:50 });
+    if (bhEff(st) > 0.5) list.push({ kind:'hack', id:'hack', cost:HACKATHON_COST, order:60 });
+    list.sort((a, b) => a.cost - b.cost || a.order - b.order);
+    return list[0] || null;
+  }
+  function buyQuick(st, rng) {
+    const q = quickBuy(st);
+    if (!q || st.points < (q.need || q.cost)) return false;
+    if (q.kind === 'client') return addClient(st);
+    if (q.kind === 'heal') return heal(st) > 0;
+    if (q.kind === 'tls') return updateTls(st);
+    if (q.kind === 'orca') return buyOrca(st);
+    if (q.kind === 'hack') return hackathon(st);
+    return buy(st, q.id, rng);
+  }
+
+  function step(st, dt, rng) {
+    if (st.won || st.failed) return;
+    st.t += dt;
+    if (!st.sharkOn && st.earned >= 6) { st.sharkOn = true; ev(st, 'era', { era:'shark' }); }
+    if (!st.hackOn && st.owned.http) { st.hackOn = true; st.hackStart = st.t; st.hackT = 20; ev(st, 'era', { era:'hacker' }); }
+    if (st.shutdown > 0) { st.shutdown -= dt; if (st.shutdown <= 0) { st.shutdown = 0; ev(st, 'restored'); } }
+
+    st.driftT -= dt;
+    if (st.driftT <= 0) {
+      st.driftT = 40 + rng() * 20;
+      if (st.owned.baran) { const n = pick(Object.values(st.nodes), rng); const old = n.d; n.d = 1 + Math.floor(rng() * 4); if (n.d !== old) ev(st, 'drift', { id:n.id, d:n.d }); }
+    }
+    brokenList(st).forEach(n => { if (st.t - n.brokenAt >= crewTime(st)) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
+
+    if (!isDown(st)) st.orcaT.forEach((t, k) => { st.orcaT[k] = Math.max(0, st.orcaT[k] - dt); if (st.orcaT[k] <= 0 && orcaHunt(st)) st.orcaT[k] = ORCA_HUNT; });
+    if (st.sharkOn) {
+      const n0 = st.lastSharks || 0, n1 = activeSharks(st);
+      if (n1 > n0 && n0 > 0) ev(st, 'sharkspawn', { n:n1 });
+      if (n1 < n0 && n1 > 0 && !st._orcaJust) ev(st, 'sharkleave', { n:n1 });
+      st._orcaJust = false; st.lastSharks = n1;
+      st.sharks.forEach((sh, k) => {
+        const on = k < n1;
+        if (!on) { sh.warn = null; if (sh.t < 6) sh.t = 6 + rng() * 6; return; }
+        if (isDown(st)) return;
+        if (sh.warn) {
+          sh.warn.left -= dt;
+          if (!st.nodes[sh.warn.id]) sh.warn = null;
+          else if (sh.warn.left <= 0) { const id = sh.warn.id; sh.warn = null; bite(st, rng, id); sh.t = sharkInterval(st) * (0.7 + 0.6 * rng()); }
+          return;
+        }
+        sh.t -= dt;
+        if (sh.t <= 0) {
+          const taken = st.sharks.filter(o => o.warn).map(o => o.warn.id);
+          const n = chooseTarget(st, rng, taken);
+          if (n) { sh.warn = { id:n.id, left:SHARK_WARN }; ev(st, 'sharkwarn', { id:n.id }); }
+          else sh.t = 3;
+        }
+      });
+    }
+    blackHat(st, dt, rng);
+    if (st.failed) return;
+    if (st.bh && st.bh.phase === 'active') { /* hackers wait while the black hat holds the system */ }
+    else if (st.hackWarn) {
+      st.hackWarn.left -= dt;
+      if (st.hackWarn.left <= 0) { st.hackWarn = null; attack(st, rng); st.hackT = hackInterval(st) * (0.8 + 0.4 * rng()); }
+    } else if (st.hackOn) {
+      st.hackT -= dt;
+      if (st.hackT <= 0) { st.hackWarn = { left:HACK_WARN }; ev(st, 'hackwarn', { s:hackStrength(st), p:protLevel(st) }); }
+    }
+
+    clientIds(st).forEach(s => {
+      if (isDown(st)) st.routes[s] = null;
+      else if (st.owned.dns) st.routes[s] = bestFrom(st, s, false);
+      else if (!pathOk(st, st.routes[s])) st.routes[s] = randomFrom(st, s, rng);
+      if (st.launchT[s] == null) st.launchT[s] = 0.5;
+      if (!isDown(st) && st.routes[s]) {
+        st.launchT[s] -= dt;
+        if (st.launchT[s] <= 0) { st.msgs.push({ id:st.nextMsgId++, src:s, back:false, path:st.routes[s].slice(), i:0, p:0 }); st.launchT[s] = launchInterval(st); }
+      }
+    });
+    st.msgs = st.msgs.filter(m => {
+      let left = dt;
+      while (left > 0) {
+        const hd = hopDur(st, m.path[m.i + 1]);
+        const need = (1 - m.p) * hd;
+        if (left < need) { m.p += left / hd; break; }
+        left -= need; m.p = 0; m.i++;
+        if (m.i >= m.path.length - 1) {
+          if (!m.back) {
+            m.back = true; m.path = m.path.slice().reverse(); m.i = 0; m.p = 0;
+            ev(st, 'arrived', { id:m.id });
+            continue;
+          }
+          const gain = st.owned.fiber ? 3 : st.owned.http ? 2 : 1;
+          st.points += gain; st.earned += gain; st.stats.delivered++;
+          ev(st, 'delivered', { id:m.id, gain });
+          return false;
+        }
+      }
+      return true;
+    });
+
+    st.peak = Math.max(st.peak, st.points);
+    const lv = level(st);
+    if (lv > (st.lastLevel || 1)) { ev(st, 'level', { level:lv, eat:sharkEat(st) }); }
+    st.lastLevel = lv;
+    if (st.points >= GOAL) { st.won = true; ev(st, 'won'); }
+  }
+
+
+  return { bhEff, BH_LEVEL, BIG_EAT, BIG_EAT_AT, healNode, quickBuy, buyQuick, ORCA_HUNT, HACKATHON_COST, BH_PENALTY, canHackathon, hackathon, tapShark, BH_FAIL, WHITE_COST, BH_ORCAS, isDown, bhUnlocked, canWhiteHat, whiteHat, GOAL, LEVEL_STEP, MAX_LEVEL, level, sharkEat, effD, CREW, UPGRADES, U, create, step, heal, buy, canBuy,
+    next, bestFrom, pathCost, protLevel, hackStrength, sharkInterval, hackInterval, healCost, healUnit,
+    bestBack, brokenList, isRouter, isClient, crewTime, clientIds, anchorCol,
+    MAX_CLIENTS, MAX_SHARKS, MAX_ORCAS, ORCA_COST, sharkCount, activeSharks, sharkWarns, canBuyOrca, buyOrca, TLS_MAX, TLS_NAMES, HACK_CAP, clientCost, canAddClient, addClient, tlsCost, canUpdateTls, updateTls };
+})();
+
+</script>
+<script>
+(() => {
+  const E = window.PR6;
+  const NS = 'http://www.w3.org/2000/svg';
+  const RESULT_KEY = 'itict_activity6_result', IDB_KEY = 'activity6_result';
+  const PREV_KEY = 'itict_activity5_result', PREV_IDB_KEY = 'activity5_result';
+  const IDB_NAME = 'itict_db', IDB_STORE = 'results';
+  const W = 540, TOP = 60, GAP = 110, XL = 70, XR = 470;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ===== storage: localStorage -> cookie -> IndexedDB -> sessionStorage, with backfill ===== */
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function setCookie(name, val) {
+    try { document.cookie = name + '=' + encodeURIComponent(val) + '; max-age=31536000; path=/; SameSite=Lax'; } catch (e) {}
+  }
+  function idbOpen() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(IDB_NAME, 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbGet(key) {
+    try {
+      const db = await idbOpen();
+      return await new Promise(res => {
+        const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+        q.onsuccess = () => res(q.result || null); q.onerror = () => res(null);
+      });
+    } catch (e) { return null; }
+  }
+  async function idbSet(key, val) {
+    try {
+      const db = await idbOpen();
+      return await new Promise(res => {
+        const q = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(val, key);
+        q.onsuccess = () => res(true); q.onerror = () => res(false);
+      });
+    } catch (e) { return false; }
+  }
+  const parse = s => { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } };
+  async function load(key, idbKey, backfill) {
+    let ls = null, ck = null, db = null, ss = null;
+    try { ls = parse(localStorage.getItem(key)); } catch (e) {}
+    ck = parse(getCookie(key));
+    db = await idbGet(idbKey);
+    try { ss = parse(sessionStorage.getItem(key)); } catch (e) {}
+    const rec = ls || ck || db || ss;
+    if (rec && backfill) {
+      const json = JSON.stringify(rec);
+      if (!ls) try { localStorage.setItem(key, json); } catch (e) {}
+      if (!ck) setCookie(key, json);
+      if (!db) await idbSet(idbKey, rec);
+      if (!ss) try { sessionStorage.setItem(key, json); } catch (e) {}
+    }
+    return rec;
+  }
+  async function save(rec) {
+    const json = JSON.stringify(rec);
+    try { localStorage.setItem(RESULT_KEY, json); } catch (e) {}
+    setCookie(RESULT_KEY, json);
+    await idbSet(IDB_KEY, rec);
+    try { sessionStorage.setItem(RESULT_KEY, json); } catch (e) {}
+  }
+
+  /* ===== DOM ===== */
+  const $ = id => document.getElementById(id);
+  const svg = $('board'), btn = $('discover'), log = $('log'), hintEl = $('hint');
+  const bannerEl = $('banner'), timerEl = $('timer'), pointsEl = $('points');
+  const qName = $('q-name'), qCost = $('q-cost'), qYear = $('q-year'), qDesc = $('q-desc');
+  const shopList = $('shop-list'), invPanel = $('inv-panel'), logPanel = $('log-panel'), backBtn = $('back'), invPoints = $('inv-points');
+  const ANCHOR = [0.5, 0, 1, 0.25];
+  const taskEl = { set textContent(v) { setBanner(v, '', ''); } };
+  const el = (tag, attrs, parent) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  const fmt = s => { const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s - m * 60)).padStart(2, '0'); };
+
+  let st = null, phase = 'idle', lastFrame = 0, lastUi = 0, gridSig = '';
+  let pos = {}, nodeEls = {}, edgeEls = [], orcaLayer, msgLayer, popLayer, downText, warnEls = [];
+  const rng = Math.random;
+
+  function layout() {
+    pos = {};
+    const H = TOP + (st.rows + 1) * GAP + 80;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    pos.R = { x:W / 2, y:TOP };
+    E.clientIds(st).forEach((s, k) => { pos[s] = { x: st.cols === 1 ? W / 2 : XL + (XR - XL) * ANCHOR[k], y:TOP + (st.rows + 1) * GAP }; });
+    Object.values(st.nodes).forEach(n => {
+      const x = st.cols === 1 ? W / 2 : XL + (XR - XL) * n.col / (st.cols - 1);
+      pos[n.id] = { x, y: TOP + (st.rows - n.row) * GAP };
+    });
+    return H;
+  }
+
+  function buildBoard() {
+    svg.innerHTML = '';
+    nodeEls = {}; edgeEls = [];
+    const H = layout();
+    const defs = el('defs', {}, svg);
+    const f = el('filter', { id:'glow', x:'-200%', y:'-200%', width:'500%', height:'500%' }, defs);
+    el('feGaussianBlur', { stdDeviation:'3', result:'b' }, f);
+    const m = el('feMerge', {}, f);
+    el('feMergeNode', { in:'b' }, m); el('feMergeNode', { in:'SourceGraphic' }, m);
+    const edgeLayer = el('g', {}, svg);
+    const all = E.clientIds(st).concat(Object.keys(st.nodes));
+    all.forEach(a => E.next(st, a).forEach(b => {
+      const l = el('line', { class:'edge', x1:pos[a].x, y1:pos[a].y, x2:pos[b].x, y2:pos[b].y }, edgeLayer);
+      edgeEls.push({ a, b, l });
+    }));
+    const nodeLayer = el('g', {}, svg);
+    const endpoint = (id, label, tag) => {
+      const g = el('g', { class:'node' }, nodeLayer);
+      el('rect', { x:pos[id].x - 26, y:pos[id].y - 16, width:52, height:32, rx:4, fill:'#000' }, g);
+      el('text', { x:pos[id].x, y:pos[id].y + 6, 'text-anchor':'middle', 'font-size':'16', 'font-weight':'700', fill:'#fff' }, g).textContent = label;
+      el('text', { class:'tag', x:pos[id].x, y:pos[id].y + (id === 'R' ? -24 : 34) }, g).textContent = tag;
+    };
+    endpoint('R', 'R', 'Receiver');
+    E.clientIds(st).forEach((s, k) => endpoint(s, 'S' + (k + 1), k === 0 ? 'Sender' : 'Client ' + (k + 1)));
+    Object.values(st.nodes).forEach(n => {
+      const p = pos[n.id];
+      const g = el('g', { class:'node' }, nodeLayer);
+      el('circle', { class:'node-hit', cx:p.x, cy:p.y, r:22 }, g);
+      const core = el('circle', { class:'core', cx:p.x, cy:p.y, r:15, fill:'#222' }, g);
+      g.addEventListener('pointerdown', ev => {
+        if (phase !== 'play') return;
+        if (E.tapShark(st, n.id)) { ev.preventDefault(); handleEvents(); render(); renderUi(); }
+      });
+      const d = el('text', { class:'tag', x:p.x, y:p.y + 34 }, g);
+      const x = el('text', { x:p.x, y:p.y + 7, 'text-anchor':'middle', 'font-size':'20', 'font-weight':'700', fill:'#fff' }, g);
+      nodeEls[n.id] = { g, core, d, x };
+    });
+    warnEls = [0,1,2,3].map(() => {
+      const wg = el('g', { opacity:0, class:'warn', role:'button', 'aria-label':'Tap to scare the shark' }, svg);
+      el('circle', { class:'warn-hit', r:40 }, wg);
+      wg.addEventListener('pointerdown', ev => {
+        ev.preventDefault();
+        const id = wg.getAttribute('data-node');
+        if (phase === 'play' && id && E.tapShark(st, id)) { handleEvents(); render(); renderUi(); }
+      });
+      const w = { g:wg, ring: el('circle', { class:'warn-ring', r:24 }, wg), fin: el('text', { class:'warn-fin' }, wg), tag: el('text', { class:'warn-tag' }, wg) };
+      w.fin.textContent = '🦈';
+      return w;
+    });
+    orcaLayer = el('g', { class:'no-hit' }, svg);
+    msgLayer = el('g', { class:'no-hit' }, svg);
+    popLayer = el('g', { class:'no-hit' }, svg);
+    el('rect', { class:'down-veil', x:0, y:0, width:W, height:H }, svg);
+    downText = el('text', { class:'down-text', x:W / 2, y:H / 2 }, svg);
+    gridSig = st.rows + 'x' + st.cols + 'c' + st.clients;
+  }
+
+  function pop(id, glyph, color) {
+    const p = pos[id] || pos.S0;
+    const t = el('text', { class:'pop', x:p.x + 28, y:p.y - 10, fill:color || '#000' }, popLayer);
+    t.textContent = glyph;
+    if (!t.animate) { setTimeout(() => t.remove(), 1200); return; }
+    const a = t.animate([{ opacity:1, transform:'translateY(0)' }, { opacity:0, transform:'translateY(-18px)' }], { duration: reduce ? 400 : 1300, easing:'ease-out' });
+    a.onfinish = () => t.remove();
+  }
+
+  function orcaStrike(target) {
+    const p = pos[target];
+    if (!p) return;
+    const o = el('text', { class:'pop', x:p.x, y:p.y + 10, 'font-size':'40' }, popLayer);
+    o.textContent = '🐋';
+    if (o.animate) o.animate([{ opacity:0, transform:'scale(.4)' }, { opacity:1, transform:'scale(1.15)', offset:.3 }, { opacity:1, transform:'scale(1)', offset:.7 }, { opacity:0, transform:'scale(1)' }], { duration: reduce ? 400 : 1100, easing:'ease-out' });
+    setTimeout(() => o.remove(), reduce ? 400 : 1100);
+    o.style.transformBox = 'fill-box'; o.style.transformOrigin = 'center';
+    pop(target, '💥');
+  }
+
+  function addLog(text) {
+    const p = document.createElement('p'); p.textContent = fmt(st.t) + '  ' + text;
+    log.prepend(p);
+    while (log.children.length > 30) log.lastChild.remove();
+  }
+
+  const nameOf = id => E.U[id].title;
+  function handleEvents() {
+    st.events.forEach(e => {
+      switch (e.type) {
+        case 'era':
+          if (e.era === 'shark') addLog('A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.');
+          else addLog('HTTP opened the network to the Web. Hackers found it. A hack shuts the whole system down. HTTPS protects it.');
+          break;
+        case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node' + (e.eat ? ' and ate ' + e.eat + ' pts' : '') + '. Heal it, or wait ' + E.crewTime(st) + ' s for the ' + (st.owned.baran ? 'repair crew.' : 'auto-heal.')); break;
+        case 'lost':
+          if (e.why === 'cut') addLog('Message lost at the cut.' + (e.resent ? ' TCP resends it.' : ' −' + e.pen + ' pts.'));
+          break;
+        case 'reroute': addLog('Datagram rerouted around the cut.'); break;
+        case 'hack': addLog('HACKED. Strength ' + e.s + ' beat protection ' + e.p + '. System down ' + e.dur + ' s.' + (e.lostMsgs ? ' ' + e.lostMsgs + ' in flight lost.' : '')); break;
+        case 'blocked': pop('R', '🛡'); addLog('Hacker attack (strength ' + e.s + ') blocked.'); break;
+        case 'restored': addLog('System back online.'); break;
+        case 'heal': addLog('Healed ' + e.n + (e.n === 1 ? ' node' : ' nodes') + ' for ' + e.cost + ' pts.' + (e.left ? ' ' + e.left + ' still cut (not enough points).' : '')); break;
+        case 'healfail': addLog('Not enough points to heal. Need ' + e.need + '.'); break;
+        case 'crew': addLog(st.owned.baran ? 'Repair crew fixed a node.' : 'Line auto-healed.'); break;
+        case 'drift': addLog('Traffic changed: a router is now ' + e.d + ' ms.'); break;
+        case 'buy': addLog('Bought: ' + E.U[e.id].name + ', ' + nameOf(e.id) + '.'); break;
+        case 'reset': addLog(e.why === 'shutdown' ? 'Hold timer reset: system went down.' : 'Hold timer reset: fastest route broken more than ' + E.GRACE + ' s.'); break;
+        case 'sharkwarn': addLog('Shark fin spotted. Tap the ringed node within 3 s to protect it.'); break;
+        case 'tapped': pop(e.id, '🛡'); addLog('Node protected. Shark scared off.'); break;
+        case 'intrusion': addLog('⚠ Hackers are in the system. Black hat chance now ' + Math.round(e.p * 100) + '%.'); break;
+        case 'hackathon': addLog('Cyber Hackathon held. Black hat chance now ' + Math.round(e.p * 100) + '%.'); break;
+        case 'hackwarn': addLog('Hacker probing. Attack in 5 s: strength ' + e.s + ' vs protection ' + e.p + '.'); break;
+        case 'sharkspawn': addLog('Another shark joined (' + e.n + ' circling). Hoarded points attract sharks.'); break;
+        case 'sharkleave': addLog('A shark swam off (' + e.n + ' circling).'); break;
+        case 'orca': addLog('Orca ' + e.n + ' joined. It stops a shark attack every ' + E.ORCA_HUNT + ' s.'); break;
+        case 'orcahunt': orcaStrike(e.at); addLog('🐋 Orca stopped a shark attack.'); break;
+        case 'orcamiss': break;
+        case 'client': addLog('Client ' + e.n + ' connected. More traffic, more points.'); break;
+        case 'tls': addLog('HTTPS updated to ' + e.name + '.'); break;
+        case 'level': addLog('Level ' + e.level + '. Shark bites now eat ' + e.eat + ' pts.' + (e.level === E.BH_LEVEL ? ' 🎩 Black hats are now active (+20%).' : '')); break;
+        case 'bhwarn': addLog('🎩 Black hat detected. It ignores all security.'); break;
+        case 'bhdown': addLog('🎩 Black hat took the system down and stole ' + e.pen + ' pts. ' + E.BH_FAIL + ' s to hire a white hat. Black hat chance reset to 5%.'); break;
+        case 'whitehat': pop('R', '🤍'); addLog('White hat hired. Black hat removed; system restored.'); break;
+        case 'failed': break;
+        case 'won': break;
+      }
+    });
+    st.events.length = 0;
+  }
+
+  function render() {
+    if (st.rows + 'x' + st.cols + 'c' + st.clients !== gridSig) buildBoard();
+    const down = E.isDown(st);
+    svg.classList.toggle('down', down);
+    downText.textContent = !down ? '' : (st.bh && st.bh.phase === 'active') ? '🎩 BLACK HAT ' + Math.ceil(st.bh.left) + ' s' : 'SYSTEM DOWN ' + Math.ceil(st.shutdown) + ' s';
+    const on = new Set();
+    Object.values(st.routes).forEach(r => { if (r) for (let i = 0; i < r.length - 1; i++) on.add(r[i] + '>' + r[i + 1]); });
+    edgeEls.forEach(e => {
+      const broken = (E.isRouter(e.a) && st.nodes[e.a].broken) || (E.isRouter(e.b) && st.nodes[e.b].broken);
+      e.l.classList.toggle('on', on.has(e.a + '>' + e.b));
+      e.l.setAttribute('stroke-dasharray', broken ? '6 6' : '');
+    });
+    const warnIds = new Set(E.sharkWarns(st).map(w => w.id));
+    Object.values(st.nodes).forEach(n => {
+      const ne = nodeEls[n.id];
+      ne.g.classList.toggle('broken', n.broken);
+      ne.g.classList.toggle('targeted', warnIds.has(n.id));
+      ne.x.textContent = n.broken ? '✕' : '';
+      ne.d.textContent = n.broken ? (st.owned.baran ? 'cut ' : 'heals ') + Math.max(0, Math.ceil(E.crewTime(st) - (st.t - n.brokenAt))) + 's' : n.d + ' ms';
+    });
+    const warns = E.sharkWarns(st);
+    warnEls.forEach((w, k) => {
+      const sw = warns[k];
+      if (sw && pos[sw.id]) {
+        const p = pos[sw.id];
+        w.g.setAttribute('opacity', reduce ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(st.t * 6)));
+        w.ring.setAttribute('cx', p.x); w.ring.setAttribute('cy', p.y);
+        w.g.setAttribute('data-node', sw.id); w.g.style.pointerEvents = 'auto';
+        w.g.firstChild.setAttribute('cx', p.x); w.g.firstChild.setAttribute('cy', p.y);
+        w.fin.setAttribute('x', p.x + 34); w.fin.setAttribute('y', p.y - 8);
+        w.tag.setAttribute('x', p.x); w.tag.setAttribute('y', p.y - 30);
+        w.tag.textContent = Math.ceil(sw.left) + '…';
+      } else { w.g.setAttribute('opacity', 0); w.g.removeAttribute('data-node'); w.g.style.pointerEvents = 'none'; }
+    });
+    while (msgLayer.children.length < st.msgs.length) el('circle', { r:7, fill:'#e8f8ff', stroke:'#00b4ff', 'stroke-width':3, filter:'url(#glow)' }, msgLayer);
+    while (msgLayer.children.length > st.msgs.length) msgLayer.lastChild.remove();
+    st.msgs.forEach((m, k) => {
+      const a = pos[m.path[m.i]], b = pos[m.path[Math.min(m.i + 1, m.path.length - 1)]];
+      if (!a || !b) return;
+      const c = msgLayer.children[k];
+      c.setAttribute('stroke', m.back ? '#15933a' : '#00b4ff'); c.setAttribute('fill', m.back ? '#e3f7e8' : '#e8f8ff');
+      c.setAttribute('cx', a.x + (b.x - a.x) * m.p);
+      c.setAttribute('cy', a.y + (b.y - a.y) * m.p);
+    });
+  }
+
+  function setBanner(text, cls, sub) {
+    const html = text + (sub ? '<small>' + sub + '</small>' : '');
+    if (bannerEl._h !== html) { bannerEl.innerHTML = html; bannerEl._h = html; }
+    bannerEl.className = cls || '';
+    bannerEl.disabled = cls !== 'action';
+  }
+  const bhShow = { next:12, until:-1 };
+  function bannerState() {
+    if (st.bh && st.bh.phase === 'active') return ['BLACK HAT!', 'action', (E.canWhiteHat(st) ? 'Tap: hire white hat ' : 'Need ') + E.WHITE_COST + ' pts. ' + Math.ceil(st.bh.left) + ' s left'];
+    if (st.bh) return ['BLACK HAT!', 'action', 'Incoming in ' + Math.ceil(st.bh.left) + ' s. Tap: hire white hat ' + E.WHITE_COST + ' pts'];
+    if (st.shutdown > 0) return ['SYSTEM DOWN', 'danger', 'Back in ' + Math.ceil(st.shutdown) + ' s'];
+    if (st.hackWarn) { const s = E.hackStrength(st), p = E.protLevel(st); return ['HACKERS!', s > p ? 'danger' : 'warn', 'Strength ' + s + ' vs protection ' + p + (s > p ? ': update HTTPS' : ': blocked')]; }
+    if (E.sharkWarns(st).length) return ['SHARKS!', 'warn', 'Tap the ringed node'];
+    if (st.owned.http && st.t >= bhShow.next) { bhShow.until = st.t + 3; bhShow.next = st.t + 8 + Math.random() * 7; }
+    if (st.owned.http && st.t < bhShow.until) return ['LEVEL ' + E.level(st), '', 'Black hat chance ' + Math.round(E.bhEff(st) * 100) + '%' + (E.bhUnlocked(st) ? '' : ' (active from Level ' + E.BH_LEVEL + ')')];
+    const nb = E.brokenList(st).length;
+    if (nb) return ['LEVEL ' + E.level(st), '', nb + (nb === 1 ? ' node' : ' nodes') + ' cut'];
+    return ['LEVEL ' + E.level(st), '', st.sharkOn ? E.activeSharks(st) + (E.activeSharks(st) === 1 ? ' shark' : ' sharks') + ' circling' : 'Direct line open'];
+  }
+  const CLIENT_INFO = { title:'New client', year:'Client–server networking', info:'Another sender joins the network and sends its own messages.' };
+  function renderQuick() {
+    const q = E.quickBuy(st);
+    if (!q) { qName.textContent = 'All discovered'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Open Discoveries for HTTPS, orcas and hackathons.'; btn.textContent = 'Discover'; btn.disabled = true; return; }
+    if (q.kind === 'client') { qName.textContent = CLIENT_INFO.title + ' ' + (st.clients + 1); qYear.textContent = CLIENT_INFO.year; qDesc.textContent = CLIENT_INFO.info; }
+    else if (q.kind === 'heal') { const nb = E.brokenList(st).length; qName.textContent = 'Heal ' + nb + (nb === 1 ? ' node' : ' nodes'); qYear.textContent = 'Repair'; qDesc.textContent = 'Fix cut nodes now instead of waiting ' + E.crewTime(st) + ' s for the free repair.'; }
+    else if (q.kind === 'tls') { qName.textContent = 'Update HTTPS'; qYear.textContent = E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1]; qDesc.textContent = 'Protection +1 (now ' + E.protLevel(st) + '). Hacker strength ' + E.hackStrength(st) + '.'; }
+    else if (q.kind === 'orca') { qName.textContent = 'Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')'; qYear.textContent = 'Shark hunter'; qDesc.textContent = 'Appears at a node under shark attack and stops it. Strikes every ' + E.ORCA_HUNT + ' s.'; }
+    else if (q.kind === 'hack') { qName.textContent = 'Cyber Hackathon'; qYear.textContent = 'Security community'; qDesc.textContent = 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%).'; }
+    else { const u = E.U[q.id]; qName.textContent = u.title; qYear.textContent = u.year + ', ' + u.name; qDesc.textContent = u.effect; }
+    qCost.textContent = q.cost + ' Pts';
+    btn.textContent = 'Discover';
+    btn.disabled = st.points < (q.need || q.cost);
+  }
+  function renderUi() {
+    timerEl.textContent = fmt(st.t);
+    pointsEl.textContent = st.points + '/' + E.GOAL;
+    const b = bannerState(); setBanner(b[0], b[1], b[2]);
+    renderQuick();
+    renderShop();
+    if (!logPanel.hidden) hintEl.textContent = 'Level ' + E.level(st) + '. Sharks ' + E.activeSharks(st) + '. Hacker ' + E.hackStrength(st) + ' vs protection ' + E.protLevel(st) + '. HTTPS ' + E.TLS_NAMES[st.tls] + '. Black hat ' + Math.round(E.bhEff(st) * 100) + '%' + (E.bhUnlocked(st) ? '' : ' (active from Level ' + E.BH_LEVEL + ')') + '. Orcas ' + st.orcas + '.';
+  }
+
+  const openInfo = new Set();
+  function actionRows() {
+    const r = [];
+    let tl;
+    if (st.tls < 1) tl = ['<span class="inv-state">Needs HTTPS</span>', 'locked'];
+    else if (st.tls >= E.TLS_MAX) tl = ['<span class="inv-state">' + E.TLS_NAMES[st.tls] + ' ✓</span>', 'have'];
+    else tl = ['<button type="button" class="inv-get" data-act="tls"' + (E.canUpdateTls(st) ? '' : ' disabled') + '>Get (' + E.tlsCost(st) + ' pts)</button>', 'act'];
+    r.push(['Update HTTPS', st.tls >= 1 && st.tls < E.TLS_MAX ? E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1] : 'SSL 2.0 → TLS 1.3', tl]);
+    let oc;
+    if (!st.owned.baran) oc = ['<span class="inv-state">Needs Distributed network</span>', 'locked'];
+    else if (st.orcas >= E.MAX_ORCAS) oc = ['<span class="inv-state">' + st.orcas + '/' + E.MAX_ORCAS + ' ✓</span>', 'have'];
+    else oc = ['<button type="button" class="inv-get" data-act="orca"' + (E.canBuyOrca(st) ? '' : ' disabled') + '>Get (' + E.ORCA_COST + ' pts)</button>', 'act'];
+    r.push(['Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')', 'Hunts a shark every ' + E.ORCA_HUNT + ' s', oc]);
+    r.push(['Cyber Hackathon', 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%)', ['<button type="button" class="inv-get" data-act="hack"' + (E.canHackathon(st) ? '' : ' disabled') + '>Get (' + E.HACKATHON_COST + ' pts)</button>', 'act']]);
+    return r.map(x => '<div class="inv-row ' + x[2][1] + '"><div class="inv-head"><span class="inv-name">' + x[0] + '<small>' + x[1] + '</small></span>' + x[2][0] + '</div></div>').join('');
+  }
+  function renderShop() {
+    if (invPanel.hidden) return;
+    invPoints.textContent = st.points;
+    const rows = actionRows() + E.UPGRADES.map(u => {
+      const have = !!st.owned[u.id];
+      const reqOk = u.req.every(r => st.owned[r]);
+      const cls = 'inv-row' + (have ? ' have' : reqOk ? '' : ' locked');
+      let action;
+      if (have) action = '<span class="inv-state">Owned ✓</span>';
+      else if (!reqOk) action = '<span class="inv-state">Needs ' + u.req.map(r => E.U[r].title).join(', ') + '</span>';
+      else action = '<button type="button" class="inv-get" data-buy="' + u.id + '"' + (E.canBuy(st, u.id) ? '' : ' disabled') + '>Get (' + u.cost + ' pts)</button>';
+      const open = openInfo.has(u.id);
+      return '<div class="' + cls + '"><div class="inv-head"><button type="button" class="inv-name" data-info="' + u.id + '" aria-expanded="' + open + '">'
+        + u.title + ' ' + (open ? '▴' : '▾') + '<small>' + u.name + ', ' + u.year + '</small></button>' + action + '</div>'
+        + (open ? '<div class="inv-detail"><p>' + u.info + '</p><p><b>' + u.effect + '</b></p></div>' : '') + '</div>';
+    }).join('');
+    if (shopList._html !== rows) { shopList.innerHTML = rows; shopList._html = rows; }
+  }
+  shopList.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('button');
+    if (!b) return;
+    const info = b.getAttribute('data-info');
+    if (info) { openInfo.has(info) ? openInfo.delete(info) : openInfo.add(info); renderShop(); return; }
+    if (phase !== 'play') return;
+    const act = b.getAttribute('data-act'), id = b.getAttribute('data-buy');
+    let okb = false;
+    if (act === 'tls') okb = E.updateTls(st);
+    else if (act === 'orca') okb = E.buyOrca(st);
+    else if (act === 'hack') okb = E.hackathon(st);
+    else if (id) okb = E.buy(st, id, rng);
+    if (okb) { handleEvents(); render(); renderUi(); }
+  });
+  let openPanel = null;
+  function setPanel(p) {
+    const was = openPanel;
+    [invPanel, logPanel].forEach(x => { x.hidden = x !== p; });
+    backBtn.hidden = !p; openPanel = p;
+    if (p) { if (st) renderUi(); backBtn.focus(); }
+    else if (was) (was === invPanel ? $('inv-open') : $('log-open')).focus();
+  }
+  const setInv = open => setPanel(open ? invPanel : null);
+  $('inv-open').addEventListener('click', () => { if (st) setPanel(invPanel); });
+  $('log-open').addEventListener('click', () => setPanel(logPanel));
+  backBtn.addEventListener('click', () => setPanel(null));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && openPanel) setPanel(null); });
+  bannerEl.addEventListener('click', () => { if (phase === 'play' && st.bh && E.whiteHat(st)) { handleEvents(); render(); renderUi(); } });
+
+  function frame(now) {
+    if (phase !== 'play') return;
+    let dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    while (dt > 0) { const d = Math.min(0.05, dt); E.step(st, d, rng); dt -= d; }
+    const won = st.events.some(e => e.type === 'won');
+    const failed = st.events.some(e => e.type === 'failed');
+    handleEvents();
+    render();
+    if (now - lastUi > 200 || won) { renderUi(); lastUi = now; }
+    if (won) { finish(); return; }
+    if (failed) { failRun(); return; }
+    requestAnimationFrame(frame);
+  }
+
+  function start() {
+    document.body.classList.remove('idle');
+    st = E.create(rng); bhShow.next = 12; bhShow.until = -1;
+    document.body.classList.remove('done');
+    log.innerHTML = '';
+    buildBoard();
+    addLog('Connection open: one direct line from Sender to Receiver.');
+    phase = 'play';
+    renderUi();
+    lastFrame = performance.now();
+    requestAnimationFrame(frame);
+  }
+
+  function failRun() {
+    setInv(false);
+    phase = 'done';
+    $('results-body').innerHTML = [
+      ['Time', fmt(st.t)], ['Points held', st.points], ['Peak points', st.peak], ['Black hats', st.stats.blackhats || 0]
+    ].map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+    const sum = $('summary'); sum.innerHTML = '';
+    const p1 = document.createElement('p'); p1.className = 'big'; p1.textContent = 'FAILED: system lost to the black hat.'; sum.appendChild(p1);
+    const p2 = document.createElement('p'); p2.textContent = 'This run is not saved. Keep ' + E.WHITE_COST + ' pts in reserve after your second orca, then retry.'; sum.appendChild(p2);
+    taskEl.textContent = 'System lost. Retry.';
+    document.body.classList.add('done');
+    btn.disabled = false; btn.textContent = 'Retry';
+    qName.textContent = 'Run over'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Press Retry to play again.';
+  }
+
+  async function finish() {
+    setInv(false);
+    phase = 'done';
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const total = st.t;
+    const prev = await load(RESULT_KEY, IDB_KEY, false);
+    const newBest = !prev || !(prev.bestTime <= total);
+    const rec = prev ? Object.assign({}, prev) : { firstTime:total, runs:0 };
+    ['score', 'maxScore', 'percentage', 'firstScore', 'bonus', 'retries', 'lastRunScore'].forEach(k => delete rec[k]);
+    rec.runs = (rec.runs || 0) + 1;
+    rec.bestTime = newBest ? total : prev.bestTime;
+    rec.lastTime = total;
+    rec.bestTimeText = fmt(rec.bestTime);
+    rec.lastStats = Object.assign({}, st.stats, { upgrades: st.order.slice() });
+    try { rec.name = localStorage.getItem('itict_student_name') || ''; } catch (e) { rec.name = ''; }
+    rec.updated = Date.now();
+    await save(rec);
+
+    const rows = [
+      ['Time to win', fmt(total)], ['Messages delivered', st.stats.delivered], ['Messages lost', st.stats.lost],
+      ['Shark cuts', st.stats.bites], ['Nodes healed', st.stats.healed], ['Crew repairs', st.stats.crew],
+      ['Points eaten by sharks', st.stats.eaten || 0], ['Hacks blocked', st.stats.blocked], ['Shutdowns', st.stats.hacks],
+      ['Sharks scared off', st.stats.tapped || 0], ['Black hats', st.stats.blackhats || 0], ['White hats hired', st.stats.whitehats || 0], ['Cyber Hackathons', st.stats.hackathons || 0],
+      ['Clients', st.clients], ['Orcas', st.orcas], ['HTTPS level', E.TLS_NAMES[st.tls]],
+      ['Inventions bought', st.order.length + ' of ' + E.UPGRADES.length]
+    ];
+    $('results-body').innerHTML = rows.map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+    const sum = $('summary'); sum.innerHTML = '';
+    const line = (t, cls) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); };
+    line('Your time: ' + fmt(total), 'big');
+    if (!prev) line('First run recorded.');
+    else if (newBest) line('New best time! Previous best: ' + fmt(prev.bestTime) + '.');
+    else line('Best time: ' + fmt(rec.bestTime) + '.');
+    line('Completed runs: ' + rec.runs + '.');
+    line('Order bought: ' + (st.order.map(id => E.U[id].title).join(', ') || 'none') + '.');
+    taskEl.textContent = E.GOAL + ' points reached. The network is built.';
+    document.body.classList.add('done');
+    btn.disabled = false; btn.textContent = 'Retry';
+    qName.textContent = 'Run over'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Press Retry to play again.';
+  }
+
+  btn.addEventListener('click', () => {
+    if (phase === 'idle' || phase === 'done') start();
+    else if (phase === 'play' && E.buyQuick(st, rng)) { handleEvents(); render(); renderUi(); }
+  });
+
+  /* ===== self-download ===== */
+  $('downloadBtn').addEventListener('click', () => {
+    try {
+      const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+      const url = URL.createObjectURL(new Blob([html], { type:'text/html' }));
+      const a = document.createElement('a'); a.href = url; a.download = 'packet_auto.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) { alert("Download unavailable here. Use your browser's Save Page option."); }
+  });
+
+  /* ===== init: gate behind Activity 5 ===== */
+  (async () => {
+    const prev5 = await load(PREV_KEY, PREV_IDB_KEY, false);
+    if (!prev5) { document.body.classList.add('locked'); return; }
+    const mine = await load(RESULT_KEY, IDB_KEY, true);
+    st = E.create(rng); buildBoard(); render();
+    const best = mine ? 'Best time ' + (mine.bestTimeText || '–') + ' over ' + (mine.runs || 1) + (mine.runs === 1 ? ' run' : ' runs') + '. Beat it!' : 'Reach ' + E.GOAL + ' points as fast as you can.';
+    hintEl.textContent = best;
+    qName.textContent = 'Press Start'; qCost.textContent = ''; qYear.textContent = mine ? 'Best ' + (mine.bestTimeText || '–') : '';
+    qDesc.textContent = 'Sending is automatic. Tap ringed nodes to block sharks. Buy from the suggestion card.';
+    pointsEl.textContent = '0/' + E.GOAL;
+    setBanner('READY', '', mine ? best : 'Reach ' + E.GOAL + ' points');
+    bannerEl.disabled = true;
+    document.body.classList.add('idle');
+    btn.disabled = false; btn.textContent = 'Start';
+    window.__A6 = { get st(){ return st; }, E };
+  })();
+})();
+</script>
+</body>
+</html>
