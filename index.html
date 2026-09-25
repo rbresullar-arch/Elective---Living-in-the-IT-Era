@@ -287,109 +287,183 @@
     </div>
   </section>
 
-  <!-- ACTIVITIES -->
+  <!-- ACTIVITIES (rows built from ACTIVITIES config) -->
   <section class="screen" id="screen-activities">
     <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Activities</button>
-
     <div class="caption">Score</div>
-    <div class="row">
-      <div class="box score" id="activity1Score">—</div>
-      <a class="box pill" id="activity1Btn" href="it_ict_sentence_order_v2.html"><span class="pill-label">Activity 1</span><span class="pill-end" id="activity1End">›</span></a>
-    </div>
-    <div class="note" id="activity1Note">Checking...</div>
-
-    <div class="row">
-      <div class="box score" id="activity2Score">—</div>
-      <a class="box pill" id="activity2Btn" href="abacus_addition_activity.html"><span class="pill-label">Activity 2</span><span class="pill-end" id="activity2End">›</span></a>
-    </div>
-    <div class="note" id="activity2Note">Checking...</div>
-
-    <div class="row">
-      <div class="box score" id="activity3Score">—</div>
-      <a class="box pill" id="activity3Btn" href="pascaline.html"><span class="pill-label">Activity 3</span><span class="pill-end" id="activity3End">›</span></a>
-    </div>
-    <div class="note" id="activity3Note">Checking...</div>
-
-    <div id="redoRow" style="display:none;">
-      <div class="row">
-        <div class="box score">↺</div>
-        <button type="button" class="box pill" id="redoBtn"><span class="pill-label">Redo Fast Play</span><span class="pill-end" id="redoEnd">1</span></button>
-      </div>
-      <div class="note" id="redoStatus"></div>
-    </div>
-
-    <div class="row">
-      <div class="box score" id="activity4Score">—</div>
-      <a class="box pill" id="activity4Btn" href="binary_activity.html"><span class="pill-label">Activity 4</span><span class="pill-end" id="activity4End">›</span></a>
-    </div>
-    <div class="note" id="activity4Note">Checking...</div>
+    <div id="activityList"></div>
   </section>
 
-  <!-- EXAMINATION -->
+  <!-- EXAMINATION (rows built from EXAMS config) -->
   <section class="screen" id="screen-exam">
     <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Examination</button>
-
     <div class="caption">Status</div>
-    <div class="row">
-      <div class="box score" id="midtermScore">—</div>
-      <a class="box pill" id="midtermBtn" href="midterm_exam_ITEra.html"><span class="pill-label" id="midtermLabel">Midterm</span><span class="pill-end" id="midtermEnd">›</span></a>
-    </div>
-    <div class="note" id="midtermNote">Checking...</div>
+    <div id="examList"></div>
   </section>
 
-  <!-- READS -->
+  <!-- READS (buttons built from READS config) -->
   <section class="screen reads" id="screen-reads">
     <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Reads</button>
-    <a class="box pill" href="prelim_ITEra.html"><span class="pill-label">Prelim</span></a>
-    <a class="box pill" href="midterm_ITEra.html"><span class="pill-label">Midterm</span></a>
-    <a class="box pill" href="prefinals_ITEra.html"><span class="pill-label">Prefinals</span></a>
-    <a class="box pill" href="finals_ITEra.html"><span class="pill-label">Finals</span></a>
+    <div id="readList"></div>
   </section>
 
 </main>
 
 <script>
+/* =====================================================================
+   CONFIG — edit only this block to add/remove items.
+   ---------------------------------------------------------------------
+   ACTIVITIES: one line per activity. Minimum: { href: 'file.html' }
+     Defaults for activity #N (1-based position in the list):
+       label    'Activity N'
+       key      'itict_activityN_result'   (localStorage + cookie name)
+       idbKey   'activityN_result'         (IndexedDB 'itict_db' / 'results')
+       requires [N-1]                      (unlocks after previous activity)
+     The activity page must save its result under `key`/`idbKey` with
+     { score, maxScore, percentage } or { totalScore, totalMax }.
+     Optional: note: r => 'text'   custom line under the row
+               requires: [1, 2]    activity numbers that must be done first
+               redo: { label, flagKey }   one-time redo button
+
+   EXAMS: minimum { label, href, prefix }
+     prefix must match the exam page's CFG.prefix (reads prefix_session /
+     prefix_result from IndexedDB 'itict_exam' / 'kv').
+
+   READS: { label, href }
+   ===================================================================== */
+
+const ACTIVITIES = [
+  { label: 'Activity 1', href: 'it_ict_sentence_order_v2.html', key: 'itict_essay_result', idbKey: 'result' },
+  { label: 'Activity 2', href: 'abacus_addition_activity.html', key: 'itict_abacus_result', idbKey: 'abacus_result' },
+  { label: 'Activity 3', href: 'pascaline.html', key: 'itict_pascaline_result', idbKey: 'pascaline_result',
+    requires: [1, 2],
+    note: r => `Fast Play: ${r.score}/${r.maxScore || 100}`,
+    redo: { label: 'Redo Fast Play', flagKey: 'itict_pascaline_redo_used' } },
+  { label: 'Activity 4', href: 'binary_activity.html', key: 'itict_binary_result', idbKey: 'binary_result',
+    note: r => `${r.score} pts, ${r.solved} solved` },
+  { label: 'Activity 5', href: 'packet_relay.html',
+    note: r => `Retries: ${r.retries || 0} · Best time ${r.bestTimeText || '—'}` },
+  // { href: 'activity6.html' },
+];
+
+const EXAMS = [
+  { label: 'Midterm', href: 'midterm_exam_ITEra.html', prefix: 'itict_midterm' },
+  // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
+];
+
+const READS = [
+  { label: 'Prelim',    href: 'prelim_ITEra.html' },
+  { label: 'Midterm',   href: 'midterm_ITEra.html' },
+  { label: 'Prefinals', href: 'prefinals_ITEra.html' },
+  { label: 'Finals',    href: 'finals_ITEra.html' },
+];
+
+/* ======================= END OF CONFIG ======================= */
+
 const NAME_KEY = 'itict_student_name';
 const DATE_KEY = 'itict_created_date';
 const SCREEN_KEY = 'itict_last_screen';
 
-const RESULT_KEY = 'itict_essay_result';
-const RESULT_COOKIE = 'itict_essay_result';
 const IDB_NAME = 'itict_db';
 const IDB_STORE = 'results';
-const IDB_KEY = 'result';
-
-const RESULT2_KEY = 'itict_abacus_result';
-const RESULT2_COOKIE = 'itict_abacus_result';
-const IDB_KEY2 = 'abacus_result';
-
-const RESULT3_KEY = 'itict_pascaline_result';
-const RESULT3_COOKIE = 'itict_pascaline_result';
-const IDB_KEY3 = 'pascaline_result';
-const REDO_FLAG_KEY = 'itict_pascaline_redo_used';
-
-const RESULT4_KEY = 'itict_binary_result';
-const RESULT4_COOKIE = 'itict_binary_result';
-const IDB_KEY4 = 'binary_result';
-
-/* Midterm exam keys — must match midterm_exam_ITEra.html (CFG.prefix = 'itict_midterm') */
-const MID_SESSION_KEY = 'itict_midterm_session';
-const MID_RESULT_KEY = 'itict_midterm_result';
-const MID_IDB_NAME = 'itict_exam';
-const MID_IDB_STORE = 'kv';
+const EXAM_IDB_NAME = 'itict_exam';
+const EXAM_IDB_STORE = 'kv';
 
 const SYNC_KEY = 'ITEra2026';
 const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
 const SYNC_FILENAME = 'itict_sync.json';
 const SYNC_DIR_HANDLE_KEY = 'sync_dir_handle';
 
-const ACT_HREFS = {
-  activity1: 'it_ict_sentence_order_v2.html',
-  activity2: 'abacus_addition_activity.html',
-  activity3: 'pascaline.html',
-  activity4: 'binary_activity.html',
-  midterm: 'midterm_exam_ITEra.html'
-};
+/* ===== Normalize config ===== */
+ACTIVITIES.forEach((a, i) => {
+  const n = i + 1;
+  a.n = n;
+  a.id = a.id || `activity${n}`;
+  a.label = a.label || `Activity ${n}`;
+  a.key = a.key || `itict_${a.id}_result`;
+  a.cookie = a.cookie || a.key;
+  a.idbKey = a.idbKey || `${a.id}_result`;
+  a.requires = (a.requires || (n > 1 ? [n - 1] : [])).filter(r => r >= 1 && r <= ACTIVITIES.length && r !== n);
+  if (a.redo) {
+    a.redo.label = a.redo.label || `Redo ${a.label}`;
+    a.redo.flagKey = a.redo.flagKey || `itict_${a.id}_redo_used`;
+  }
+});
+EXAMS.forEach((e, i) => {
+  e.id = e.id || `exam${i + 1}`;
+  e.label = e.label || `Exam ${i + 1}`;
+  e.prefix = e.prefix || `itict_${e.id}`;
+});
+
+/* ===== Build UI from config ===== */
+function el(tag, cls, text) {
+  const x = document.createElement(tag);
+  if (cls) x.className = cls;
+  if (text != null) x.textContent = text;
+  return x;
+}
+
+function buildRow(item, scoreText) {
+  const wrap = el('div');
+  const row = el('div', 'row');
+  const score = el('div', 'box score', scoreText || '—');
+  score.id = item.id + 'Score';
+  const btn = el('a', 'box pill');
+  btn.id = item.id + 'Btn';
+  btn.href = item.href;
+  const label = el('span', 'pill-label', item.label);
+  label.id = item.id + 'Label';
+  const end = el('span', 'pill-end', '›');
+  end.id = item.id + 'End';
+  btn.append(label, end);
+  row.append(score, btn);
+  const note = el('div', 'note', 'Checking...');
+  note.id = item.id + 'Note';
+  wrap.append(row, note);
+  return wrap;
+}
+
+function buildRedoRow(a) {
+  const wrap = el('div');
+  wrap.id = a.id + 'RedoRow';
+  wrap.style.display = 'none';
+  const row = el('div', 'row');
+  row.append(el('div', 'box score', '↺'));
+  const btn = el('button', 'box pill');
+  btn.type = 'button';
+  btn.id = a.id + 'RedoBtn';
+  const end = el('span', 'pill-end', '1');
+  end.id = a.id + 'RedoEnd';
+  btn.append(el('span', 'pill-label', a.redo.label), end);
+  btn.addEventListener('click', () => doRedo(a));
+  row.append(btn);
+  const note = el('div', 'note');
+  note.id = a.id + 'RedoNote';
+  wrap.append(row, note);
+  return wrap;
+}
+
+function buildLists() {
+  const actList = document.getElementById('activityList');
+  actList.innerHTML = '';
+  ACTIVITIES.forEach(a => {
+    actList.append(buildRow(a));
+    if (a.redo) actList.append(buildRedoRow(a));
+  });
+
+  const examList = document.getElementById('examList');
+  examList.innerHTML = '';
+  EXAMS.forEach(e => examList.append(buildRow(e)));
+
+  const readList = document.getElementById('readList');
+  readList.innerHTML = '';
+  READS.forEach(r => {
+    const a = el('a', 'box pill');
+    a.href = r.href;
+    a.append(el('span', 'pill-label', r.label));
+    readList.append(a);
+  });
+}
 
 /* ===== Screens ===== */
 const SCREEN_COLORS = { name: 'blue', home: 'blue', activities: 'yellow', exam: 'coral', reads: 'cream' };
@@ -406,23 +480,24 @@ function showScreen(id) {
   if (id !== 'name') { try { sessionStorage.setItem(SCREEN_KEY, id); } catch (e) {} }
 }
 
-document.querySelectorAll('[data-go]').forEach(el => {
-  el.addEventListener('click', () => showScreen(el.dataset.go));
+document.querySelectorAll('[data-go]').forEach(x => {
+  x.addEventListener('click', () => showScreen(x.dataset.go));
 });
 
 /* ===== Row rendering ===== */
-function setRow(key, { score = '—', end = '›', note = '', locked = false, done = false }) {
-  const btn = document.getElementById(key + 'Btn');
-  document.getElementById(key + 'Score').textContent = score;
-  document.getElementById(key + 'End').textContent = end;
-  document.getElementById(key + 'Note').textContent = note;
+function setRow(item, { score = '—', end = '›', note = '', locked = false, done = false }) {
+  const btn = document.getElementById(item.id + 'Btn');
+  if (!btn) return;
+  document.getElementById(item.id + 'Score').textContent = score;
+  document.getElementById(item.id + 'End').textContent = end;
+  document.getElementById(item.id + 'Note').textContent = note;
   btn.classList.toggle('locked', locked);
   btn.classList.toggle('done', done);
   if (locked) {
     btn.removeAttribute('href');
     btn.setAttribute('aria-disabled', 'true');
   } else {
-    btn.setAttribute('href', ACT_HREFS[key]);
+    btn.setAttribute('href', item.href);
     btn.removeAttribute('aria-disabled');
   }
 }
@@ -431,6 +506,9 @@ function setRow(key, { score = '—', end = '›', note = '', locked = false, do
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
+}
+function deleteCookie(name) {
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
 }
 
 function idbOpen() {
@@ -445,8 +523,7 @@ async function idbGet(key) {
   try {
     const db = await idbOpen();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const req = tx.objectStore(IDB_STORE).get(key);
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error);
     });
@@ -456,8 +533,7 @@ async function idbSet(key, value) {
   try {
     const db = await idbOpen();
     return new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const req = tx.objectStore(IDB_STORE).put(value, key);
+      const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
       req.onsuccess = () => resolve(true);
       req.onerror = () => resolve(false);
     });
@@ -467,50 +543,102 @@ async function idbDelete(key) {
   try {
     const db = await idbOpen();
     return new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const req = tx.objectStore(IDB_STORE).delete(key);
+      const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(key);
       req.onsuccess = () => resolve(true);
       req.onerror = () => resolve(false);
     });
   } catch (e) { return false; }
 }
 
-function deleteCookie(name) {
-  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-}
-
-async function clearActivity3Result() {
-  try { localStorage.removeItem(RESULT3_KEY); } catch (e) {}
-  try { sessionStorage.removeItem(RESULT3_KEY); } catch (e) {}
-  deleteCookie(RESULT3_COOKIE);
-  await idbDelete(IDB_KEY3);
-}
-
-async function loadResult(lsKey, cookieKey, idbKey) {
+async function loadActivity(a) {
   let record = null;
-  const lsRaw = localStorage.getItem(lsKey);
+  const lsRaw = localStorage.getItem(a.key);
   if (lsRaw) { try { record = JSON.parse(lsRaw); } catch (e) {} }
   if (!record) {
-    const cookieRaw = getCookie(cookieKey);
+    const cookieRaw = getCookie(a.cookie);
     if (cookieRaw) { try { record = JSON.parse(cookieRaw); } catch (e) {} }
   }
-  if (!record) record = await idbGet(idbKey);
+  if (!record) record = await idbGet(a.idbKey);
   return record;
 }
-const loadActivity1Result = () => loadResult(RESULT_KEY, RESULT_COOKIE, IDB_KEY);
-const loadActivity2Result = () => loadResult(RESULT2_KEY, RESULT2_COOKIE, IDB_KEY2);
-const loadActivity3Result = () => loadResult(RESULT3_KEY, RESULT3_COOKIE, IDB_KEY3);
-const loadActivity4Result = () => loadResult(RESULT4_KEY, RESULT4_COOKIE, IDB_KEY4);
 
-/* ===== Midterm exam status (read-only; exam page owns the data) ===== */
-function midIdbGet(key) {
+async function clearActivity(a) {
+  try { localStorage.removeItem(a.key); } catch (e) {}
+  try { sessionStorage.removeItem(a.key); } catch (e) {}
+  deleteCookie(a.cookie);
+  await idbDelete(a.idbKey);
+}
+
+/* ===== Activity statuses ===== */
+function pctOf(r) {
+  if (r.totalScore != null && r.totalMax) return Math.round((r.totalScore / r.totalMax) * 100);
+  if (r.percentage != null) return r.percentage;
+  const max = r.maxScore || 100;
+  return Math.round(((r.score || 0) / max) * 100);
+}
+function defaultNote(r) {
+  if (r.totalScore != null) return `${r.totalScore}/${r.totalMax}`;
+  return `${r.score}/${r.maxScore || 100}`;
+}
+
+async function refreshActivities() {
+  const recs = await Promise.all(ACTIVITIES.map(loadActivity));
+  ACTIVITIES.forEach((a, i) => {
+    const missing = a.requires.filter(n => !recs[n - 1]);
+    if (missing.length) {
+      const names = missing.map(n => ACTIVITIES[n - 1].label).join(' and ');
+      setRow(a, { end: '🔒', note: `Complete ${names} first`, locked: true });
+    } else if (recs[i]) {
+      const r = recs[i];
+      let note;
+      try { note = (a.note || defaultNote)(r); } catch (e) { note = defaultNote(r); }
+      setRow(a, { score: pctOf(r) + '%', end: '✓', note, done: true });
+    } else {
+      setRow(a, { note: 'Not yet attempted' });
+    }
+    if (a.redo) refreshRedo(a, recs[i]);
+  });
+}
+
+function refreshRedo(a, record) {
+  const row = document.getElementById(a.id + 'RedoRow');
+  const btn = document.getElementById(a.id + 'RedoBtn');
+  const end = document.getElementById(a.id + 'RedoEnd');
+  const note = document.getElementById(a.id + 'RedoNote');
+  const used = localStorage.getItem(a.redo.flagKey) === '1';
+
+  if (!record && !used) { row.style.display = 'none'; return; }
+  row.style.display = '';
+  if (used) {
+    btn.disabled = true;
+    btn.classList.add('locked');
+    end.textContent = '0';
+    note.textContent = 'Redo already used';
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('locked');
+    end.textContent = '1';
+    note.textContent = `One redo available — clears your ${a.label} score`;
+  }
+}
+
+async function doRedo(a) {
+  if (localStorage.getItem(a.redo.flagKey) === '1') return;
+  document.getElementById(a.id + 'RedoBtn').disabled = true;
+  await clearActivity(a);
+  localStorage.setItem(a.redo.flagKey, '1');
+  await refreshActivities();
+}
+
+/* ===== Exam statuses (read-only; exam pages own the data) ===== */
+function examIdbGet(key) {
   return new Promise((resolve) => {
     try {
-      const req = indexedDB.open(MID_IDB_NAME, 1);
-      req.onupgradeneeded = () => { req.result.createObjectStore(MID_IDB_STORE); };
+      const req = indexedDB.open(EXAM_IDB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(EXAM_IDB_STORE); };
       req.onsuccess = () => {
         try {
-          const q = req.result.transaction(MID_IDB_STORE, 'readonly').objectStore(MID_IDB_STORE).get(key);
+          const q = req.result.transaction(EXAM_IDB_STORE, 'readonly').objectStore(EXAM_IDB_STORE).get(key);
           q.onsuccess = () => resolve(q.result || null);
           q.onerror = () => resolve(null);
         } catch (e) { resolve(null); }
@@ -521,148 +649,41 @@ function midIdbGet(key) {
 }
 
 /* Newest copy across localStorage / sessionStorage / cookie / IndexedDB wins. */
-async function loadMidtermRecord(key) {
+async function loadExamRecord(key) {
   const copies = [];
   try { const s = localStorage.getItem(key); if (s) copies.push(JSON.parse(s)); } catch (e) {}
   try { const s = sessionStorage.getItem(key); if (s) copies.push(JSON.parse(s)); } catch (e) {}
   try { const c = getCookie(key); if (c) copies.push(JSON.parse(c)); } catch (e) {}
-  const i = await midIdbGet(key);
+  const i = await examIdbGet(key);
   if (i) copies.push(i);
   let best = null;
   copies.forEach(x => { if (x && (!best || (x.updated || 0) > (best.updated || 0))) best = x; });
   return best;
 }
 
-async function refreshMidtermStatus() {
-  const label = document.getElementById('midtermLabel');
-  const result = await loadMidtermRecord(MID_RESULT_KEY);
-  const session = await loadMidtermRecord(MID_SESSION_KEY);
-
+async function refreshExam(e) {
+  const result = await loadExamRecord(e.prefix + '_result');
+  const session = await loadExamRecord(e.prefix + '_session');
   if (result || (session && session.submitted)) {
-    label.textContent = 'Midterm';
-    setRow('midterm', { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
+    setRow(e, { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
   }
   if (session) {
     const total = (session.order && session.order.length) || '?';
     const item = (session.cur || 0) + 1;
-    label.textContent = 'Midterm';
     const expired = session.endAt && Date.now() >= session.endAt;
-    setRow('midterm', {
+    setRow(e, {
       score: `${item}/${total}`,
-      end: '›',
-      note: expired ? 'Time expired — open to submit' : `In progress — tap to resume`
+      note: expired ? 'Time expired — open to submit' : 'In progress — tap to resume'
     });
     return;
   }
-  label.textContent = 'Midterm';
-  setRow('midterm', { note: 'Not yet taken' });
+  setRow(e, { note: 'Not yet taken' });
 }
-
-/* ===== Activity statuses ===== */
-async function refreshActivity1Status() {
-  const record = await loadActivity1Result();
-  if (record) {
-    const pct = Math.round((record.totalScore / record.totalMax) * 100);
-    setRow('activity1', { score: pct + '%', end: '✓', note: `${record.totalScore}/${record.totalMax}`, done: true });
-  } else {
-    setRow('activity1', { note: 'Not yet attempted' });
-  }
-}
-
-async function refreshActivity2Status() {
-  const act1Record = await loadActivity1Result();
-  if (!act1Record) {
-    setRow('activity2', { end: '🔒', note: 'Complete Activity 1 first', locked: true });
-    return;
-  }
-  const record = await loadActivity2Result();
-  if (record) {
-    setRow('activity2', { score: record.percentage + '%', end: '✓', note: `${record.score}/${record.maxScore}`, done: true });
-  } else {
-    setRow('activity2', { note: 'Not yet attempted' });
-  }
-}
-
-async function refreshActivity3Status() {
-  const act1Record = await loadActivity1Result();
-  const act2Record = await loadActivity2Result();
-  if (!act1Record || !act2Record) {
-    setRow('activity3', { end: '🔒', note: 'Complete Activities 1 and 2 first', locked: true });
-    return;
-  }
-  const record = await loadActivity3Result();
-  if (record) {
-    const max = record.maxScore || 100;
-    const pct = record.percentage != null ? record.percentage : Math.round((record.score / max) * 100);
-    setRow('activity3', { score: pct + '%', end: '✓', note: `Fast Play: ${record.score}/${max}`, done: true });
-  } else {
-    setRow('activity3', { note: 'Not yet attempted' });
-  }
-}
-
-async function refreshActivity4Status() {
-  const act3Record = await loadActivity3Result();
-  if (!act3Record) {
-    setRow('activity4', { end: '🔒', note: 'Complete Activity 3 first', locked: true });
-    return;
-  }
-  const record = await loadActivity4Result();
-  if (record) {
-    const max = record.maxScore || 100;
-    const pct = record.percentage != null ? record.percentage : Math.round((record.score / max) * 100);
-    setRow('activity4', { score: pct + '%', end: '✓', note: `${record.score} pts, ${record.solved} solved`, done: true });
-  } else {
-    setRow('activity4', { note: 'Not yet attempted' });
-  }
-}
-
-async function refreshRedoButton() {
-  const row = document.getElementById('redoRow');
-  const btn = document.getElementById('redoBtn');
-  const end = document.getElementById('redoEnd');
-  const st = document.getElementById('redoStatus');
-  const used = localStorage.getItem(REDO_FLAG_KEY) === '1';
-  const record = await loadActivity3Result();
-
-  if (!record && !used) { row.style.display = 'none'; return; }
-  row.style.display = '';
-
-  if (used) {
-    btn.disabled = true;
-    btn.classList.add('locked');
-    end.textContent = '0';
-    st.textContent = 'Redo already used';
-    return;
-  }
-  if (record) {
-    btn.disabled = false;
-    btn.classList.remove('locked');
-    end.textContent = '1';
-    st.textContent = 'One redo available — clears your Activity 3 score';
-  } else {
-    row.style.display = 'none';
-  }
-}
-
-document.getElementById('redoBtn').addEventListener('click', async () => {
-  if (localStorage.getItem(REDO_FLAG_KEY) === '1') return;
-  const btn = document.getElementById('redoBtn');
-  btn.disabled = true;
-  await clearActivity3Result();
-  localStorage.setItem(REDO_FLAG_KEY, '1');
-  await refreshActivity3Status();
-  await refreshActivity4Status();
-  await refreshRedoButton();
-});
 
 function refreshAll() {
-  refreshActivity1Status();
-  refreshActivity2Status();
-  refreshActivity3Status();
-  refreshActivity4Status();
-  refreshRedoButton();
-  refreshMidtermStatus();
+  refreshActivities();
+  EXAMS.forEach(refreshExam);
 }
 
 function enterActivities(name) {
@@ -707,23 +728,46 @@ function b64ToBuf(b64) {
   return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 }
 
+const FIRST_REDO = ACTIVITIES.find(a => a.redo);
+
 async function collectSyncData() {
-  return {
+  const data = {
     name: localStorage.getItem(NAME_KEY),
     createdDate: localStorage.getItem(DATE_KEY),
-    redoUsed: localStorage.getItem(REDO_FLAG_KEY) === '1',
-    activity1: await loadActivity1Result(),
-    activity2: await loadActivity2Result(),
-    activity3: await loadActivity3Result(),
-    activity4: await loadActivity4Result(),
+    redoUsed: FIRST_REDO ? localStorage.getItem(FIRST_REDO.redo.flagKey) === '1' : false,
+    redoFlags: {},
     updatedAt: new Date().toISOString()
   };
+  for (const a of ACTIVITIES) {
+    data[a.id] = await loadActivity(a);
+    if (a.redo) data.redoFlags[a.id] = localStorage.getItem(a.redo.flagKey) === '1';
+  }
+  return data;
+}
+
+async function applySyncData(data) {
+  if (data.name) localStorage.setItem(NAME_KEY, data.name);
+  if (data.createdDate) localStorage.setItem(DATE_KEY, data.createdDate);
+  if (data.redoFlags) {
+    ACTIVITIES.forEach(a => {
+      if (a.redo && data.redoFlags[a.id]) localStorage.setItem(a.redo.flagKey, '1');
+    });
+  } else if (data.redoUsed && FIRST_REDO) {
+    localStorage.setItem(FIRST_REDO.redo.flagKey, '1');
+  }
+  for (const a of ACTIVITIES) {
+    if (data[a.id]) {
+      localStorage.setItem(a.key, JSON.stringify(data[a.id]));
+      await idbSet(a.idbKey, data[a.id]);
+    }
+  }
+  if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
 }
 
 function setSyncStatus(msg, isError) {
-  const el = document.getElementById('syncStatus');
-  el.textContent = msg;
-  el.classList.toggle('error', !!isError);
+  const x = document.getElementById('syncStatus');
+  x.textContent = msg;
+  x.classList.toggle('error', !!isError);
 }
 
 /* ===== Sync folder (File System Access API) ===== */
@@ -739,8 +783,7 @@ async function getSyncFolderHandle() {
   return await idbGet(SYNC_DIR_HANDLE_KEY);
 }
 function updateFolderLabel(handle) {
-  const el = document.getElementById('folderLabel');
-  el.textContent = (handle && handle.name)
+  document.getElementById('folderLabel').textContent = (handle && handle.name)
     ? `Sync folder: ${handle.name}`
     : 'No folder set — Save/Update will use file dialogs.';
 }
@@ -803,17 +846,6 @@ async function saveSyncFile() {
   } catch (e) {
     setSyncStatus('Save failed.', true);
   }
-}
-
-async function applySyncData(data) {
-  if (data.name) localStorage.setItem(NAME_KEY, data.name);
-  if (data.createdDate) localStorage.setItem(DATE_KEY, data.createdDate);
-  if (data.redoUsed) localStorage.setItem(REDO_FLAG_KEY, '1');
-  if (data.activity1) { localStorage.setItem(RESULT_KEY, JSON.stringify(data.activity1)); await idbSet(IDB_KEY, data.activity1); }
-  if (data.activity2) { localStorage.setItem(RESULT2_KEY, JSON.stringify(data.activity2)); await idbSet(IDB_KEY2, data.activity2); }
-  if (data.activity3) { localStorage.setItem(RESULT3_KEY, JSON.stringify(data.activity3)); await idbSet(IDB_KEY3, data.activity3); }
-  if (data.activity4) { localStorage.setItem(RESULT4_KEY, JSON.stringify(data.activity4)); await idbSet(IDB_KEY4, data.activity4); }
-  if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
 }
 
 async function updateFromFolder() {
@@ -881,6 +913,8 @@ document.getElementById('updateFileInput').addEventListener('change', (e) => {
 });
 document.getElementById('chooseFolderBtn').addEventListener('click', chooseSyncFolder);
 document.getElementById('saveOfflineBtn').addEventListener('click', saveOffline);
+
+buildLists();
 restoreFolderLabel();
 
 /* Refresh statuses when returning via Back (bfcache restore) */
