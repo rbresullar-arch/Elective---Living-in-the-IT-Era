@@ -648,6 +648,32 @@ function examIdbGet(key) {
   });
 }
 
+function examIdbSet(key, value) {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(EXAM_IDB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(EXAM_IDB_STORE); };
+      req.onsuccess = () => {
+        try {
+          const q = req.result.transaction(EXAM_IDB_STORE, 'readwrite').objectStore(EXAM_IDB_STORE).put(value, key);
+          q.onsuccess = () => resolve(true);
+          q.onerror = () => resolve(false);
+        } catch (e) { resolve(false); }
+      };
+      req.onerror = () => resolve(false);
+    } catch (e) { resolve(false); }
+  });
+}
+
+/* Write an exam record only if it is newer than what this device already has. */
+async function applyExamRecord(key, incoming) {
+  if (!incoming) return;
+  const local = await loadExamRecord(key);
+  if (local && (local.updated || 0) >= (incoming.updated || 0)) return;
+  try { localStorage.setItem(key, JSON.stringify(incoming)); } catch (e) {}
+  await examIdbSet(key, incoming);
+}
+
 /* Newest copy across localStorage / sessionStorage / cookie / IndexedDB wins. */
 async function loadExamRecord(key) {
   const copies = [];
@@ -742,6 +768,14 @@ async function collectSyncData() {
     data[a.id] = await loadActivity(a);
     if (a.redo) data.redoFlags[a.id] = localStorage.getItem(a.redo.flagKey) === '1';
   }
+  data.exams = {};
+  for (const e of EXAMS) {
+    data.exams[e.id] = {
+      prefix: e.prefix,
+      result: await loadExamRecord(e.prefix + '_result'),
+      session: await loadExamRecord(e.prefix + '_session')
+    };
+  }
   return data;
 }
 
@@ -759,6 +793,14 @@ async function applySyncData(data) {
     if (data[a.id]) {
       localStorage.setItem(a.key, JSON.stringify(data[a.id]));
       await idbSet(a.idbKey, data[a.id]);
+    }
+  }
+  if (data.exams) {
+    for (const e of EXAMS) {
+      const x = data.exams[e.id];
+      if (!x || x.prefix !== e.prefix) continue;
+      await applyExamRecord(e.prefix + '_session', x.session);
+      await applyExamRecord(e.prefix + '_result', x.result);
     }
   }
   if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
