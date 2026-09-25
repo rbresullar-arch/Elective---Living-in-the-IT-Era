@@ -322,6 +322,7 @@
      The activity page must save its result under `key`/`idbKey` with
      { score, maxScore, percentage } or { totalScore, totalMax }.
      Optional: note: r => 'text'   custom line under the row
+               score: r => 'text'  custom text in the score box (default: %)
                requires: [1, 2]    activity numbers that must be done first
                redo: { label, flagKey }   one-time redo button
 
@@ -344,7 +345,8 @@ const ACTIVITIES = [
   { label: 'Activity 5', href: 'packet_relay.html',
     note: r => `Retries: ${r.retries || 0} · Best time ${r.bestTimeText || '—'}` },
   { label: 'Activity 6', href: 'packet_auto.html',
-    note: r => `Retries: ${r.retries || 0} · Best time ${r.bestTimeText || '—'}` },
+    score: r => r.bestTimeText || '—',
+    note: r => `Runs: ${r.runs || 1} · Best ${r.bestTimeText || '—'}` },
 ];
 
 const EXAMS = [
@@ -593,7 +595,9 @@ async function refreshActivities() {
       const r = recs[i];
       let note;
       try { note = (a.note || defaultNote)(r); } catch (e) { note = defaultNote(r); }
-      setRow(a, { score: pctOf(r) + '%', end: '✓', note, done: true });
+      let scoreText;
+      try { scoreText = a.score ? a.score(r) : pctOf(r) + '%'; } catch (e) { scoreText = pctOf(r) + '%'; }
+      setRow(a, { score: scoreText, end: '✓', note, done: true });
     } else {
       setRow(a, { note: 'Not yet attempted' });
     }
