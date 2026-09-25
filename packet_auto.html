@@ -126,7 +126,7 @@ body.locked .gate{display:block}
 
 <script>
 window.PR6 = (() => {
-  const HOLD_GOAL = 180, GRACE = 5, CREW = 25, PERFECT = 720, STEP = 20;
+  const HOLD_GOAL = 180, GRACE = 5, CREW = 25, CREW_EARLY = 8, PERFECT = 720, STEP = 20;
   const HEAL_COST = 8;
   const UPGRADES = [
     { id:'baran', group:'net', cost:15, req:[], name:'Paul Baran', year:'1964', title:'Distributed network',
@@ -165,6 +165,7 @@ window.PR6 = (() => {
   ];
   const U = {}; UPGRADES.forEach(u => U[u.id] = u);
 
+  const crewTime = st => st.owned.baran ? CREW : CREW_EARLY;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 
@@ -326,7 +327,7 @@ window.PR6 = (() => {
       st.driftT = 40 + rng() * 20;
       if (st.owned.baran) { const n = pick(Object.values(st.nodes), rng); const old = n.d; n.d = 1 + Math.floor(rng() * 4); if (n.d !== old) ev(st, 'drift', { id:n.id, d:n.d }); }
     }
-    brokenList(st).forEach(n => { if (st.t - n.brokenAt >= CREW) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
+    brokenList(st).forEach(n => { if (st.t - n.brokenAt >= crewTime(st)) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
 
     if (st.sharkOn) { st.sharkT -= dt; if (st.sharkT <= 0) { bite(st, rng); st.sharkT = sharkInterval(st) * (0.7 + 0.6 * rng()); } }
     if (st.hackOn) { st.hackT -= dt; if (st.hackT <= 0) { attack(st); st.hackT = hackInterval(st) * (0.8 + 0.4 * rng()); } }
@@ -368,7 +369,7 @@ window.PR6 = (() => {
 
   return { HOLD_GOAL, GRACE, CREW, PERFECT, STEP, UPGRADES, U, create, step, heal, buy, canBuy,
     next, bestFrom, pathCost, protLevel, hackStrength, sharkInterval, hackInterval, healCost, healUnit,
-    brokenList, runScore, isRouter };
+    brokenList, runScore, isRouter, crewTime };
 })();
 
 </script>
@@ -532,7 +533,7 @@ window.PR6 = (() => {
           if (e.era === 'shark') addLog('A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.');
           else addLog('Hackers found the network. A hack shuts the whole system down. Only protection stops them.');
           break;
-        case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node. Heal it, or wait ' + E.CREW + ' s for the repair crew.'); break;
+        case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node. Heal it, or wait ' + E.crewTime(st) + ' s for the ' + (st.owned.baran ? 'repair crew.' : 'auto-heal.')); break;
         case 'lost':
           if (e.why === 'cut') addLog('Message lost at the cut.' + (e.resent ? ' TCP resends it.' : ' −' + e.pen + ' pts.'));
           break;
@@ -542,7 +543,7 @@ window.PR6 = (() => {
         case 'restored': addLog('System back online.'); break;
         case 'heal': addLog('Healed ' + e.n + (e.n === 1 ? ' node' : ' nodes') + ' for ' + e.cost + ' pts.' + (e.left ? ' ' + e.left + ' still cut (not enough points).' : '')); break;
         case 'healfail': addLog('Not enough points to heal. Need ' + e.need + '.'); break;
-        case 'crew': addLog('Repair crew fixed a node.'); break;
+        case 'crew': addLog(st.owned.baran ? 'Repair crew fixed a node.' : 'Line auto-healed.'); break;
         case 'drift': addLog('Traffic changed: a router is now ' + e.d + ' ms.'); break;
         case 'buy': addLog('Bought: ' + E.U[e.id].name + ', ' + nameOf(e.id) + '.'); break;
         case 'reset': addLog(e.why === 'shutdown' ? 'Hold timer reset: system went down.' : 'Hold timer reset: fastest route broken more than ' + E.GRACE + ' s.'); break;
@@ -568,7 +569,7 @@ window.PR6 = (() => {
       const ne = nodeEls[n.id];
       ne.g.classList.toggle('broken', n.broken);
       ne.x.textContent = n.broken ? '✕' : '';
-      ne.d.textContent = n.broken ? 'cut ' + Math.ceil(E.CREW - (st.t - n.brokenAt)) + 's' : n.d + ' ms';
+      ne.d.textContent = n.broken ? (st.owned.baran ? 'cut ' : 'heals ') + Math.max(0, Math.ceil(E.crewTime(st) - (st.t - n.brokenAt))) + 's' : n.d + ' ms';
     });
     while (msgLayer.children.length < st.msgs.length) el('circle', { r:7, fill:'#e8f8ff', stroke:'#00b4ff', 'stroke-width':3, filter:'url(#glow)' }, msgLayer);
     while (msgLayer.children.length > st.msgs.length) msgLayer.lastChild.remove();
