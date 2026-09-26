@@ -29,6 +29,8 @@ main{max-width:480px;height:100%;margin:0 auto;padding:12px 14px 12px;display:fl
 
 .top{display:flex;align-items:baseline;justify-content:space-between}
 h1{font-family:var(--body);font-weight:800;font-size:1.7rem;margin:0;letter-spacing:-.01em}
+.top-r{display:flex;align-items:center;gap:8px}
+.mute{background:var(--fill);border:none;border-radius:10px;font-size:1.1rem;line-height:1;padding:6px 8px;cursor:pointer}
 .clock{font-size:.9rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
 
 .hud{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px}
@@ -126,7 +128,7 @@ body.locked .gate{display:block}
 </head>
 <body>
 <main>
-  <div class="top"><h1>The Internet</h1><span class="clock" id="timer">0:00</span></div>
+  <div class="top"><h1>The Internet</h1><span class="top-r"><button type="button" class="mute" id="mute" aria-pressed="false">🔊</button><span class="clock" id="timer">0:00</span></span></div>
 
   <div class="hud">
     <button type="button" class="sq log" id="log-open" aria-label="Open log"><span class="lbl">Log</span><span class="box"></span></button>
@@ -811,8 +813,92 @@ window.PR6 = (() => {
   }
 
   const nameOf = id => E.U[id].title;
+
+  /* ===== audio: synthesized with Web Audio (no files) ===== */
+  const MUTE_KEY = 'itict_a6_mute';
+  const SFX = (() => {
+    let ctx = null, master = null, noiseBuf = null;
+    let muted = false;
+    try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+    const last = {};
+    function init() {
+      if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try {
+        ctx = new AC();
+        master = ctx.createGain(); master.gain.value = muted ? 0 : 0.22; master.connect(ctx.destination);
+        noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      } catch (e) { ctx = null; }
+    }
+    const ok = () => ctx && !muted && ctx.state !== 'closed';
+    function tone(f, dur, type, vol, f2, delay) {
+      if (!ok()) return;
+      const t = ctx.currentTime + (delay || 0);
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(f, t);
+      if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    function noise(dur, freq, vol, freq2, delay) {
+      if (!ok()) return;
+      const t = ctx.currentTime + (delay || 0);
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(freq, t);
+      if (freq2) f.frequency.exponentialRampToValueAtTime(freq2, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol || 0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(master);
+      s.start(t); s.stop(t + dur + 0.02);
+    }
+    const throttle = (k, ms) => { const n = performance.now(); if (last[k] && n - last[k] < ms) return false; last[k] = n; return true; };
+    const arp = (notes, step, type, vol) => notes.forEach((f, i) => tone(f, step * 1.6, type || 'triangle', vol || 0.25, null, i * step));
+    const S = {
+      deliver: () => { if (throttle('deliver', 250)) tone(1320, 0.06, 'sine', 0.08); },
+      sharkDun: () => { if (throttle('dun', 650)) { tone(82, 0.22, 'sawtooth', 0.22); tone(87, 0.22, 'sawtooth', 0.22, null, 0.26); } },
+      bite: () => { tone(110, 0.25, 'square', 0.25, 45); noise(0.18, 900, 0.35, 200); },
+      block: () => { tone(1568, 0.25, 'triangle', 0.3); tone(2093, 0.3, 'sine', 0.18, null, 0.05); },
+      orca: () => { noise(0.45, 300, 0.3, 2400); noise(0.35, 1800, 0.25, 300, 0.4); },
+      heal: () => tone(440, 0.18, 'triangle', 0.25, 880),
+      cut: () => tone(160, 0.12, 'square', 0.15),
+      hackWarn: () => { [0, 0.12, 0.24].forEach(d => tone(1760, 0.07, 'square', 0.14, null, d)); },
+      down: () => tone(600, 0.7, 'sawtooth', 0.22, 90),
+      blocked: () => tone(700, 0.12, 'triangle', 0.2, 1100),
+      siren: () => { if (throttle('siren', 520)) { tone(740, 0.24, 'square', 0.16); tone(554, 0.24, 'square', 0.16, null, 0.25); } },
+      white: () => arp([523, 659, 784, 1047], 0.08, 'triangle', 0.25),
+      buy: () => { tone(988, 0.08, 'square', 0.14); tone(1319, 0.2, 'square', 0.14, null, 0.08); },
+      level: () => arp([392, 523, 659], 0.09, 'triangle', 0.22),
+      lost: () => { if (throttle('lost', 300)) tone(300, 0.12, 'sine', 0.12, 180); },
+      win: () => arp([523, 659, 784, 1047, 784, 1047], 0.13, 'triangle', 0.3),
+      fail: () => arp([392, 349, 311, 262], 0.28, 'sawtooth', 0.2),
+      start: () => arp([262, 392], 0.08, 'triangle', 0.2)
+    };
+    return {
+      init, S,
+      get muted() { return muted; },
+      setMuted(m) { muted = m; try { localStorage.setItem(MUTE_KEY, m ? '1' : '0'); } catch (e) {} if (master) master.gain.value = m ? 0 : 0.22; }
+    };
+  })();
+  const muteBtn = $('mute');
+  const paintMute = () => { muteBtn.textContent = SFX.muted ? '🔇' : '🔊'; muteBtn.setAttribute('aria-label', SFX.muted ? 'Sound off. Tap to turn on' : 'Sound on. Tap to mute'); muteBtn.setAttribute('aria-pressed', SFX.muted ? 'true' : 'false'); };
+  muteBtn.addEventListener('click', () => { SFX.init(); SFX.setMuted(!SFX.muted); paintMute(); if (!SFX.muted) SFX.S.blocked(); });
+  paintMute();
+
   function handleEvents() {
     st.events.forEach(e => {
+      const snd = { delivered:'deliver', sharkwarn:'sharkDun', bite:'bite', tapped:'block', orcahunt:'orca', heal:'heal',
+        hackwarn:'hackWarn', hack:'down', blocked:'blocked', bhwarn:'siren', bhdown:'down', whitehat:'white',
+        buy:'buy', client:'buy', tls:'buy', orca:'buy', hackathon:'buy', level:'level', lost:'lost', won:'win', failed:'fail', crew:'heal' }[e.type];
+      if (snd) SFX.S[snd]();
       switch (e.type) {
         case 'era':
           if (e.era === 'shark') addLog('A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.');
@@ -1011,6 +1097,8 @@ window.PR6 = (() => {
     let dt = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
     while (dt > 0) { const d = Math.min(0.05, dt); E.step(st, d, rng); dt -= d; }
+    if (E.sharkWarns(st).length) SFX.S.sharkDun();
+    if (st.bh) SFX.S.siren();
     const won = st.events.some(e => e.type === 'won');
     const failed = st.events.some(e => e.type === 'failed');
     handleEvents();
@@ -1022,6 +1110,7 @@ window.PR6 = (() => {
   }
 
   function start() {
+    SFX.init(); SFX.S.start();
     document.body.classList.remove('idle');
     st = E.create(rng); bhShow.next = 12; bhShow.until = -1;
     document.body.classList.remove('done');
