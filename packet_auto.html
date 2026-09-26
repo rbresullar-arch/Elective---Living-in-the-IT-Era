@@ -11,7 +11,7 @@
 :root{
   --bg:#ffffff; --ink:#000000; --muted:#555555; --fill:#f1f1f1; --fill2:#e6e6e6;
   --ok:#15933a; --bad:#d4151b; --line:#a8a8a8; --bolt:#00b4ff;
-  --log:#8bc34a; --disc:#4fd3e3; --go:#bde3b8; --label:#7a0000; --dot:#222;
+  --log:#8bc34a; --disc:#4fd3e3; --go:#bde3b8;
   --display:'Bebas Neue','Anton',Impact,'Arial Narrow',sans-serif;
   --body:'League Spartan','Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
   color-scheme:light;
@@ -19,8 +19,6 @@
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#ffffff; --ink:#000000; } }
-:root[data-theme="dark"]{ --bg:#ffffff; --ink:#000000; }
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.3}
@@ -66,11 +64,11 @@ svg.down .down-veil{opacity:.55}
 svg.down .down-text{opacity:1}
 .pop{font-size:30px;text-anchor:middle;pointer-events:none}
 .down-veil,.down-text,.no-hit{pointer-events:none}
-.warn{cursor:pointer}
-.warn-hit{fill:transparent}
-.warn-ring{fill:none;stroke:var(--bad);stroke-width:4}
-.warn-fin{font-size:26px;text-anchor:middle}
-.warn-tag{font-size:14px;font-weight:700;fill:var(--bad);text-anchor:middle}
+.sw{cursor:pointer}
+.sw-hit{fill:transparent}
+.sw-ring{fill:none;stroke:var(--bad);stroke-width:4}
+.sw-fin{font-size:26px;text-anchor:middle}
+.sw-tag{font-size:14px;font-weight:700;fill:var(--bad);text-anchor:middle}
 
 .bottom{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
 .quick{background:var(--fill);border-radius:14px;padding:10px 12px;min-height:84px}
@@ -123,6 +121,20 @@ body.done .board-box{display:none}
 body.done .results{display:block}
 body.locked .board-box,body.locked .bottom,body.locked .hud,body.locked #banner{display:none}
 body.locked .gate{display:block}
+.quiz{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.quiz[hidden]{display:none}
+.quiz-card{background:var(--bg);border-radius:16px;padding:16px;width:100%;max-width:420px}
+.quiz-step{margin:0;font-size:.82rem;font-weight:700;color:var(--muted)}
+.quiz-card h2{font-family:var(--display);font-weight:400;font-size:2rem;margin:2px 0 6px;line-height:1}
+.quiz-q{margin:0 0 10px;font-weight:800;font-size:1.05rem}
+.quiz-opts{display:grid;gap:8px}
+.quiz-opts button{font:inherit;font-weight:700;font-size:1rem;text-align:left;padding:12px 14px;border:2px solid transparent;border-radius:12px;background:var(--fill);cursor:pointer}
+.quiz-opts button:disabled{cursor:default}
+.quiz-opts button.right{background:#e3f3e1;border-color:var(--ok)}
+.quiz-opts button.wrong{background:#fde3e3;border-color:var(--bad)}
+.quiz-fb{min-height:1.3em;margin:10px 0 0;font-weight:700}
+.quiz-next{font:inherit;font-weight:800;font-size:1rem;margin-top:10px;width:100%;padding:14px;border:none;border-radius:14px;background:var(--go);cursor:pointer}
+.quiz-next[hidden]{display:none}
 @media (max-height:640px){ .pts b{font-size:2.1rem} #banner{font-size:2rem} h1{font-size:1.4rem} }
 </style>
 </head>
@@ -174,13 +186,22 @@ body.locked .gate{display:block}
   <p class="sub">Points: <b id="inv-points">0</b>. The game keeps running.</p>
   <div id="shop-list"></div>
 </div>
+<div class="quiz" id="quiz" role="dialog" aria-modal="true" aria-labelledby="quiz-title" hidden>
+  <div class="quiz-card">
+    <p class="quiz-step" id="quiz-step"></p>
+    <h2 id="quiz-title"></h2>
+    <p class="quiz-q" id="quiz-q"></p>
+    <div class="quiz-opts" id="quiz-opts"></div>
+    <p class="quiz-fb" id="quiz-fb" aria-live="polite"></p>
+    <button type="button" class="quiz-next" id="quiz-next" hidden></button>
+  </div>
+</div>
 <button type="button" class="back" id="back" hidden aria-label="Back to game"><span>‹ Back to game</span></button>
 
 <script>
 window.PR6 = (() => {
-  const GOAL = 3000, BH_BASE = 0.05, BH_ROLL = 20, INTRUDE_P = 0.4, INTRUDE_ADD = 0.10, HACKATHON_COST = 100, HACKATHON_CUT = 0.15, BH_PENALTY = 200, FIBER_X = 2, QUEUE_X = 1.75, ORCA_HUNT = 5, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, BH_ORCAS = 2, LEVEL_STEP = 250, MAX_LEVEL = 12, SHARK_EAT = 1, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 3, BH_LEVEL = 7, BH_LEVEL_ADD = 0.20, BIG_EAT_AT = 2500, BIG_EAT = 500, ORCA_COST = 500, SHARK_PER = 400, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6,
-    CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25];
-  const HEAL_COST = 8;
+  const GOAL = 3000, BH_BASE = 0.05, BH_ROLL = 20, INTRUDE_P = 0.4, INTRUDE_ADD = 0.10, HACKATHON_COST = 12, HACKATHON_CUT = 0.15, BH_PENALTY = 200, FIBER_X = 2, QUEUE_X = 1.75, ORCA_HUNT = 5, BH_WARN = 3, BH_FAIL = 30, WHITE_COST = 200, LEVEL_STEP = 250, MAX_LEVEL = 12, SHARK_EAT = 1, CREW = 25, CREW_EARLY = 8, MAX_CLIENTS = 4, MAX_SHARKS = 4, MAX_ORCAS = 3, BH_LEVEL = 7, BH_LEVEL_ADD = 0.20, BIG_EAT_AT = 2500, BIG_EAT = 500, ORCA_COST = 500, TLS_MAX = 5, HACK_CAP = 5, SHARK_WARN = 3, HACK_WARN = 5, DNS_SHARK = 0.6, HEAL_COST = 8,
+    CLIENT_COST = [10, 20, 30], TLS_COST = [20, 30, 40, 50], TLS_NAMES = ['None', 'SSL 2.0', 'SSL 3.0', 'TLS 1.0', 'TLS 1.2', 'TLS 1.3'], CLIENT_ANCHOR = [0.5, 0, 1, 0.25], CIDS = ['S0', 'S1', 'S2', 'S3'];
   const UPGRADES = [
     { id:'baran', group:'net', cost:15, req:[], name:'Paul Baran', year:'1964', title:'Distributed network',
       info:'At RAND he designed a mesh with many redundant links and no central hub, so messages survive when links are destroyed.',
@@ -229,15 +250,16 @@ window.PR6 = (() => {
   const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 
   function create(rng) {
-    const st = { t:0, points:0, earned:0, owned:{}, order:[], nodes:{}, rows:0, cols:0,
-      clients:1, tls:0, hackStart:0, sharks:[0,1,2,3].map(k => ({ t: 6 + k * 4, warn:null })), orcas:0, orcaT:[], lastSharks:0, hackWarn:null, routes:{}, msgs:[], launchT:{ S0:0.3 }, sharkOn:false, hackOn:false, sharkT:0, hackT:0,
+    const st = { t:0, points:0, earned:0, owned:{}, order:[], nodes:{}, list:[], byRow:[], adj:{}, adjBack:{}, rows:0, cols:0,
+      clients:1, tls:0, hackStart:0, sharks:[0,1,2,3].map(k => ({ t: 6 + k * 4, warn:null })), orcas:0, orcaT:[], lastSharks:0, hackWarn:null, routes:{}, msgs:[], launchT:{ S0:0.3 }, sharkOn:false, hackOn:false, hackT:0,
       shutdown:0, bh:null, bhP:BH_BASE, bhRollT:BH_ROLL, intrusions:0, failed:false, peak:0, won:false, driftT:45, nextMsgId:1,
-      stats:{ delivered:0, lost:0, bites:0, blocked:0, hacks:0, heals:0, healed:0, crew:0, resets:0 },
+      stats:{ delivered:0, lost:0, bites:0, blocked:0, hacks:0, heals:0, healed:0, crew:0 },
       events:[] };
     buildGrid(st, rng);
     return st;
   }
 
+  // builds nodes plus cached row lists and adjacency (forward to R, backward to senders)
   function buildGrid(st, rng) {
     st.nodes = {};
     if (!st.owned.baran) { st.rows = 1; st.cols = 1; }
@@ -246,74 +268,79 @@ window.PR6 = (() => {
       const id = 'n' + r + c;
       st.nodes[id] = { id, row:r, col:c, d: st.rows === 1 ? 2 : 1 + Math.floor(rng() * 4), broken:false, brokenAt:0 };
     }
+    const list = st.list = Object.values(st.nodes);
+    st.byRow = Array.from({ length:st.rows }, (_, r) => list.filter(n => n.row === r));
+    st.adj = {}; st.adjBack = {};
+    list.forEach(n => {
+      st.adj[n.id] = n.row === st.rows - 1 ? ['R'] : st.byRow[n.row + 1].filter(m => Math.abs(m.col - n.col) <= 1).map(m => m.id);
+      if (n.row > 0) st.adjBack[n.id] = st.byRow[n.row - 1].filter(o => Math.abs(o.col - n.col) <= 1).map(o => o.id);
+    });
+    st.adjBack.R = st.byRow[st.rows - 1].map(n => n.id);
     st.routes = {}; st.msgs = [];
   }
 
   const isClient = id => id.charAt(0) === 'S';
   const isRouter = id => !isClient(id) && id !== 'R';
-  const clientIds = st => Array.from({ length:st.clients }, (_, k) => 'S' + k);
+  const clientIds = st => CIDS.slice(0, st.clients);
   const anchorCol = (st, k) => Math.round(CLIENT_ANCHOR[k] * (st.cols - 1));
   const works = (st, id) => !isRouter(id) || !st.nodes[id].broken;
   function next(st, id) {
-    if (isClient(id)) { const a = anchorCol(st, +id.slice(1)); return Object.values(st.nodes).filter(n => n.row === 0 && Math.abs(n.col - a) <= 1).map(n => n.id); }
-    const n = st.nodes[id];
-    if (n.row === st.rows - 1) return ['R'];
-    return Object.values(st.nodes).filter(m => m.row === n.row + 1 && Math.abs(m.col - n.col) <= 1).map(m => m.id);
+    let a = st.adj[id];
+    if (!a) { const c = anchorCol(st, +id.slice(1)); a = st.adj[id] = st.byRow[0].filter(n => Math.abs(n.col - c) <= 1).map(n => n.id); }
+    return a;
   }
+  const effD = (st, n) => Math.max(1, n.d - (st.owned.fiber ? 1 : 0));
   // cost-to-R table; ignoreBroken = treat all nodes as intact
   function costTable(st, ignoreBroken) {
     const cost = { R:0 };
-    for (let r = st.rows - 1; r >= 0; r--) Object.values(st.nodes).filter(n => n.row === r).forEach(n => {
-      if (!ignoreBroken && n.broken) { cost[n.id] = Infinity; return; }
-      const best = Math.min(...next(st, n.id).map(k => cost[k]));
+    for (let r = st.rows - 1; r >= 0; r--) for (const n of st.byRow[r]) {
+      if (!ignoreBroken && n.broken) { cost[n.id] = Infinity; continue; }
+      let best = Infinity;
+      for (const k of st.adj[n.id]) if (cost[k] < best) best = cost[k];
       cost[n.id] = effD(st, n) + best;
-    });
-    clientIds(st).forEach(s => { cost[s] = Math.min(...next(st, s).map(k => cost[k])); });
+    }
+    for (const s of clientIds(st)) { let best = Infinity; for (const k of next(st, s)) if (cost[k] < best) best = cost[k]; cost[s] = best; }
     return cost;
   }
-  function bestFrom(st, from, ignoreBroken) {
-    const cost = costTable(st, ignoreBroken);
+  function walk(st, from, cost) {
     if (!isFinite(cost[from])) return null;
     const path = [from]; let cur = from;
-    while (cur !== 'R') {
-      const opts = next(st, cur);
-      cur = opts.reduce((a, b) => cost[b] < cost[a] ? b : a);
-      path.push(cur);
-    }
+    while (cur !== 'R') { cur = next(st, cur).reduce((a, b) => cost[b] < cost[a] ? b : a); path.push(cur); }
     return path;
+  }
+  const bestFrom = (st, from, ignoreBroken) => walk(st, from, costTable(st, ignoreBroken));
+  // ids on every client's fastest route, from one cost table
+  function bestSet(st, ignoreBroken) {
+    const cost = costTable(st, ignoreBroken), set = new Set();
+    clientIds(st).forEach(s => (walk(st, s, cost) || []).forEach(id => set.add(id)));
+    return set;
   }
   function randomFrom(st, from, rng) {
     const cost = costTable(st, false);
     if (!isFinite(cost[from])) return null;
     const path = [from]; let cur = from;
-    while (cur !== 'R') {
-      cur = pick(next(st, cur).filter(k => isFinite(cost[k])), rng);
-      path.push(cur);
-    }
+    while (cur !== 'R') { cur = pick(next(st, cur).filter(k => isFinite(cost[k])), rng); path.push(cur); }
     return path;
   }
-  const effD = (st, n) => Math.max(1, n.d - (st.owned.fiber ? 1 : 0));
   // replies travel downward: cost from each node back to one sender
   function prevOf(st, id, sender) {
-    if (id === 'R') return Object.values(st.nodes).filter(n => n.row === st.rows - 1).map(n => n.id);
-    const n = st.nodes[id];
-    if (n.row === 0) return next(st, sender).indexOf(id) >= 0 ? [sender] : [];
-    return Object.values(st.nodes).filter(o => o.row === n.row - 1 && Math.abs(o.col - n.col) <= 1).map(o => o.id);
+    if (id === 'R' || st.nodes[id].row > 0) return st.adjBack[id];
+    return next(st, sender).indexOf(id) >= 0 ? [sender] : [];
   }
   function bestBack(st, from, sender) {
     const cost = {}; cost[sender] = 0;
-    for (let r = 0; r < st.rows; r++) Object.values(st.nodes).filter(n => n.row === r).forEach(n => {
-      if (n.broken) { cost[n.id] = Infinity; return; }
-      const pv = prevOf(st, n.id, sender).map(k => cost[k] == null ? Infinity : cost[k]);
-      cost[n.id] = effD(st, n) + (pv.length ? Math.min(...pv) : Infinity);
-    });
-    cost.R = Math.min(...prevOf(st, 'R', sender).map(k => cost[k]));
+    for (let r = 0; r < st.rows; r++) for (const n of st.byRow[r]) {
+      if (n.broken) { cost[n.id] = Infinity; continue; }
+      let best = Infinity;
+      for (const k of prevOf(st, n.id, sender)) if (cost[k] != null && cost[k] < best) best = cost[k];
+      cost[n.id] = effD(st, n) + best;
+    }
+    cost.R = Math.min(...st.adjBack.R.map(k => cost[k]));
     if (!isFinite(cost[from])) return null;
     const path = [from]; let cur = from;
-    while (cur !== sender) { const opts = prevOf(st, cur, sender); cur = opts.reduce((a, b) => (cost[b] < cost[a] ? b : a)); path.push(cur); }
+    while (cur !== sender) { cur = prevOf(st, cur, sender).reduce((a, b) => (cost[b] < cost[a] ? b : a)); path.push(cur); }
     return path;
   }
-  const pathCost = (st, p) => p ? p.filter(isRouter).reduce((s, id) => s + effD(st, st.nodes[id]), 0) : Infinity;
   const level = st => Math.min(MAX_LEVEL, 1 + Math.floor(st.points / LEVEL_STEP));
   const sharkEat = st => !st.owned.baran ? 0 : st.points >= BIG_EAT_AT ? BIG_EAT : SHARK_EAT * level(st);
   const pathOk = (st, p) => !!p && p.every(id => (!isRouter(id) || st.nodes[id]) && works(st, id));
@@ -322,12 +349,12 @@ window.PR6 = (() => {
   const hackInterval = st => clamp(40 - st.points / 40, 14, 40);
   const hackStrength = st => Math.min(HACK_CAP, 1 + Math.floor(st.points / 250) + Math.floor(Math.max(0, st.t - st.hackStart) / 300));
   const healUnit = st => !st.owned.baran ? 2 : st.owned.metcalfe ? HEAL_COST / 2 : HEAL_COST;
-  const brokenList = st => Object.values(st.nodes).filter(n => n.broken);
+  const brokenList = st => st.list.filter(n => n.broken);
   const healCost = st => brokenList(st).length * healUnit(st);
-  const launchInterval = st => 2.0 / (st.owned.kleinrock ? QUEUE_X : 1) / (st.owned.fiber ? FIBER_X : 1);
-  const hopTime = st => 0.4 / (st.owned.kleinrock ? QUEUE_X : 1) / (st.owned.fiber ? FIBER_X : 1);
-  const hopDur = (st, id) => hopTime(st) * (isRouter(id) && st.nodes[id] ? 0.5 + effD(st, st.nodes[id]) / 4 : 0.6);
-  const ev = (st, type, data) => st.events.push(Object.assign({ type, t:st.t }, data || {}));
+  const speedDiv = st => (st.owned.kleinrock ? QUEUE_X : 1) * (st.owned.fiber ? FIBER_X : 1);
+  const launchInterval = st => 2.0 / speedDiv(st);
+  const hopDur = (st, id) => 0.4 / speedDiv(st) * (isRouter(id) && st.nodes[id] ? 0.5 + effD(st, st.nodes[id]) / 4 : 0.6);
+  const ev = (st, type, data) => st.events.push(Object.assign({ type, t:st.t }, data));
 
   function loseMsg(st, m, why) {
     st.stats.lost++;
@@ -336,15 +363,18 @@ window.PR6 = (() => {
     if (st.owned.cerfkahn) st.launchT[m.src] = 0;
     ev(st, 'lost', { why, pen, resent: !!st.owned.cerfkahn, id:m.id });
   }
+  function dropAll(st) {
+    const n = st.msgs.length;
+    st.msgs.forEach(m => loseMsg(st, m, 'hack')); st.msgs = [];
+    return n;
+  }
 
   function chooseTarget(st, rng, taken) {
-    const intact = Object.values(st.nodes).filter(n => !n.broken && (!taken || taken.indexOf(n.id) < 0));
+    const intact = st.list.filter(n => !n.broken && taken.indexOf(n.id) < 0);
     if (!intact.length) return null;
-    let pool = intact;
-    const fast = [].concat(...clientIds(st).map(s => bestFrom(st, s, false) || []));
-    const onFast = intact.filter(n => fast.indexOf(n.id) >= 0);
-    if (onFast.length) pool = onFast;
-    return pick(pool, rng);
+    const fast = bestSet(st, false);
+    const onFast = intact.filter(n => fast.has(n.id));
+    return pick(onFast.length ? onFast : intact, rng);
   }
   function bite(st, rng, id) {
     const n = st.nodes[id];
@@ -353,10 +383,10 @@ window.PR6 = (() => {
     st.stats.bites++;
     const eat = Math.min(st.points, sharkEat(st));
     st.points -= eat; st.stats.eaten = (st.stats.eaten || 0) + eat;
-    ev(st, 'bite', { id:n.id, eat });
+    ev(st, 'bite', { id, eat });
     st.msgs = st.msgs.filter(m => {
-      if (m.path.slice(m.i + 1).indexOf(n.id) < 0 && !(m.path[m.i] === n.id)) return true;
-      if (st.owned.pouzin && m.path[m.i] !== n.id) {
+      if (m.path.indexOf(id, m.i) < 0) return true;
+      if (st.owned.pouzin && m.path[m.i] !== id) {
         const here = m.path[m.i];
         const sub = m.back ? bestBack(st, here, m.src) : st.owned.dns ? bestFrom(st, here, false) : randomFrom(st, here, rng);
         if (sub) { m.path = m.path.slice(0, m.i + 1).concat(sub.slice(1)); ev(st, 'reroute', { id:m.id }); return true; }
@@ -372,10 +402,7 @@ window.PR6 = (() => {
     const dur = 6 * (s - p);
     st.shutdown = Math.max(st.shutdown, dur);
     st.stats.hacks++;
-    const n = st.msgs.length;
-    st.msgs.forEach(m => loseMsg(st, m, 'hack'));
-    st.msgs = [];
-    ev(st, 'hack', { s, p, dur, lostMsgs:n });
+    ev(st, 'hack', { s, p, dur, lostMsgs:dropAll(st) });
   }
 
   function heal(st) {
@@ -384,8 +411,8 @@ window.PR6 = (() => {
     const unit = healUnit(st);
     const afford = Math.floor(st.points / unit);
     if (afford < 1) { ev(st, 'healfail', { need:unit }); return 0; }
-    const best = [].concat(...clientIds(st).map(s => bestFrom(st, s, true) || []));
-    list.sort((a, b) => (best.indexOf(b.id) >= 0) - (best.indexOf(a.id) >= 0));
+    const best = bestSet(st, true);
+    list.sort((a, b) => best.has(b.id) - best.has(a.id));
     const fix = list.slice(0, afford);
     fix.forEach(n => { n.broken = false; });
     st.points -= fix.length * unit;
@@ -394,22 +421,10 @@ window.PR6 = (() => {
     return fix.length;
   }
 
-  function healNode(st, id) {
-    const n = st.nodes[id];
-    if (!n || !n.broken || st.points < healUnit(st)) return false;
-    n.broken = false; st.points -= healUnit(st);
-    st.stats.heals++; st.stats.healed++;
-    ev(st, 'heal', { n:1, cost:healUnit(st), left:brokenList(st).length });
-    return true;
-  }
-  function canBuy(st, id) {
-    const u = U[id];
-    return !st.owned[id] && u.req.every(r => st.owned[r]) && st.points >= u.cost;
-  }
+  const canBuy = (st, id) => { const u = U[id]; return !st.owned[id] && u.req.every(r => st.owned[r]) && st.points >= u.cost; };
   function buy(st, id, rng) {
     if (!canBuy(st, id)) return false;
-    const u = U[id];
-    st.points -= u.cost; st.owned[id] = true; st.order.push(id);
+    st.points -= U[id].cost; st.owned[id] = true; st.order.push(id);
     if (id === 'https') st.tls = 1;
     if (id === 'baran' || id === 'roberts') buildGrid(st, rng);
     ev(st, 'buy', { id });
@@ -435,8 +450,7 @@ window.PR6 = (() => {
     return true;
   }
 
-  const sharkCount = st => st.sharkOn ? Math.min(MAX_SHARKS, level(st)) : 0;
-  const activeSharks = st => sharkCount(st);
+  const activeSharks = st => st.sharkOn ? Math.min(MAX_SHARKS, level(st)) : 0;
   const sharkWarns = st => st.sharks.filter(s => s.warn).map(s => s.warn);
   const canBuyOrca = st => !!st.owned.baran && st.orcas < MAX_ORCAS && st.points >= ORCA_COST;
   function buyOrca(st) {
@@ -447,7 +461,8 @@ window.PR6 = (() => {
     return true;
   }
   function orcaHunt(st) {
-    const prey = st.sharks.find((s, k) => k < activeSharks(st) && s.warn);
+    const n = activeSharks(st);
+    const prey = st.sharks.find((s, k) => k < n && s.warn);
     if (!prey) return false;
     const at = prey.warn.id;
     prey.warn = null; prey.t = sharkInterval(st);
@@ -458,7 +473,7 @@ window.PR6 = (() => {
 
   const isDown = st => st.shutdown > 0 || !!(st.bh && st.bh.phase === 'active');
   const bhUnlocked = st => level(st) >= BH_LEVEL;
-  const bhEff = st => Math.min(1, st.bhP + (level(st) >= BH_LEVEL ? BH_LEVEL_ADD : 0));
+  const bhEff = st => Math.min(1, st.bhP + (bhUnlocked(st) ? BH_LEVEL_ADD : 0));
   const canWhiteHat = st => !!st.bh && st.points >= WHITE_COST;
   function whiteHat(st) {
     if (!canWhiteHat(st)) return false;
@@ -482,10 +497,8 @@ window.PR6 = (() => {
       st.bh = { phase:'active', left:BH_FAIL };
       const pen = Math.min(st.points, BH_PENALTY); st.points -= pen; st.bhP = BH_BASE;
       st.stats.bhEaten = (st.stats.bhEaten || 0) + pen;
-      const n = st.msgs.length;
-      st.msgs.forEach(m => loseMsg(st, m, 'hack')); st.msgs = [];
       st.stats.blackhats = (st.stats.blackhats || 0) + 1;
-      ev(st, 'bhdown', { lostMsgs:n, pen });
+      ev(st, 'bhdown', { lostMsgs:dropAll(st), pen });
     } else if (st.bh.phase === 'active' && st.bh.left <= 0) {
       st.bh.left = 0; st.failed = true; ev(st, 'failed');
     }
@@ -508,26 +521,76 @@ window.PR6 = (() => {
     return true;
   }
 
-  // cheapest discovery available now (inventions + next client)
+  // cheapest discovery available now (inventions + actions)
   function quickBuy(st) {
-    const list = UPGRADES.filter(u => !st.owned[u.id] && u.req.every(r => st.owned[r])).map((u, k) => ({ kind:'inv', id:u.id, cost:u.cost, order:UPGRADES.indexOf(u) }));
-    if (st.owned.baran && st.clients < MAX_CLIENTS) list.push({ kind:'client', id:'client', cost:clientCost(st), order:0.5 });
-    if (brokenList(st).length) list.push({ kind:'heal', id:'heal', cost:healCost(st), order:-1, need:healUnit(st) });
-    if (st.tls >= 1 && st.tls < TLS_MAX) list.push({ kind:'tls', id:'tls', cost:tlsCost(st), order:0.6 });
-    if (st.owned.baran && st.orcas < MAX_ORCAS) list.push({ kind:'orca', id:'orca', cost:ORCA_COST, order:50 });
-    if (bhEff(st) > 0.5) list.push({ kind:'hack', id:'hack', cost:HACKATHON_COST, order:60 });
+    const list = UPGRADES.filter(u => !st.owned[u.id] && u.req.every(r => st.owned[r])).map((u, k) => ({ kind:'inv', id:u.id, cost:u.cost, order:k }));
+    if (st.owned.baran && st.clients < MAX_CLIENTS) list.push({ kind:'client', cost:clientCost(st), order:0.5 });
+    const nb = brokenList(st).length;
+    if (nb) list.push({ kind:'heal', cost:nb * healUnit(st), order:-1, need:healUnit(st) });
+    if (st.tls >= 1 && st.tls < TLS_MAX) list.push({ kind:'tls', cost:tlsCost(st), order:0.6 });
+    if (st.owned.baran && st.orcas < MAX_ORCAS) list.push({ kind:'orca', cost:ORCA_COST, order:50 });
+    if (bhEff(st) > 0.5) list.push({ kind:'hack', cost:HACKATHON_COST, order:60 });
     list.sort((a, b) => a.cost - b.cost || a.order - b.order);
     return list[0] || null;
   }
   function buyQuick(st, rng) {
     const q = quickBuy(st);
     if (!q || st.points < (q.need || q.cost)) return false;
-    if (q.kind === 'client') return addClient(st);
-    if (q.kind === 'heal') return heal(st) > 0;
-    if (q.kind === 'tls') return updateTls(st);
-    if (q.kind === 'orca') return buyOrca(st);
-    if (q.kind === 'hack') return hackathon(st);
-    return buy(st, q.id, rng);
+    switch (q.kind) {
+      case 'client': return addClient(st);
+      case 'heal': return heal(st) > 0;
+      case 'tls': return updateTls(st);
+      case 'orca': return buyOrca(st);
+      case 'hack': return hackathon(st);
+      default: return buy(st, q.id, rng);
+    }
+  }
+
+  function stepSharks(st, dt, rng, down) {
+    const n0 = st.lastSharks, n1 = activeSharks(st);
+    if (n1 > n0 && n0 > 0) ev(st, 'sharkspawn', { n:n1 });
+    if (n1 < n0 && n1 > 0) ev(st, 'sharkleave', { n:n1 });
+    st.lastSharks = n1;
+    st.sharks.forEach((sh, k) => {
+      if (k >= n1) { sh.warn = null; if (sh.t < 6) sh.t = 6 + rng() * 6; return; }
+      if (down) return;
+      if (sh.warn) {
+        sh.warn.left -= dt;
+        if (!st.nodes[sh.warn.id]) sh.warn = null;
+        else if (sh.warn.left <= 0) { const id = sh.warn.id; sh.warn = null; bite(st, rng, id); sh.t = sharkInterval(st) * (0.7 + 0.6 * rng()); }
+        return;
+      }
+      sh.t -= dt;
+      if (sh.t <= 0) {
+        const n = chooseTarget(st, rng, sharkWarns(st).map(w => w.id));
+        if (n) { sh.warn = { id:n.id, left:SHARK_WARN }; ev(st, 'sharkwarn', { id:n.id }); }
+        else sh.t = 3;
+      }
+    });
+  }
+
+  function stepMsgs(st, dt) {
+    st.msgs = st.msgs.filter(m => {
+      let left = dt;
+      while (left > 0) {
+        const hd = hopDur(st, m.path[m.i + 1]);
+        const need = (1 - m.p) * hd;
+        if (left < need) { m.p += left / hd; break; }
+        left -= need; m.p = 0; m.i++;
+        if (m.i >= m.path.length - 1) {
+          if (!m.back) {
+            m.back = true; m.path = m.path.slice().reverse(); m.i = 0;
+            ev(st, 'arrived', { id:m.id });
+            continue;
+          }
+          const gain = st.owned.fiber ? 3 : st.owned.http ? 2 : 1;
+          st.points += gain; st.earned += gain; st.stats.delivered++;
+          ev(st, 'delivered', { id:m.id, gain });
+          return false;
+        }
+      }
+      return true;
+    });
   }
 
   function step(st, dt, rng) {
@@ -540,92 +603,53 @@ window.PR6 = (() => {
     st.driftT -= dt;
     if (st.driftT <= 0) {
       st.driftT = 40 + rng() * 20;
-      if (st.owned.baran) { const n = pick(Object.values(st.nodes), rng); const old = n.d; n.d = 1 + Math.floor(rng() * 4); if (n.d !== old) ev(st, 'drift', { id:n.id, d:n.d }); }
+      if (st.owned.baran) { const n = pick(st.list, rng); const old = n.d; n.d = 1 + Math.floor(rng() * 4); if (n.d !== old) ev(st, 'drift', { id:n.id, d:n.d }); }
     }
-    brokenList(st).forEach(n => { if (st.t - n.brokenAt >= crewTime(st)) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
+    const crew = crewTime(st);
+    st.list.forEach(n => { if (n.broken && st.t - n.brokenAt >= crew) { n.broken = false; st.stats.crew++; ev(st, 'crew', { id:n.id }); } });
 
-    if (!isDown(st)) st.orcaT.forEach((t, k) => { st.orcaT[k] = Math.max(0, st.orcaT[k] - dt); if (st.orcaT[k] <= 0 && orcaHunt(st)) st.orcaT[k] = ORCA_HUNT; });
-    if (st.sharkOn) {
-      const n0 = st.lastSharks || 0, n1 = activeSharks(st);
-      if (n1 > n0 && n0 > 0) ev(st, 'sharkspawn', { n:n1 });
-      if (n1 < n0 && n1 > 0 && !st._orcaJust) ev(st, 'sharkleave', { n:n1 });
-      st._orcaJust = false; st.lastSharks = n1;
-      st.sharks.forEach((sh, k) => {
-        const on = k < n1;
-        if (!on) { sh.warn = null; if (sh.t < 6) sh.t = 6 + rng() * 6; return; }
-        if (isDown(st)) return;
-        if (sh.warn) {
-          sh.warn.left -= dt;
-          if (!st.nodes[sh.warn.id]) sh.warn = null;
-          else if (sh.warn.left <= 0) { const id = sh.warn.id; sh.warn = null; bite(st, rng, id); sh.t = sharkInterval(st) * (0.7 + 0.6 * rng()); }
-          return;
-        }
-        sh.t -= dt;
-        if (sh.t <= 0) {
-          const taken = st.sharks.filter(o => o.warn).map(o => o.warn.id);
-          const n = chooseTarget(st, rng, taken);
-          if (n) { sh.warn = { id:n.id, left:SHARK_WARN }; ev(st, 'sharkwarn', { id:n.id }); }
-          else sh.t = 3;
-        }
-      });
-    }
+    let down = isDown(st);
+    if (!down) st.orcaT.forEach((t, k) => { st.orcaT[k] = Math.max(0, t - dt); if (st.orcaT[k] <= 0 && orcaHunt(st)) st.orcaT[k] = ORCA_HUNT; });
+    if (st.sharkOn) stepSharks(st, dt, rng, down);
     blackHat(st, dt, rng);
     if (st.failed) return;
-    if (st.bh && st.bh.phase === 'active') { /* hackers wait while the black hat holds the system */ }
-    else if (st.hackWarn) {
-      st.hackWarn.left -= dt;
-      if (st.hackWarn.left <= 0) { st.hackWarn = null; attack(st, rng); st.hackT = hackInterval(st) * (0.8 + 0.4 * rng()); }
-    } else if (st.hackOn) {
-      st.hackT -= dt;
-      if (st.hackT <= 0) { st.hackWarn = { left:HACK_WARN }; ev(st, 'hackwarn', { s:hackStrength(st), p:protLevel(st) }); }
+    if (!(st.bh && st.bh.phase === 'active')) {
+      if (st.hackWarn) {
+        st.hackWarn.left -= dt;
+        if (st.hackWarn.left <= 0) { st.hackWarn = null; attack(st, rng); st.hackT = hackInterval(st) * (0.8 + 0.4 * rng()); }
+      } else if (st.hackOn) {
+        st.hackT -= dt;
+        if (st.hackT <= 0) { st.hackWarn = { left:HACK_WARN }; ev(st, 'hackwarn', { s:hackStrength(st), p:protLevel(st) }); }
+      }
     }
 
+    down = isDown(st);
+    const dnsCost = !down && st.owned.dns ? costTable(st, false) : null;
+    const li = launchInterval(st);
     clientIds(st).forEach(s => {
-      if (isDown(st)) st.routes[s] = null;
-      else if (st.owned.dns) st.routes[s] = bestFrom(st, s, false);
+      if (down) st.routes[s] = null;
+      else if (dnsCost) st.routes[s] = walk(st, s, dnsCost);
       else if (!pathOk(st, st.routes[s])) st.routes[s] = randomFrom(st, s, rng);
       if (st.launchT[s] == null) st.launchT[s] = 0.5;
-      if (!isDown(st) && st.routes[s]) {
+      if (!down && st.routes[s]) {
         st.launchT[s] -= dt;
-        if (st.launchT[s] <= 0) { st.msgs.push({ id:st.nextMsgId++, src:s, back:false, path:st.routes[s].slice(), i:0, p:0 }); st.launchT[s] = launchInterval(st); }
+        if (st.launchT[s] <= 0) { st.msgs.push({ id:st.nextMsgId++, src:s, back:false, path:st.routes[s].slice(), i:0, p:0 }); st.launchT[s] = li; }
       }
     });
-    st.msgs = st.msgs.filter(m => {
-      let left = dt;
-      while (left > 0) {
-        const hd = hopDur(st, m.path[m.i + 1]);
-        const need = (1 - m.p) * hd;
-        if (left < need) { m.p += left / hd; break; }
-        left -= need; m.p = 0; m.i++;
-        if (m.i >= m.path.length - 1) {
-          if (!m.back) {
-            m.back = true; m.path = m.path.slice().reverse(); m.i = 0; m.p = 0;
-            ev(st, 'arrived', { id:m.id });
-            continue;
-          }
-          const gain = st.owned.fiber ? 3 : st.owned.http ? 2 : 1;
-          st.points += gain; st.earned += gain; st.stats.delivered++;
-          ev(st, 'delivered', { id:m.id, gain });
-          return false;
-        }
-      }
-      return true;
-    });
+    stepMsgs(st, dt);
 
     st.peak = Math.max(st.peak, st.points);
     const lv = level(st);
-    if (lv > (st.lastLevel || 1)) { ev(st, 'level', { level:lv, eat:sharkEat(st) }); }
+    if (lv > (st.lastLevel || 1)) ev(st, 'level', { level:lv, eat:sharkEat(st) });
     st.lastLevel = lv;
     if (st.points >= GOAL) { st.won = true; ev(st, 'won'); }
   }
 
-
-  return { bhEff, BH_LEVEL, BIG_EAT, BIG_EAT_AT, healNode, quickBuy, buyQuick, ORCA_HUNT, HACKATHON_COST, BH_PENALTY, canHackathon, hackathon, tapShark, BH_FAIL, WHITE_COST, BH_ORCAS, isDown, bhUnlocked, canWhiteHat, whiteHat, GOAL, LEVEL_STEP, MAX_LEVEL, level, sharkEat, effD, CREW, UPGRADES, U, create, step, heal, buy, canBuy,
-    next, bestFrom, pathCost, protLevel, hackStrength, sharkInterval, hackInterval, healCost, healUnit,
-    bestBack, brokenList, isRouter, isClient, crewTime, clientIds, anchorCol,
-    MAX_CLIENTS, MAX_SHARKS, MAX_ORCAS, ORCA_COST, sharkCount, activeSharks, sharkWarns, canBuyOrca, buyOrca, TLS_MAX, TLS_NAMES, HACK_CAP, clientCost, canAddClient, addClient, tlsCost, canUpdateTls, updateTls };
+  return { GOAL, UPGRADES, U, CLIENT_ANCHOR, BH_LEVEL, BH_FAIL, WHITE_COST, ORCA_HUNT, ORCA_COST, HACKATHON_COST, MAX_ORCAS, TLS_MAX, TLS_NAMES,
+    create, step, buy, canBuy, quickBuy, buyQuick, tapShark, hackathon, canHackathon, whiteHat, canWhiteHat,
+    buyOrca, canBuyOrca, updateTls, canUpdateTls, tlsCost, isDown, bhUnlocked, bhEff, level,
+    next, isRouter, clientIds, brokenList, crewTime, healUnit, protLevel, hackStrength, activeSharks, sharkWarns };
 })();
-
 </script>
 <script>
 (() => {
@@ -645,55 +669,47 @@ window.PR6 = (() => {
   function setCookie(name, val) {
     try { document.cookie = name + '=' + encodeURIComponent(val) + '; max-age=31536000; path=/; SameSite=Lax'; } catch (e) {}
   }
+  let dbP = null;
   function idbOpen() {
-    return new Promise((res, rej) => {
+    return dbP || (dbP = new Promise((res, rej) => {
       const r = indexedDB.open(IDB_NAME, 1);
       r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE); };
       r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
-    });
+      r.onerror = () => { dbP = null; rej(r.error); };
+    }));
   }
-  async function idbGet(key) {
+  async function idbReq(mode, fn) {
     try {
       const db = await idbOpen();
       return await new Promise(res => {
-        const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
-        q.onsuccess = () => res(q.result || null); q.onerror = () => res(null);
+        const q = fn(db.transaction(IDB_STORE, mode).objectStore(IDB_STORE));
+        q.onsuccess = () => res(q.result == null ? (mode === 'readonly' ? null : true) : q.result); q.onerror = () => res(mode === 'readonly' ? null : false);
       });
-    } catch (e) { return null; }
+    } catch (e) { return mode === 'readonly' ? null : false; }
   }
-  async function idbSet(key, val) {
-    try {
-      const db = await idbOpen();
-      return await new Promise(res => {
-        const q = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(val, key);
-        q.onsuccess = () => res(true); q.onerror = () => res(false);
-      });
-    } catch (e) { return false; }
-  }
+  const idbGet = key => idbReq('readonly', s => s.get(key));
+  const idbSet = (key, val) => idbReq('readwrite', s => s.put(val, key));
   const parse = s => { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } };
+  const lsGet = (s, k) => { try { return parse(s.getItem(k)); } catch (e) { return null; } };
+  const lsSet = (s, k, v) => { try { s.setItem(k, v); } catch (e) {} };
   async function load(key, idbKey, backfill) {
-    let ls = null, ck = null, db = null, ss = null;
-    try { ls = parse(localStorage.getItem(key)); } catch (e) {}
-    ck = parse(getCookie(key));
-    db = await idbGet(idbKey);
-    try { ss = parse(sessionStorage.getItem(key)); } catch (e) {}
+    const ls = lsGet(localStorage, key), ck = parse(getCookie(key)), db = await idbGet(idbKey), ss = lsGet(sessionStorage, key);
     const rec = ls || ck || db || ss;
     if (rec && backfill) {
       const json = JSON.stringify(rec);
-      if (!ls) try { localStorage.setItem(key, json); } catch (e) {}
+      if (!ls) lsSet(localStorage, key, json);
       if (!ck) setCookie(key, json);
       if (!db) await idbSet(idbKey, rec);
-      if (!ss) try { sessionStorage.setItem(key, json); } catch (e) {}
+      if (!ss) lsSet(sessionStorage, key, json);
     }
     return rec;
   }
   async function save(rec) {
     const json = JSON.stringify(rec);
-    try { localStorage.setItem(RESULT_KEY, json); } catch (e) {}
+    lsSet(localStorage, RESULT_KEY, json);
     setCookie(RESULT_KEY, json);
     await idbSet(IDB_KEY, rec);
-    try { sessionStorage.setItem(RESULT_KEY, json); } catch (e) {}
+    lsSet(sessionStorage, RESULT_KEY, json);
   }
 
   /* ===== DOM ===== */
@@ -702,18 +718,21 @@ window.PR6 = (() => {
   const bannerEl = $('banner'), timerEl = $('timer'), pointsEl = $('points');
   const qName = $('q-name'), qCost = $('q-cost'), qYear = $('q-year'), qDesc = $('q-desc');
   const shopList = $('shop-list'), invPanel = $('inv-panel'), logPanel = $('log-panel'), backBtn = $('back'), invPoints = $('inv-points');
-  const ANCHOR = [0.5, 0, 1, 0.25];
-  const taskEl = { set textContent(v) { setBanner(v, '', ''); } };
   const el = (tag, attrs, parent) => {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
     if (parent) parent.appendChild(e);
     return e;
   };
+  // write only when the value changed (avoids layout work every frame)
+  const setText = (e, v) => { if (e._t !== v) { e.textContent = v; e._t = v; } };
+  const setAttr = (e, k, v) => { const c = '_' + k; if (e[c] !== v) { e.setAttribute(k, v); e[c] = v; } };
   const fmt = s => { const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s - m * 60)).padStart(2, '0'); };
+  const setQuick = (name, cost, year, desc) => { qName.textContent = name; qCost.textContent = cost; qYear.textContent = year; qDesc.textContent = desc; };
 
+  let paused = false;
   let st = null, phase = 'idle', lastFrame = 0, lastUi = 0, gridSig = '';
-  let pos = {}, nodeEls = {}, edgeEls = [], orcaLayer, msgLayer, popLayer, downText, warnEls = [];
+  let pos = {}, nodeEls = {}, edgeEls = [], msgLayer, popLayer, downText, warnEls = [];
   const rng = Math.random;
 
   function layout() {
@@ -721,12 +740,17 @@ window.PR6 = (() => {
     const H = TOP + (st.rows + 1) * GAP + 80;
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     pos.R = { x:W / 2, y:TOP };
-    E.clientIds(st).forEach((s, k) => { pos[s] = { x: st.cols === 1 ? W / 2 : XL + (XR - XL) * ANCHOR[k], y:TOP + (st.rows + 1) * GAP }; });
-    Object.values(st.nodes).forEach(n => {
+    E.clientIds(st).forEach((s, k) => { pos[s] = { x: st.cols === 1 ? W / 2 : XL + (XR - XL) * E.CLIENT_ANCHOR[k], y:TOP + (st.rows + 1) * GAP }; });
+    st.list.forEach(n => {
       const x = st.cols === 1 ? W / 2 : XL + (XR - XL) * n.col / (st.cols - 1);
       pos[n.id] = { x, y: TOP + (st.rows - n.row) * GAP };
     });
     return H;
+  }
+
+  function onTap(id) {
+    if (phase === 'play' && id && E.tapShark(st, id)) { handleEvents(); render(); renderUi(); return true; }
+    return false;
   }
 
   function buildBoard() {
@@ -739,10 +763,9 @@ window.PR6 = (() => {
     const m = el('feMerge', {}, f);
     el('feMergeNode', { in:'b' }, m); el('feMergeNode', { in:'SourceGraphic' }, m);
     const edgeLayer = el('g', {}, svg);
-    const all = E.clientIds(st).concat(Object.keys(st.nodes));
-    all.forEach(a => E.next(st, a).forEach(b => {
+    E.clientIds(st).concat(Object.keys(st.nodes)).forEach(a => E.next(st, a).forEach(b => {
       const l = el('line', { class:'edge', x1:pos[a].x, y1:pos[a].y, x2:pos[b].x, y2:pos[b].y }, edgeLayer);
-      edgeEls.push({ a, b, l });
+      edgeEls.push({ a, b, key:a + '>' + b, l, on:false, dash:false });
     }));
     const nodeLayer = el('g', {}, svg);
     const endpoint = (id, label, tag) => {
@@ -753,32 +776,24 @@ window.PR6 = (() => {
     };
     endpoint('R', 'R', 'Receiver');
     E.clientIds(st).forEach((s, k) => endpoint(s, 'S' + (k + 1), k === 0 ? 'Sender' : 'Client ' + (k + 1)));
-    Object.values(st.nodes).forEach(n => {
+    st.list.forEach(n => {
       const p = pos[n.id];
       const g = el('g', { class:'node' }, nodeLayer);
       el('circle', { class:'node-hit', cx:p.x, cy:p.y, r:22 }, g);
       const core = el('circle', { class:'core', cx:p.x, cy:p.y, r:15, fill:'#222' }, g);
-      g.addEventListener('pointerdown', ev => {
-        if (phase !== 'play') return;
-        if (E.tapShark(st, n.id)) { ev.preventDefault(); handleEvents(); render(); renderUi(); }
-      });
+      g.addEventListener('pointerdown', e => { if (onTap(n.id)) e.preventDefault(); });
       const d = el('text', { class:'tag', x:p.x, y:p.y + 34 }, g);
       const x = el('text', { x:p.x, y:p.y + 7, 'text-anchor':'middle', 'font-size':'20', 'font-weight':'700', fill:'#fff' }, g);
       nodeEls[n.id] = { g, core, d, x };
     });
-    warnEls = [0,1,2,3].map(() => {
-      const wg = el('g', { opacity:0, class:'warn', role:'button', 'aria-label':'Tap to scare the shark' }, svg);
-      el('circle', { class:'warn-hit', r:40 }, wg);
-      wg.addEventListener('pointerdown', ev => {
-        ev.preventDefault();
-        const id = wg.getAttribute('data-node');
-        if (phase === 'play' && id && E.tapShark(st, id)) { handleEvents(); render(); renderUi(); }
-      });
-      const w = { g:wg, ring: el('circle', { class:'warn-ring', r:24 }, wg), fin: el('text', { class:'warn-fin' }, wg), tag: el('text', { class:'warn-tag' }, wg) };
+    warnEls = [0, 1, 2, 3].map(() => {
+      const wg = el('g', { opacity:0, class:'sw', role:'button', 'aria-label':'Tap to scare the shark' }, svg);
+      const hit = el('circle', { class:'sw-hit', r:40 }, wg);
+      wg.addEventListener('pointerdown', e => { e.preventDefault(); onTap(wg.getAttribute('data-node')); });
+      const w = { g:wg, hit, ring: el('circle', { class:'sw-ring', r:24 }, wg), fin: el('text', { class:'sw-fin' }, wg), tag: el('text', { class:'sw-tag' }, wg) };
       w.fin.textContent = '🦈';
       return w;
     });
-    orcaLayer = el('g', { class:'no-hit' }, svg);
     msgLayer = el('g', { class:'no-hit' }, svg);
     popLayer = el('g', { class:'no-hit' }, svg);
     el('rect', { class:'down-veil', x:0, y:0, width:W, height:H }, svg);
@@ -791,8 +806,7 @@ window.PR6 = (() => {
     const t = el('text', { class:'pop', x:p.x + 28, y:p.y - 10, fill:color || '#000' }, popLayer);
     t.textContent = glyph;
     if (!t.animate) { setTimeout(() => t.remove(), 1200); return; }
-    const a = t.animate([{ opacity:1, transform:'translateY(0)' }, { opacity:0, transform:'translateY(-18px)' }], { duration: reduce ? 400 : 1300, easing:'ease-out' });
-    a.onfinish = () => t.remove();
+    t.animate([{ opacity:1, transform:'translateY(0)' }, { opacity:0, transform:'translateY(-18px)' }], { duration: reduce ? 400 : 1300, easing:'ease-out' }).onfinish = () => t.remove();
   }
 
   function orcaStrike(target) {
@@ -800,9 +814,9 @@ window.PR6 = (() => {
     if (!p) return;
     const o = el('text', { class:'pop', x:p.x, y:p.y + 10, 'font-size':'40' }, popLayer);
     o.textContent = '🐋';
+    o.style.transformBox = 'fill-box'; o.style.transformOrigin = 'center';
     if (o.animate) o.animate([{ opacity:0, transform:'scale(.4)' }, { opacity:1, transform:'scale(1.15)', offset:.3 }, { opacity:1, transform:'scale(1)', offset:.7 }, { opacity:0, transform:'scale(1)' }], { duration: reduce ? 400 : 1100, easing:'ease-out' });
     setTimeout(() => o.remove(), reduce ? 400 : 1100);
-    o.style.transformBox = 'fill-box'; o.style.transformOrigin = 'center';
     pop(target, '💥');
   }
 
@@ -812,54 +826,60 @@ window.PR6 = (() => {
     while (log.children.length > 30) log.lastChild.remove();
   }
 
-  const nameOf = id => E.U[id].title;
-
   /* ===== audio: synthesized with Web Audio (no files) ===== */
   const MUTE_KEY = 'itict_a6_mute';
   const SFX = (() => {
-    let ctx = null, master = null, noiseBuf = null;
+    let ctx = null, master = null, musicBus = null, noiseBuf = null, pulse12 = null, pulse25 = null;
     let muted = false;
     try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
     const last = {};
+    // NES-style pulse wave with duty d
+    function pulse(d) {
+      const N = 32, re = new Float32Array(N), im = new Float32Array(N);
+      for (let n = 1; n < N; n++) re[n] = 2 * Math.sin(Math.PI * n * d) / (Math.PI * n);
+      return ctx.createPeriodicWave(re, im);
+    }
     function init() {
-      if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+      if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       try {
         ctx = new AC();
         master = ctx.createGain(); master.gain.value = muted ? 0 : 0.22; master.connect(ctx.destination);
+        musicBus = ctx.createGain(); musicBus.gain.value = 0.3; musicBus.connect(master);
         noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
         const d = noiseBuf.getChannelData(0);
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        pulse12 = pulse(0.125); pulse25 = pulse(0.25);
       } catch (e) { ctx = null; }
     }
+    document.addEventListener('visibilitychange', () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); });
     const ok = () => ctx && !muted && ctx.state !== 'closed';
-    function tone(f, dur, type, vol, f2, delay) {
-      if (!ok()) return;
-      const t = ctx.currentTime + (delay || 0);
+    // one oscillator note at absolute time t
+    function voice(f, t, dur, wave, vol, dest, f2) {
       const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = type || 'sine';
+      if (typeof wave === 'string') o.type = wave; else o.setPeriodicWave(wave);
       o.frequency.setValueAtTime(f, t);
       if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(master);
+      o.connect(g); g.connect(dest || master);
       o.start(t); o.stop(t + dur + 0.02);
     }
-    function noise(dur, freq, vol, freq2, delay) {
-      if (!ok()) return;
-      const t = ctx.currentTime + (delay || 0);
+    function noiseAt(t, dur, freq, vol, freq2, dest, type) {
       const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+      const f = ctx.createBiquadFilter(); f.type = type || 'bandpass'; f.Q.value = 1.2;
       f.frequency.setValueAtTime(freq, t);
       if (freq2) f.frequency.exponentialRampToValueAtTime(freq2, t + dur);
       const g = ctx.createGain();
-      g.gain.setValueAtTime(vol || 0.3, t);
+      g.gain.setValueAtTime(vol, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      s.connect(f); f.connect(g); g.connect(master);
+      s.connect(f); f.connect(g); g.connect(dest || master);
       s.start(t); s.stop(t + dur + 0.02);
     }
+    const tone = (f, dur, type, vol, f2, delay) => { if (ok()) voice(f, ctx.currentTime + (delay || 0), dur, type || 'sine', vol || 0.3, null, f2); };
+    const noise = (dur, freq, vol, freq2, delay) => { if (ok()) noiseAt(ctx.currentTime + (delay || 0), dur, freq, vol || 0.3, freq2); };
     const throttle = (k, ms) => { const n = performance.now(); if (last[k] && n - last[k] < ms) return false; last[k] = n; return true; };
     const arp = (notes, step, type, vol) => notes.forEach((f, i) => tone(f, step * 1.6, type || 'triangle', vol || 0.25, null, i * step));
     const S = {
@@ -869,7 +889,6 @@ window.PR6 = (() => {
       block: () => { tone(1568, 0.25, 'triangle', 0.3); tone(2093, 0.3, 'sine', 0.18, null, 0.05); },
       orca: () => { noise(0.45, 300, 0.3, 2400); noise(0.35, 1800, 0.25, 300, 0.4); },
       heal: () => tone(440, 0.18, 'triangle', 0.25, 880),
-      cut: () => tone(160, 0.12, 'square', 0.15),
       hackWarn: () => { [0, 0.12, 0.24].forEach(d => tone(1760, 0.07, 'square', 0.14, null, d)); },
       down: () => tone(600, 0.7, 'sawtooth', 0.22, 90),
       blocked: () => tone(700, 0.12, 'triangle', 0.2, 1100),
@@ -882,8 +901,38 @@ window.PR6 = (() => {
       fail: () => arp([392, 349, 311, 262], 0.28, 'sawtooth', 0.2),
       start: () => arp([262, 392], 0.08, 'triangle', 0.2)
     };
+
+    /* ----- background chiptune: 8 bars, pulse arpeggio + pulse lead + triangle bass + noise hat ----- */
+    const BPM = 126, STEP = 60 / BPM / 4, STEPS = 128;
+    const mtof = n => 440 * Math.pow(2, (n - 69) / 12);
+    const CHORDS = [[57,60,64],[53,57,60],[48,52,55],[55,59,62],[57,60,64],[53,57,60],[55,59,62],[52,56,59]]; // Am F C G Am F G E
+    const LEAD = [ // eighth notes, 0 = rest; bars 1–4 rest so the loop breathes
+      0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+      81,0,79,76,0,76,74,76, 77,0,76,72,0,72,74,72, 74,0,72,71,0,67,71,74, 76,0,0,0,68,0,71,0
+    ];
+    const ARP = [0, 1, 2, 1];
+    let timer = null, nextT = 0, mi = 0;
+    function playStep(i, t) {
+      const bar = i >> 4, s = i & 15, ch = CHORDS[bar];
+      voice(mtof(ch[ARP[s & 3]] + 12), t, STEP * 0.9, pulse12, 0.05, musicBus);
+      if (!(s & 1)) {
+        voice(mtof(ch[0] - 12 + (s & 2 ? 12 : 0)), t, STEP * 1.8, 'triangle', 0.35, musicBus);
+        const n = LEAD[i >> 1];
+        if (n) voice(mtof(n), t, STEP * 1.9, pulse25, 0.09, musicBus);
+      }
+      if ((s & 3) === 2) noiseAt(t, 0.04, 7000, 0.12, null, musicBus, 'highpass');
+    }
+    function tick() {
+      if (!ok() || ctx.state !== 'running') return;
+      const now = ctx.currentTime;
+      if (nextT < now) nextT = now + 0.05;
+      while (nextT < now + 0.15) { playStep(mi, nextT); mi = (mi + 1) % STEPS; nextT += STEP; }
+    }
+    const startMusic = () => { init(); if (!ctx || timer) return; mi = 0; nextT = 0; timer = setInterval(tick, 40); tick(); };
+    const stopMusic = () => { clearInterval(timer); timer = null; };
+
     return {
-      init, S,
+      init, S, startMusic, stopMusic,
       get muted() { return muted; },
       setMuted(m) { muted = m; try { localStorage.setItem(MUTE_KEY, m ? '1' : '0'); } catch (e) {} if (master) master.gain.value = m ? 0 : 0.22; }
     };
@@ -893,21 +942,18 @@ window.PR6 = (() => {
   muteBtn.addEventListener('click', () => { SFX.init(); SFX.setMuted(!SFX.muted); paintMute(); if (!SFX.muted) SFX.S.blocked(); });
   paintMute();
 
+  const SOUND = { delivered:'deliver', sharkwarn:'sharkDun', bite:'bite', tapped:'block', orcahunt:'orca', heal:'heal',
+    hackwarn:'hackWarn', hack:'down', blocked:'blocked', bhwarn:'siren', bhdown:'down', whitehat:'white',
+    buy:'buy', client:'buy', tls:'buy', orca:'buy', hackathon:'buy', level:'level', lost:'lost', won:'win', failed:'fail', crew:'heal' };
   function handleEvents() {
     st.events.forEach(e => {
-      const snd = { delivered:'deliver', sharkwarn:'sharkDun', bite:'bite', tapped:'block', orcahunt:'orca', heal:'heal',
-        hackwarn:'hackWarn', hack:'down', blocked:'blocked', bhwarn:'siren', bhdown:'down', whitehat:'white',
-        buy:'buy', client:'buy', tls:'buy', orca:'buy', hackathon:'buy', level:'level', lost:'lost', won:'win', failed:'fail', crew:'heal' }[e.type];
-      if (snd) SFX.S[snd]();
+      if (SOUND[e.type]) SFX.S[SOUND[e.type]]();
       switch (e.type) {
         case 'era':
-          if (e.era === 'shark') addLog('A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.');
-          else addLog('HTTP opened the network to the Web. Hackers found it. A hack shuts the whole system down. HTTPS protects it.');
+          addLog(e.era === 'shark' ? 'A shark is near the cable. It cuts nodes. The more points you hold, the hungrier it gets.' : 'HTTP opened the network to the Web. Hackers found it. A hack shuts the whole system down. HTTPS protects it.');
           break;
         case 'bite': pop(e.id, '🦈'); addLog('Shark cut a node' + (e.eat ? ' and ate ' + e.eat + ' pts' : '') + '. Heal it, or wait ' + E.crewTime(st) + ' s for the ' + (st.owned.baran ? 'repair crew.' : 'auto-heal.')); break;
-        case 'lost':
-          if (e.why === 'cut') addLog('Message lost at the cut.' + (e.resent ? ' TCP resends it.' : ' −' + e.pen + ' pts.'));
-          break;
+        case 'lost': if (e.why === 'cut') addLog('Message lost at the cut.' + (e.resent ? ' TCP resends it.' : ' −' + e.pen + ' pts.')); break;
         case 'reroute': addLog('Datagram rerouted around the cut.'); break;
         case 'hack': addLog('HACKED. Strength ' + e.s + ' beat protection ' + e.p + '. System down ' + e.dur + ' s.' + (e.lostMsgs ? ' ' + e.lostMsgs + ' in flight lost.' : '')); break;
         case 'blocked': pop('R', '🛡'); addLog('Hacker attack (strength ' + e.s + ') blocked.'); break;
@@ -916,8 +962,7 @@ window.PR6 = (() => {
         case 'healfail': addLog('Not enough points to heal. Need ' + e.need + '.'); break;
         case 'crew': addLog(st.owned.baran ? 'Repair crew fixed a node.' : 'Line auto-healed.'); break;
         case 'drift': addLog('Traffic changed: a router is now ' + e.d + ' ms.'); break;
-        case 'buy': addLog('Bought: ' + E.U[e.id].name + ', ' + nameOf(e.id) + '.'); break;
-        case 'reset': addLog(e.why === 'shutdown' ? 'Hold timer reset: system went down.' : 'Hold timer reset: fastest route broken more than ' + E.GRACE + ' s.'); break;
+        case 'buy': addLog('Bought: ' + E.U[e.id].name + ', ' + E.U[e.id].title + '.'); break;
         case 'sharkwarn': addLog('Shark fin spotted. Tap the ringed node within 3 s to protect it.'); break;
         case 'tapped': pop(e.id, '🛡'); addLog('Node protected. Shark scared off.'); break;
         case 'intrusion': addLog('⚠ Hackers are in the system. Black hat chance now ' + Math.round(e.p * 100) + '%.'); break;
@@ -927,15 +972,12 @@ window.PR6 = (() => {
         case 'sharkleave': addLog('A shark swam off (' + e.n + ' circling).'); break;
         case 'orca': addLog('Orca ' + e.n + ' joined. It stops a shark attack every ' + E.ORCA_HUNT + ' s.'); break;
         case 'orcahunt': orcaStrike(e.at); addLog('🐋 Orca stopped a shark attack.'); break;
-        case 'orcamiss': break;
         case 'client': addLog('Client ' + e.n + ' connected. More traffic, more points.'); break;
         case 'tls': addLog('HTTPS updated to ' + e.name + '.'); break;
         case 'level': addLog('Level ' + e.level + '. Shark bites now eat ' + e.eat + ' pts.' + (e.level === E.BH_LEVEL ? ' 🎩 Black hats are now active (+20%).' : '')); break;
         case 'bhwarn': addLog('🎩 Black hat detected. It ignores all security.'); break;
         case 'bhdown': addLog('🎩 Black hat took the system down and stole ' + e.pen + ' pts. ' + E.BH_FAIL + ' s to hire a white hat. Black hat chance reset to 5%.'); break;
         case 'whitehat': pop('R', '🤍'); addLog('White hat hired. Black hat removed; system restored.'); break;
-        case 'failed': break;
-        case 'won': break;
       }
     });
     st.events.length = 0;
@@ -945,43 +987,49 @@ window.PR6 = (() => {
     if (st.rows + 'x' + st.cols + 'c' + st.clients !== gridSig) buildBoard();
     const down = E.isDown(st);
     svg.classList.toggle('down', down);
-    downText.textContent = !down ? '' : (st.bh && st.bh.phase === 'active') ? '🎩 BLACK HAT ' + Math.ceil(st.bh.left) + ' s' : 'SYSTEM DOWN ' + Math.ceil(st.shutdown) + ' s';
+    setText(downText, !down ? '' : (st.bh && st.bh.phase === 'active') ? '🎩 BLACK HAT ' + Math.ceil(st.bh.left) + ' s' : 'SYSTEM DOWN ' + Math.ceil(st.shutdown) + ' s');
     const on = new Set();
-    Object.values(st.routes).forEach(r => { if (r) for (let i = 0; i < r.length - 1; i++) on.add(r[i] + '>' + r[i + 1]); });
+    for (const s in st.routes) { const r = st.routes[s]; if (r) for (let i = 0; i < r.length - 1; i++) on.add(r[i] + '>' + r[i + 1]); }
     edgeEls.forEach(e => {
-      const broken = (E.isRouter(e.a) && st.nodes[e.a].broken) || (E.isRouter(e.b) && st.nodes[e.b].broken);
-      e.l.classList.toggle('on', on.has(e.a + '>' + e.b));
-      e.l.setAttribute('stroke-dasharray', broken ? '6 6' : '');
-    });
-    const warnIds = new Set(E.sharkWarns(st).map(w => w.id));
-    Object.values(st.nodes).forEach(n => {
-      const ne = nodeEls[n.id];
-      ne.g.classList.toggle('broken', n.broken);
-      ne.g.classList.toggle('targeted', warnIds.has(n.id));
-      ne.x.textContent = n.broken ? '✕' : '';
-      ne.d.textContent = n.broken ? (st.owned.baran ? 'cut ' : 'heals ') + Math.max(0, Math.ceil(E.crewTime(st) - (st.t - n.brokenAt))) + 's' : n.d + ' ms';
+      const isOn = on.has(e.key);
+      const dash = (E.isRouter(e.a) && st.nodes[e.a].broken) || (E.isRouter(e.b) && st.nodes[e.b].broken);
+      if (e.on !== isOn) { e.l.classList.toggle('on', isOn); e.on = isOn; }
+      if (e.dash !== dash) { e.l.setAttribute('stroke-dasharray', dash ? '6 6' : ''); e.dash = dash; }
     });
     const warns = E.sharkWarns(st);
+    const warnIds = new Set(warns.map(w => w.id));
+    const crew = E.crewTime(st), cutWord = st.owned.baran ? 'cut ' : 'heals ';
+    st.list.forEach(n => {
+      const ne = nodeEls[n.id];
+      if (ne.broken !== n.broken) { ne.g.classList.toggle('broken', n.broken); ne.broken = n.broken; }
+      const tg = warnIds.has(n.id);
+      if (ne.tg !== tg) { ne.g.classList.toggle('targeted', tg); ne.tg = tg; }
+      setText(ne.x, n.broken ? '✕' : '');
+      setText(ne.d, n.broken ? cutWord + Math.max(0, Math.ceil(crew - (st.t - n.brokenAt))) + 's' : n.d + ' ms');
+    });
     warnEls.forEach((w, k) => {
       const sw = warns[k];
       if (sw && pos[sw.id]) {
         const p = pos[sw.id];
         w.g.setAttribute('opacity', reduce ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(st.t * 6)));
-        w.ring.setAttribute('cx', p.x); w.ring.setAttribute('cy', p.y);
-        w.g.setAttribute('data-node', sw.id); w.g.style.pointerEvents = 'auto';
-        w.g.firstChild.setAttribute('cx', p.x); w.g.firstChild.setAttribute('cy', p.y);
-        w.fin.setAttribute('x', p.x + 34); w.fin.setAttribute('y', p.y - 8);
-        w.tag.setAttribute('x', p.x); w.tag.setAttribute('y', p.y - 30);
-        w.tag.textContent = Math.ceil(sw.left) + '…';
-      } else { w.g.setAttribute('opacity', 0); w.g.removeAttribute('data-node'); w.g.style.pointerEvents = 'none'; }
+        if (w.id !== sw.id) {
+          w.id = sw.id;
+          w.g.setAttribute('data-node', sw.id); w.g.style.pointerEvents = 'auto';
+          [w.ring, w.hit].forEach(c => { c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); });
+          w.fin.setAttribute('x', p.x + 34); w.fin.setAttribute('y', p.y - 8);
+          w.tag.setAttribute('x', p.x); w.tag.setAttribute('y', p.y - 30);
+        }
+        setText(w.tag, Math.ceil(sw.left) + '…');
+      } else if (w.id !== null) { w.id = null; w.g.setAttribute('opacity', 0); w.g.removeAttribute('data-node'); w.g.style.pointerEvents = 'none'; }
     });
-    while (msgLayer.children.length < st.msgs.length) el('circle', { r:7, fill:'#e8f8ff', stroke:'#00b4ff', 'stroke-width':3, filter:'url(#glow)' }, msgLayer);
-    while (msgLayer.children.length > st.msgs.length) msgLayer.lastChild.remove();
+    const kids = msgLayer.children;
+    while (kids.length < st.msgs.length) el('circle', { r:7, 'stroke-width':3, filter:'url(#glow)' }, msgLayer);
+    while (kids.length > st.msgs.length) msgLayer.lastChild.remove();
     st.msgs.forEach((m, k) => {
       const a = pos[m.path[m.i]], b = pos[m.path[Math.min(m.i + 1, m.path.length - 1)]];
       if (!a || !b) return;
-      const c = msgLayer.children[k];
-      c.setAttribute('stroke', m.back ? '#15933a' : '#00b4ff'); c.setAttribute('fill', m.back ? '#e3f7e8' : '#e8f8ff');
+      const c = kids[k];
+      setAttr(c, 'stroke', m.back ? '#15933a' : '#00b4ff'); setAttr(c, 'fill', m.back ? '#e3f7e8' : '#e8f8ff');
       c.setAttribute('cx', a.x + (b.x - a.x) * m.p);
       c.setAttribute('cy', a.y + (b.y - a.y) * m.p);
     });
@@ -1000,22 +1048,23 @@ window.PR6 = (() => {
     if (st.shutdown > 0) return ['SYSTEM DOWN', 'danger', 'Back in ' + Math.ceil(st.shutdown) + ' s'];
     if (st.hackWarn) { const s = E.hackStrength(st), p = E.protLevel(st); return ['HACKERS!', s > p ? 'danger' : 'warn', 'Strength ' + s + ' vs protection ' + p + (s > p ? ': update HTTPS' : ': blocked')]; }
     if (E.sharkWarns(st).length) return ['SHARKS!', 'warn', 'Tap the ringed node'];
+    const lv = 'LEVEL ' + E.level(st);
     if (st.owned.http && st.t >= bhShow.next) { bhShow.until = st.t + 3; bhShow.next = st.t + 8 + Math.random() * 7; }
-    if (st.owned.http && st.t < bhShow.until) return ['LEVEL ' + E.level(st), '', 'Black hat chance ' + Math.round(E.bhEff(st) * 100) + '%' + (E.bhUnlocked(st) ? '' : ' (active from Level ' + E.BH_LEVEL + ')')];
+    if (st.owned.http && st.t < bhShow.until) return [lv, '', 'Black hat chance ' + Math.round(E.bhEff(st) * 100) + '%' + (E.bhUnlocked(st) ? '' : ' (active from Level ' + E.BH_LEVEL + ')')];
     const nb = E.brokenList(st).length;
-    if (nb) return ['LEVEL ' + E.level(st), '', nb + (nb === 1 ? ' node' : ' nodes') + ' cut'];
-    return ['LEVEL ' + E.level(st), '', st.sharkOn ? E.activeSharks(st) + (E.activeSharks(st) === 1 ? ' shark' : ' sharks') + ' circling' : 'Direct line open'];
+    if (nb) return [lv, '', nb + (nb === 1 ? ' node' : ' nodes') + ' cut'];
+    const ns = E.activeSharks(st);
+    return [lv, '', st.sharkOn ? ns + (ns === 1 ? ' shark' : ' sharks') + ' circling' : 'Direct line open'];
   }
-  const CLIENT_INFO = { title:'New client', year:'Client–server networking', info:'Another sender joins the network and sends its own messages.' };
   function renderQuick() {
     const q = E.quickBuy(st);
-    if (!q) { qName.textContent = 'All discovered'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Open Discoveries for HTTPS, orcas and hackathons.'; btn.textContent = 'Discover'; btn.disabled = true; return; }
-    if (q.kind === 'client') { qName.textContent = CLIENT_INFO.title + ' ' + (st.clients + 1); qYear.textContent = CLIENT_INFO.year; qDesc.textContent = CLIENT_INFO.info; }
-    else if (q.kind === 'heal') { const nb = E.brokenList(st).length; qName.textContent = 'Heal ' + nb + (nb === 1 ? ' node' : ' nodes'); qYear.textContent = 'Repair'; qDesc.textContent = 'Fix cut nodes now instead of waiting ' + E.crewTime(st) + ' s for the free repair.'; }
-    else if (q.kind === 'tls') { qName.textContent = 'Update HTTPS'; qYear.textContent = E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1]; qDesc.textContent = 'Protection +1 (now ' + E.protLevel(st) + '). Hacker strength ' + E.hackStrength(st) + '.'; }
-    else if (q.kind === 'orca') { qName.textContent = 'Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')'; qYear.textContent = 'Shark hunter'; qDesc.textContent = 'Appears at a node under shark attack and stops it. Strikes every ' + E.ORCA_HUNT + ' s.'; }
-    else if (q.kind === 'hack') { qName.textContent = 'Cyber Hackathon'; qYear.textContent = 'Security community'; qDesc.textContent = 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%).'; }
-    else { const u = E.U[q.id]; qName.textContent = u.title; qYear.textContent = u.year + ', ' + u.name; qDesc.textContent = u.effect; }
+    if (!q) { setQuick('All discovered', '', '', 'Open Discoveries for HTTPS, orcas and hackathons.'); btn.textContent = 'Discover'; btn.disabled = true; return; }
+    if (q.kind === 'client') setQuick('New client ' + (st.clients + 1), '', 'Client–server networking', 'Another sender joins the network and sends its own messages.');
+    else if (q.kind === 'heal') { const nb = E.brokenList(st).length; setQuick('Heal ' + nb + (nb === 1 ? ' node' : ' nodes'), '', 'Repair', 'Fix cut nodes now instead of waiting ' + E.crewTime(st) + ' s for the free repair.'); }
+    else if (q.kind === 'tls') setQuick('Update HTTPS', '', E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1], 'Protection +1 (now ' + E.protLevel(st) + '). Hacker strength ' + E.hackStrength(st) + '.');
+    else if (q.kind === 'orca') setQuick('Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')', '', 'Shark hunter', 'Appears at a node under shark attack and stops it. Strikes every ' + E.ORCA_HUNT + ' s.');
+    else if (q.kind === 'hack') setQuick('Cyber Hackathon', '', 'Security community', 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%).');
+    else { const u = E.U[q.id]; setQuick(u.title, '', u.year + ', ' + u.name, u.effect); }
     qCost.textContent = q.cost + ' Pts';
     btn.textContent = 'Discover';
     btn.disabled = st.points < (q.need || q.cost);
@@ -1030,20 +1079,21 @@ window.PR6 = (() => {
   }
 
   const openInfo = new Set();
+  const getBtn = (attr, can, cost) => '<button type="button" class="inv-get" ' + attr + (can ? '' : ' disabled') + '>Get (' + cost + ' pts)</button>';
+  const stateSpan = t => '<span class="inv-state">' + t + '</span>';
   function actionRows() {
-    const r = [];
-    let tl;
-    if (st.tls < 1) tl = ['<span class="inv-state">Needs HTTPS</span>', 'locked'];
-    else if (st.tls >= E.TLS_MAX) tl = ['<span class="inv-state">' + E.TLS_NAMES[st.tls] + ' ✓</span>', 'have'];
-    else tl = ['<button type="button" class="inv-get" data-act="tls"' + (E.canUpdateTls(st) ? '' : ' disabled') + '>Get (' + E.tlsCost(st) + ' pts)</button>', 'act'];
-    r.push(['Update HTTPS', st.tls >= 1 && st.tls < E.TLS_MAX ? E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1] : 'SSL 2.0 → TLS 1.3', tl]);
-    let oc;
-    if (!st.owned.baran) oc = ['<span class="inv-state">Needs Distributed network</span>', 'locked'];
-    else if (st.orcas >= E.MAX_ORCAS) oc = ['<span class="inv-state">' + st.orcas + '/' + E.MAX_ORCAS + ' ✓</span>', 'have'];
-    else oc = ['<button type="button" class="inv-get" data-act="orca"' + (E.canBuyOrca(st) ? '' : ' disabled') + '>Get (' + E.ORCA_COST + ' pts)</button>', 'act'];
-    r.push(['Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')', 'Hunts a shark every ' + E.ORCA_HUNT + ' s', oc]);
-    r.push(['Cyber Hackathon', 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%)', ['<button type="button" class="inv-get" data-act="hack"' + (E.canHackathon(st) ? '' : ' disabled') + '>Get (' + E.HACKATHON_COST + ' pts)</button>', 'act']]);
-    return r.map(x => '<div class="inv-row ' + x[2][1] + '"><div class="inv-head"><span class="inv-name">' + x[0] + '<small>' + x[1] + '</small></span>' + x[2][0] + '</div></div>').join('');
+    let tl, oc;
+    if (st.tls < 1) tl = [stateSpan('Needs HTTPS'), 'locked'];
+    else if (st.tls >= E.TLS_MAX) tl = [stateSpan(E.TLS_NAMES[st.tls] + ' ✓'), 'have'];
+    else tl = [getBtn('data-act="tls"', E.canUpdateTls(st), E.tlsCost(st)), 'act'];
+    if (!st.owned.baran) oc = [stateSpan('Needs Distributed network'), 'locked'];
+    else if (st.orcas >= E.MAX_ORCAS) oc = [stateSpan(st.orcas + '/' + E.MAX_ORCAS + ' ✓'), 'have'];
+    else oc = [getBtn('data-act="orca"', E.canBuyOrca(st), E.ORCA_COST), 'act'];
+    return [
+      ['Update HTTPS', st.tls >= 1 && st.tls < E.TLS_MAX ? E.TLS_NAMES[st.tls] + ' → ' + E.TLS_NAMES[st.tls + 1] : 'SSL 2.0 → TLS 1.3', tl],
+      ['Orca 🐋 (' + st.orcas + '/' + E.MAX_ORCAS + ')', 'Hunts a shark every ' + E.ORCA_HUNT + ' s', oc],
+      ['Cyber Hackathon', 'Black hat chance −15% (now ' + Math.round(E.bhEff(st) * 100) + '%)', [getBtn('data-act="hack"', E.canHackathon(st), E.HACKATHON_COST), 'act']]
+    ].map(x => '<div class="inv-row ' + x[2][1] + '"><div class="inv-head"><span class="inv-name">' + x[0] + '<small>' + x[1] + '</small></span>' + x[2][0] + '</div></div>').join('');
   }
   function renderShop() {
     if (invPanel.hidden) return;
@@ -1051,18 +1101,17 @@ window.PR6 = (() => {
     const rows = actionRows() + E.UPGRADES.map(u => {
       const have = !!st.owned[u.id];
       const reqOk = u.req.every(r => st.owned[r]);
-      const cls = 'inv-row' + (have ? ' have' : reqOk ? '' : ' locked');
-      let action;
-      if (have) action = '<span class="inv-state">Owned ✓</span>';
-      else if (!reqOk) action = '<span class="inv-state">Needs ' + u.req.map(r => E.U[r].title).join(', ') + '</span>';
-      else action = '<button type="button" class="inv-get" data-buy="' + u.id + '"' + (E.canBuy(st, u.id) ? '' : ' disabled') + '>Get (' + u.cost + ' pts)</button>';
+      const action = have ? stateSpan('Owned ✓')
+        : !reqOk ? stateSpan('Needs ' + u.req.map(r => E.U[r].title).join(', '))
+        : getBtn('data-buy="' + u.id + '"', E.canBuy(st, u.id), u.cost);
       const open = openInfo.has(u.id);
-      return '<div class="' + cls + '"><div class="inv-head"><button type="button" class="inv-name" data-info="' + u.id + '" aria-expanded="' + open + '">'
+      return '<div class="inv-row' + (have ? ' have' : reqOk ? '' : ' locked') + '"><div class="inv-head"><button type="button" class="inv-name" data-info="' + u.id + '" aria-expanded="' + open + '">'
         + u.title + ' ' + (open ? '▴' : '▾') + '<small>' + u.name + ', ' + u.year + '</small></button>' + action + '</div>'
         + (open ? '<div class="inv-detail"><p>' + u.info + '</p><p><b>' + u.effect + '</b></p></div>' : '') + '</div>';
     }).join('');
     if (shopList._html !== rows) { shopList.innerHTML = rows; shopList._html = rows; }
   }
+  const refresh = okb => { if (okb) { handleEvents(); render(); renderUi(); } };
   shopList.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('button');
     if (!b) return;
@@ -1070,12 +1119,8 @@ window.PR6 = (() => {
     if (info) { openInfo.has(info) ? openInfo.delete(info) : openInfo.add(info); renderShop(); return; }
     if (phase !== 'play') return;
     const act = b.getAttribute('data-act'), id = b.getAttribute('data-buy');
-    let okb = false;
-    if (act === 'tls') okb = E.updateTls(st);
-    else if (act === 'orca') okb = E.buyOrca(st);
-    else if (act === 'hack') okb = E.hackathon(st);
-    else if (id) okb = E.buy(st, id, rng);
-    if (okb) { handleEvents(); render(); renderUi(); }
+    refresh(act === 'tls' ? E.updateTls(st) : act === 'orca' ? E.buyOrca(st) : act === 'hack' ? E.hackathon(st) : false);
+    if (id) tryBuy(id);
   });
   let openPanel = null;
   function setPanel(p) {
@@ -1085,22 +1130,82 @@ window.PR6 = (() => {
     if (p) { if (st) renderUi(); backBtn.focus(); }
     else if (was) (was === invPanel ? $('inv-open') : $('log-open')).focus();
   }
-  const setInv = open => setPanel(open ? invPanel : null);
   $('inv-open').addEventListener('click', () => { if (st) setPanel(invPanel); });
   $('log-open').addEventListener('click', () => setPanel(logPanel));
   backBtn.addEventListener('click', () => setPanel(null));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && openPanel) setPanel(null); });
-  bannerEl.addEventListener('click', () => { if (phase === 'play' && st.bh && E.whiteHat(st)) { handleEvents(); render(); renderUi(); } });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (quiz) closeQuiz(false); else if (openPanel) setPanel(null); });
+  bannerEl.addEventListener('click', () => { if (phase === 'play' && st.bh) refresh(E.whiteHat(st)); });
+
+  /* ===== discovery quiz: who + when, both right to buy ===== */
+  const quizEl = $('quiz'), quizOpts = $('quiz-opts'), quizFb = $('quiz-fb'), quizNext = $('quiz-next');
+  const shuffle = a => Math.random() < 0.5 ? a : a.reverse();
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  let quiz = null;
+  function askQuiz(id) {
+    const u = E.U[id], others = E.UPGRADES.filter(o => o.id !== id);
+    quiz = { id, k:0, right:0, qs:[
+      { q:'Who made this discovery?', a:u.name, opts:shuffle([u.name, pickOne(others.filter(o => o.name !== u.name)).name]) },
+      { q:'When was it made?', a:u.year, opts:shuffle([u.year, pickOne(others.filter(o => o.year !== u.year)).year]) }
+    ] };
+    paused = true;
+    quizEl.hidden = false;
+    showQ();
+  }
+  function showQ() {
+    const q = quiz.qs[quiz.k];
+    $('quiz-step').textContent = 'Question ' + (quiz.k + 1) + ' of 2';
+    $('quiz-title').textContent = E.U[quiz.id].title;
+    $('quiz-q').textContent = q.q;
+    quizFb.textContent = ''; quizNext.hidden = true;
+    quizOpts.innerHTML = '';
+    q.opts.forEach(o => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = o;
+      b.addEventListener('click', () => answer(b, o));
+      quizOpts.appendChild(b);
+    });
+    quizOpts.firstChild.focus();
+  }
+  function answer(b, o) {
+    const q = quiz.qs[quiz.k], ok = o === q.a;
+    [...quizOpts.children].forEach(x => { x.disabled = true; if (x.textContent === q.a) x.classList.add('right'); });
+    if (!ok) b.classList.add('wrong');
+    if (ok) { quiz.right++; SFX.S.blocked(); } else SFX.S.lost();
+    quizFb.textContent = ok ? 'Correct!' : 'Not quite. Answer: ' + q.a + '.';
+    quizNext.textContent = quiz.k === 0 ? 'Next question' : 'See result';
+    quizNext.hidden = false; quizNext.focus();
+  }
+  quizNext.addEventListener('click', () => {
+    if (quiz.done) return closeQuiz(quiz.right === 2);
+    if (quiz.k === 0) { quiz.k = 1; return showQ(); }
+    quiz.done = true;
+    const win = quiz.right === 2;
+    $('quiz-step').textContent = quiz.right + ' of 2 correct';
+    $('quiz-q').textContent = '';
+    quizOpts.innerHTML = '';
+    quizFb.textContent = win ? 'Discovery unlocked!' : 'Discovery not bought. Your points are kept. Try again.';
+    quizNext.textContent = 'Back to game'; quizNext.focus();
+  });
+  function closeQuiz(buyIt) {
+    const id = quiz.id;
+    quiz = null; quizEl.hidden = true; paused = false;
+    if (buyIt) refresh(E.buy(st, id, rng));
+    else if (phase === 'play') renderUi();
+    btn.focus();
+  }
+  // inventions go through the quiz; everything else buys directly
+  function tryBuy(id) {
+    if (phase === 'play' && E.canBuy(st, id)) askQuiz(id);
+  }
 
   function frame(now) {
     if (phase !== 'play') return;
+    if (paused) { lastFrame = now; requestAnimationFrame(frame); return; }
     let dt = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
     while (dt > 0) { const d = Math.min(0.05, dt); E.step(st, d, rng); dt -= d; }
     if (E.sharkWarns(st).length) SFX.S.sharkDun();
     if (st.bh) SFX.S.siren();
-    const won = st.events.some(e => e.type === 'won');
-    const failed = st.events.some(e => e.type === 'failed');
+    const won = st.won, failed = st.failed;
     handleEvents();
     render();
     if (now - lastUi > 200 || won) { renderUi(); lastUi = now; }
@@ -1110,10 +1215,10 @@ window.PR6 = (() => {
   }
 
   function start() {
-    SFX.init(); SFX.S.start();
-    document.body.classList.remove('idle');
+    if (quiz) closeQuiz(false);
+    SFX.init(); SFX.S.start(); SFX.startMusic();
+    document.body.classList.remove('idle', 'done');
     st = E.create(rng); bhShow.next = 12; bhShow.until = -1;
-    document.body.classList.remove('done');
     log.innerHTML = '';
     buildBoard();
     addLog('Connection open: one direct line from Sender to Receiver.');
@@ -1123,23 +1228,29 @@ window.PR6 = (() => {
     requestAnimationFrame(frame);
   }
 
-  function failRun() {
-    setInv(false);
+  function showResults(rows, lines, bannerText) {
+    setPanel(null);
+    SFX.stopMusic();
     phase = 'done';
-    $('results-body').innerHTML = [
-      ['Time', fmt(st.t)], ['Points held', st.points], ['Peak points', st.peak], ['Black hats', st.stats.blackhats || 0]
-    ].map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+    $('results-body').innerHTML = rows.map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
     const sum = $('summary'); sum.innerHTML = '';
-    const p1 = document.createElement('p'); p1.className = 'big'; p1.textContent = 'FAILED: system lost to the black hat.'; sum.appendChild(p1);
-    const p2 = document.createElement('p'); p2.textContent = 'This run is not saved. Keep ' + E.WHITE_COST + ' pts in reserve after your second orca, then retry.'; sum.appendChild(p2);
-    taskEl.textContent = 'System lost. Retry.';
+    lines.forEach(([t, cls]) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); });
+    setBanner(bannerText, '', '');
     document.body.classList.add('done');
     btn.disabled = false; btn.textContent = 'Retry';
-    qName.textContent = 'Run over'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Press Retry to play again.';
+    setQuick('Run over', '', '', 'Press Retry to play again.');
+  }
+
+  function failRun() {
+    showResults(
+      [['Time', fmt(st.t)], ['Points held', st.points], ['Peak points', st.peak], ['Black hats', st.stats.blackhats || 0]],
+      [['FAILED: system lost to the black hat.', 'big'], ['This run is not saved. Keep ' + E.WHITE_COST + ' pts in reserve after your second orca, then retry.']],
+      'System lost. Retry.');
   }
 
   async function finish() {
-    setInv(false);
+    setPanel(null);
+    SFX.stopMusic();
     phase = 'done';
     btn.disabled = true; btn.textContent = 'Saving…';
     const total = st.t;
@@ -1156,32 +1267,28 @@ window.PR6 = (() => {
     rec.updated = Date.now();
     await save(rec);
 
-    const rows = [
+    showResults([
       ['Time to win', fmt(total)], ['Messages delivered', st.stats.delivered], ['Messages lost', st.stats.lost],
       ['Shark cuts', st.stats.bites], ['Nodes healed', st.stats.healed], ['Crew repairs', st.stats.crew],
       ['Points eaten by sharks', st.stats.eaten || 0], ['Hacks blocked', st.stats.blocked], ['Shutdowns', st.stats.hacks],
       ['Sharks scared off', st.stats.tapped || 0], ['Black hats', st.stats.blackhats || 0], ['White hats hired', st.stats.whitehats || 0], ['Cyber Hackathons', st.stats.hackathons || 0],
       ['Clients', st.clients], ['Orcas', st.orcas], ['HTTPS level', E.TLS_NAMES[st.tls]],
       ['Inventions bought', st.order.length + ' of ' + E.UPGRADES.length]
-    ];
-    $('results-body').innerHTML = rows.map((r, i) => '<tr' + (i === 0 ? ' class="total"' : '') + '><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
-    const sum = $('summary'); sum.innerHTML = '';
-    const line = (t, cls) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); };
-    line('Your time: ' + fmt(total), 'big');
-    if (!prev) line('First run recorded.');
-    else if (newBest) line('New best time! Previous best: ' + fmt(prev.bestTime) + '.');
-    else line('Best time: ' + fmt(rec.bestTime) + '.');
-    line('Completed runs: ' + rec.runs + '.');
-    line('Order bought: ' + (st.order.map(id => E.U[id].title).join(', ') || 'none') + '.');
-    taskEl.textContent = E.GOAL + ' points reached. The network is built.';
-    document.body.classList.add('done');
-    btn.disabled = false; btn.textContent = 'Retry';
-    qName.textContent = 'Run over'; qCost.textContent = ''; qYear.textContent = ''; qDesc.textContent = 'Press Retry to play again.';
+    ], [
+      ['Your time: ' + fmt(total), 'big'],
+      [!prev ? 'First run recorded.' : newBest ? 'New best time! Previous best: ' + fmt(prev.bestTime) + '.' : 'Best time: ' + fmt(rec.bestTime) + '.'],
+      ['Completed runs: ' + rec.runs + '.'],
+      ['Order bought: ' + (st.order.map(id => E.U[id].title).join(', ') || 'none') + '.']
+    ], E.GOAL + ' points reached. The network is built.');
   }
 
   btn.addEventListener('click', () => {
     if (phase === 'idle' || phase === 'done') start();
-    else if (phase === 'play' && E.buyQuick(st, rng)) { handleEvents(); render(); renderUi(); }
+    else if (phase === 'play' && !paused) {
+      const q = E.quickBuy(st);
+      if (q && q.kind === 'inv') tryBuy(q.id);
+      else refresh(E.buyQuick(st, rng));
+    }
   });
 
   /* ===== self-download ===== */
@@ -1203,11 +1310,9 @@ window.PR6 = (() => {
     st = E.create(rng); buildBoard(); render();
     const best = mine ? 'Best time ' + (mine.bestTimeText || '–') + ' over ' + (mine.runs || 1) + (mine.runs === 1 ? ' run' : ' runs') + '. Beat it!' : 'Reach ' + E.GOAL + ' points as fast as you can.';
     hintEl.textContent = best;
-    qName.textContent = 'Press Start'; qCost.textContent = ''; qYear.textContent = mine ? 'Best ' + (mine.bestTimeText || '–') : '';
-    qDesc.textContent = 'Sending is automatic. Tap ringed nodes to block sharks. Buy from the suggestion card.';
+    setQuick('Press Start', '', mine ? 'Best ' + (mine.bestTimeText || '–') : '', 'Sending is automatic. Tap ringed nodes to block sharks. Buy from the suggestion card.');
     pointsEl.textContent = '0/' + E.GOAL;
     setBanner('READY', '', mine ? best : 'Reach ' + E.GOAL + ' points');
-    bannerEl.disabled = true;
     document.body.classList.add('idle');
     btn.disabled = false; btn.textContent = 'Start';
     window.__A6 = { get st(){ return st; }, E };
