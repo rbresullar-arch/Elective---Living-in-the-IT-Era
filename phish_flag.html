@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <script>
+      (function() {
+        // Capture host references before any artifact code runs: Window.parent
+        // is [Replaceable] (a top-level `var parent` in artifact code would
+        // replace the accessor with a data property), and a top-level
+        // `const crypto` would shadow the global — either would otherwise
+        // silently break the bridge for artifacts that worked before.
+        const realParent = window.parent;
+        const cryptoObj = window.crypto;
+        const RealURL = URL;
+        // html-to-image is only used by takeScreenshot: fetched on first use, not as a
+        // parser-blocking tag. Native fetch, captured before the proxy override below.
+        const realFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
+        const HTML_TO_IMAGE_SRC = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js";
+        const HTML_TO_IMAGE_INTEGRITY = "sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==";
+        let htmlToImageLoad = null;
+        const loadHtmlToImage = () => {
+          if (!htmlToImageLoad) {
+            htmlToImageLoad = (realFetch
+              ? realFetch(HTML_TO_IMAGE_SRC, { integrity: HTML_TO_IMAGE_INTEGRITY, credentials: 'omit', referrerPolicy: 'no-referrer' })
+              : Promise.reject(new Error('fetch unavailable'))
+            )
+              .then((res) => {
+                if (!res.ok) throw new Error('html-to-image failed to load (' + res.status + ')');
+                return res.text();
+              })
+              .then((source) => {
+                // UMD bundle: hide the artifact's AMD/CommonJS globals so it takes the
+                // window-global branch; inline script text runs synchronously on insert.
+                const hidden = ['define', 'module', 'exports'].map((k) => {
+                  const entry = { k, own: Object.prototype.hasOwnProperty.call(window, k), v: window[k] };
+                  try { window[k] = undefined; } catch (e) {}
+                  return entry;
+                });
+                try {
+                  const el = document.createElement('script');
+                  el.text = source;
+                  (document.head || document.documentElement).appendChild(el);
+                } finally {
+                  hidden.forEach(({ k, own, v }) => {
+                    try { if (own) { window[k] = v; } else { delete window[k]; } } catch (e) {}
+                  });
+                }
+                if (!window.htmlToImage) throw new Error('html-to-image unavailable after load');
+                return window.htmlToImage;
+              });
+            // A failed load may be transient; let the next screenshot retry.
+            htmlToImageLoad.catch(() => { htmlToImageLoad = null; });
+          }
+          return htmlToImageLoad;
+        };
+        // crypto.randomUUID exists only in Secure Contexts; fall back to a
+        // unique non-crypto id elsewhere (http://LAN-IP dev flows) —
+        // uniqueness is what the bridge needs, unpredictability is
+        // defense-in-depth on top of the source guards.
+        const newRequestId =
+          cryptoObj && typeof cryptoObj.randomUUID === "function"
+            ? function () { return cryptoObj.randomUUID(); }
+            : function () { return Date.now() + "-" + Math.random(); };
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            realParent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            realParent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            realParent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        // Bridge request ids are crypto-random (not sequential) so they
+        // cannot be predicted by other frames in the tab.
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = newRequestId();
+              callbacksMap.set(id, { resolve, reject });
+              realParent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = newRequestId();
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Null-body statuses: Response(stream, {status: 204}) throws
+                // per the Fetch spec, which would escape this resolver and
+                // hang the artifact's await forever.
+                if (response.status === 204 || response.status === 205 || response.status === 304) {
+                  try {
+                    resolve(new Response(null, {
+                      status: response.status,
+                      statusText: response.statusText,
+                      headers: response.headers
+                    }));
+                  } catch (err) {
+                    // Invalid statusText/header bytes can throw here too.
+                    reject(new TypeError(
+                      'Bridge fetch: unconstructable response (status ' + response.status + ')'
+                    ));
+                  }
+                  return;
+                }
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream. Response()
+                // requires status in [200, 599]; an opaque/no-cors fetch
+                // forwards status 0, which would throw here and escape the
+                // resolver, hanging the artifact's await. Surface it as a
+                // network-error-shaped rejection instead.
+                try {
+                  resolve(new Response(stream, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                  }));
+                } catch (err) {
+                  streamControllers.delete(channelId);
+                  reject(new TypeError(
+                    'Bridge fetch: unconstructable response (status ' + response.status + ')'
+                  ));
+                }
+              },
+              reject,
+              channelId
+            });
+            
+            realParent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          // Only the embedding parent may drive the bridge — sibling and
+          // nested frames can also postMessage into this window.
+          if (event.source !== realParent) return;
+          if (event.data.type === 'takeScreenshot') {
+            // Echo the request's nonce so the requester can correlate the
+            // reply to ITS request — a reply without the expected nonce
+            // (e.g. from a stale pre-remount artifact) is ignored upstream.
+            const screenshotNonce = event.data.nonce;
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              realParent.postMessage({
+                type: 'screenshotError',
+                nonce: screenshotNonce,
+                error: new Error('Root element not found'),
+              }, '*');
+              return;
+            }
+            // Catch CDN load failures and toPng errors so the parent always
+            // gets a response instead of hanging forever.
+            try {
+              const htmlToImage = await loadHtmlToImage();
+              const screenshot = await htmlToImage.toPng(rootElement, {
+                imagePlaceholder:
+                  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+              });
+              realParent.postMessage({
+                type: 'screenshotData',
+                nonce: screenshotNonce,
+                data: screenshot,
+              }, '*');
+            } catch (err) {
+              realParent.postMessage({
+                type: 'screenshotError',
+                nonce: screenshotNonce,
+                error: err instanceof Error ? err : new Error(String(err)),
+              }, '*');
+            }
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (!callback) return;
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        // An SVG <a> exposes href as an SVGAnimatedString; its baseVal is the attribute
+        // as written, so resolve it against the base URL as the browser does for an HTML <a>.
+        const resolvedHref = (linkEl) => {
+          if (typeof linkEl.href === "string") return linkEl.href;
+          const written = linkEl.href?.baseVal;
+          // A same-document SVG link, such as one that begins an animation, stays with the browser.
+          if (!written || written.trim().startsWith("#")) return "";
+          try {
+            return new RealURL(written, linkEl.baseURI).href;
+          } catch (error) {
+            return written;
+          }
+        };
+
+        window.addEventListener('click', (event) => {
+          // Not instanceof Element: an artifact's own top-level class Element shadows the global.
+          if (typeof event.target?.closest !== "function") return;
+    
+          const linkEl = event.target.closest("a");
+          const href = linkEl && resolvedHref(linkEl);
+          if (!href) return;
+          const filename = linkEl.getAttribute("download") ?? "";
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              realParent.postMessage({
+                type: "downloadFile",
+                filename,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (href.startsWith("data:")) {
+            const [header, base64Data] = href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            realParent.postMessage({
+              type: "downloadFile",
+              filename,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            realParent.postMessage({
+              type: 'openExternal',
+              href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          realParent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          realParent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  <style id="claude-scrollbar">@layer claude-scrollbar{*{scrollbar-width:thin}html{scrollbar-color:rgb(128 128 128 / 50%) transparent}}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Phish or Legit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Rubik:wght@400;500;700&amp;family=Silkscreen:wght@400;700&amp;display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --www:#ff7250; --name:#dffcf8; --addr:#ffa383; --main:#fbb82e; --side:#fff3d8; --drink:#3b6689;
+  --grey:#5b636a; --light:#e8e9eb;
+  --good:#1f9d55; --warn:#e8a200; --bad:#d62828; --gold:#f5b700; --sel:#fff6b3; --mint:#6ee7a0; --lilac:#c9b6ff;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 180px;display:flex;flex-direction:column;gap:10px}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--ink);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--gold);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.mute{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;align-self:center}
+.mute.armed{background:var(--bad);border-color:var(--bad);color:#fff}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
+.stat.ok b{color:#6ee7a0}.stat.low b{color:#ff8a80}
+.shields b{letter-spacing:3px}
+
+/* Screens */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:8px;min-height:430px}
+.screen.anim{animation:slide .22s ease-out}
+.screen h2{font-family:var(--display);font-weight:400;font-size:19px;margin:0;text-align:center;letter-spacing:.3px;line-height:1.15}
+.screen h3{font-family:var(--display);font-weight:400;font-size:21px;margin:0;text-align:center;letter-spacing:.3px}
+.eyebrow{font-family:var(--display);font-size:18px;margin:0}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:24px;padding:12px}
+.s-inbox{background:var(--www)}
+.s-msg{background:var(--name)}
+.s-browser{background:var(--grey)}
+.s-browser.infected{background:var(--bad);animation:glitch .5s steps(4) 3}
+.stepnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.back{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:4px 10px;font-family:var(--pixel);font-size:10px}
+.hint{font-size:11.5px;color:#555;text-align:center;margin:4px 0 0}
+.empty{font-size:12px;color:#666;text-align:center;padding:14px 0}
+
+/* Inbox */
+.s-inbox .well{flex:1;display:flex;flex-direction:column;gap:6px}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.mrow{width:100%;text-align:left;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 9px;display:grid;grid-template-columns:auto 1fr auto;gap:3px 9px;align-items:center}
+.mrow:active{transform:translateY(2px)}
+.mrow.enter{animation:pop .35s ease-out}
+.mrow.unread{background:#fff6b3}
+.mrow.unread .mfrom::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-right:5px;vertical-align:1px;animation:blink .6s steps(2) infinite}
+.av{width:34px;height:34px;border:3px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:16px;background:var(--c,#fff);grid-row:span 2}
+.mfrom{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mprev{grid-column:2/4;font-size:12px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-family:var(--pixel);font-size:10px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap;background:#fff}
+.chip.SMS{background:var(--mint)}.chip.EMAIL{background:var(--main)}.chip.CHAT{background:var(--lilac)}
+.mrow .bar{grid-column:1/-1;height:6px;background:#eee;border-radius:3px;overflow:hidden;border:1px solid var(--ink)}
+.mrow .bar i{display:block;height:100%;width:100%}
+.progress{font-family:var(--pixel);font-size:10px;text-align:center}
+
+/* Message */
+.mhead{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center}
+.mhead .av{width:42px;height:42px;font-size:20px}
+.mhead .who{font-weight:700;font-size:15px}
+.mhead .addr{grid-column:2/4;font-family:var(--pixel);font-size:10px;color:#444;word-break:break-all}
+.subj{font-family:var(--display);font-size:20px;line-height:1.15;margin:8px 0 2px}
+.body{font-size:14.5px;line-height:1.5;margin:6px 0 0;white-space:pre-line}
+.lnk{display:block;width:100%;margin-top:10px;text-align:left;background:#eef4ff;border:3px dashed var(--drink);border-radius:12px;padding:9px 11px;color:#1d4ed8;text-decoration:underline;font-weight:500;word-break:break-all}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tbtn{background:#fff;border:3px solid var(--ink);border-radius:14px;padding:10px 6px;font-family:var(--pixel);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tbtn small{font-family:var(--body);font-size:10.5px;color:#555}
+.tbtn.open{background:var(--main)}
+.tbtn:active,.vbtn:active,.lnk:active{transform:translateY(2px)}
+.tbtn[disabled]{opacity:.55;cursor:default}
+.urlbox{background:var(--ink);color:#fff;border-radius:14px;padding:9px 11px;font-family:var(--pixel);font-size:11px;line-height:1.5;word-break:break-all;border:3px solid var(--ink)}
+.urlbox .lab{display:block;color:var(--gold);font-size:9.5px}
+.urlbox .root{background:var(--gold);color:var(--ink);padding:0 3px;border-radius:3px}
+.urlbox.scan{background:repeating-linear-gradient(90deg,#111 0 10px,#2a2a2a 10px 20px);background-size:200% 100%;animation:scan .5s linear infinite}
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px}
+.vbtn{border:4px solid var(--ink);border-radius:18px;padding:14px 6px 12px;font-family:var(--display);font-size:25px;letter-spacing:.4px;line-height:1.05;color:#fff;box-shadow:0 4px 0 var(--ink)}
+.vbtn small{display:block;font-family:var(--pixel);font-size:9.5px;letter-spacing:0;margin-top:4px}
+.vbtn.phish{background:var(--bad)}
+.vbtn.safe{background:var(--good)}
+
+/* Browser */
+.bchrome{background:var(--light);border:4px solid var(--ink);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;flex:1}
+.bbar{display:flex;align-items:center;gap:7px;padding:8px 10px;border-bottom:3px solid var(--ink);background:#fff}
+.bdots{display:flex;gap:4px}.bdots i{width:9px;height:9px;border-radius:50%;border:2px solid var(--ink);background:var(--www)}
+.bdots i:nth-child(2){background:var(--main)}.bdots i:nth-child(3){background:var(--mint)}
+.burl{flex:1;background:var(--light);border:2px solid var(--ink);border-radius:8px;padding:4px 8px;font-family:var(--pixel);font-size:10px;word-break:break-all}
+.bpage{flex:1;padding:16px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.bpage h4{font-family:var(--display);font-weight:400;font-size:24px;margin:0;line-height:1.1}
+.bpage p{margin:0;line-height:1.5}
+.bpage .ok{background:#eafff2;border:3px solid var(--ink);border-radius:12px;padding:8px 10px;font-weight:500}
+.bpage.bad{background:var(--ink);color:#fff}
+.bpage.bad h4{color:#ff8a80;font-size:30px;animation:blink .4s steps(2) infinite}
+.bpage.bad .skull{font-family:var(--pixel);font-size:11px;color:var(--gold);white-space:pre;line-height:1.2}
+.bpage.bad ul{margin:0;padding-left:18px;line-height:1.5}
+.bpage .pen{font-family:var(--pixel);font-size:14px;color:#ff8a80}
+
+/* Feed */
+.feed{display:flex;flex-direction:column;gap:5px}
+.feed div{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:5px 9px;font-size:12.5px;display:flex;justify-content:space-between;gap:8px;animation:pop .3s ease-out}
+.feed div.good{background:#eafff2}
+.feed div.bad{background:#ffd0cc}
+.feed b{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.card{background:#fff;border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--www)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.tw{overflow-x:auto}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{border:2px solid var(--ink);padding:5px 8px;text-align:left}
+.cmp th{background:var(--main);font-family:var(--pixel);font-size:10px;font-weight:400}
+.cmp td.p{font-family:var(--pixel);font-size:12px;white-space:nowrap}
+.cmp td.p.plus{color:var(--good)}.cmp td.p.minus{color:var(--bad)}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go{align-self:flex-start;background:var(--www);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px;color:var(--ink)}
+.go.home{background:#fff;text-decoration:none;display:inline-block}
+.go:active{transform:translateY(2px)}
+.dl{background:none;border:none;text-decoration:underline;font-size:12px;color:#555;padding:0;align-self:flex-start}
+.result{font-family:var(--display);font-size:46px;line-height:1}
+.result.win{color:var(--good)}.result.mid{color:var(--warn)}.result.lose{color:var(--bad)}
+.bigscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bigscore b{font-family:var(--display);font-size:56px;line-height:1;font-weight:400}
+.bigscore span{font-family:var(--pixel);font-size:12px}
+.scoreline{background:#eafff2;border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{border:3px solid var(--ink);border-radius:12px;padding:6px 10px}
+.kpi b{display:block;font-family:var(--pixel);font-size:18px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.debrief{background:var(--side);border:3px solid var(--ink);border-radius:12px;padding:10px 12px}
+.review{display:flex;flex-direction:column;gap:7px}
+.review h4{margin:0;font-family:var(--pixel);font-size:11px}
+.rv{border:3px solid var(--ink);border-radius:12px;padding:7px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.rv.ok{background:#eafff2}.rv.bad{background:#ffe3e0}
+.rvh{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rvh .pts{margin-left:auto;font-family:var(--pixel);font-size:11px}
+.rvu{font-family:var(--pixel);font-size:9.5px;word-break:break-all;color:#333}
+.rv ul{margin:0;padding-left:17px;line-height:1.45}
+.tag{font-family:var(--pixel);font-size:9.5px;padding:1px 5px;border-radius:5px;border:2px solid var(--ink)}
+.tag.P{background:var(--bad);color:#fff}.tag.L{background:var(--good);color:#fff}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--ink);color:#fff;font-family:var(--pixel);font-size:12px;padding:8px 14px;border-radius:10px;z-index:9;pointer-events:none;max-width:90vw;text-align:center}
+.toast.good{background:var(--good)}.toast.bad{background:var(--bad)}
+
+/* Notifications */
+.notes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:min(488px,calc(100% - 32px));display:flex;flex-direction:column-reverse;gap:6px;z-index:8;pointer-events:none}
+.note{pointer-events:auto;width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;text-align:left;border:3px solid var(--ink);border-radius:14px;padding:8px 10px;font-size:13px;font-weight:500;box-shadow:0 4px 0 var(--ink);animation:pop .25s ease-out;background:#fff}
+.note .tg{font-family:var(--pixel);font-size:10px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);background:#fff}
+.note .go2{font-family:var(--pixel);font-size:10px}
+.note.n-new{background:#fff}
+.note.n-warn{background:#ffd23f;animation:pulse .6s steps(2) infinite}
+.note.n-urgent{background:var(--bad);color:#fff;animation:pulse .3s steps(2) infinite}
+.note.n-urgent .tg{color:var(--ink)}
+
+body.hit .app{animation:glitch .45s steps(3)}
+@keyframes glitch{0%{transform:translate(0);filter:none}25%{transform:translate(-5px,2px);filter:hue-rotate(90deg) contrast(1.4)}50%{transform:translate(4px,-2px);filter:invert(1)}75%{transform:translate(-2px,1px);filter:hue-rotate(-60deg)}100%{transform:none;filter:none}}
+@keyframes scan{to{background-position:-40px 0}}
+@keyframes pulse{50%{transform:translateY(-2px)}}
+@keyframes blink{50%{opacity:.45}}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
+@keyframes slide{0%{transform:translateX(18px);opacity:.2}100%{transform:none;opacity:1}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){
+  .vbtn{font-size:21px}
+  .screen{min-height:380px}
+  .bigscore b{font-size:46px}
+}
+</style>
+</head>
+<body id="artifacts-component-root-html">
+<div class="app">
+  <header class="hud">
+    <div class="brand">Phish or Legit<small>SPOT THE SCAM</small></div>
+    <div class="hudbtns"><button class="mute" id="homeBtn" type="button">Home</button><button class="mute" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat" id="stTime"><b id="hudTime">3:00</b><span>Time left</span></div>
+      <div class="stat" id="stScore"><b id="hudScore">0</b><span>Score</span></div>
+      <div class="stat shields ok" id="stShield"><b id="hudShield">■■■</b><span>Device shield</span></div>
+    </div>
+  </header>
+
+  <div id="view"><section class="screen s-inbox anim"><p class="eyebrow">Your Phone</p><h2>Phish or Legit</h2>
+      <div class="well"><h3>Inbox</h3><ul class="list"><li class="empty">Messages appear here</li></ul>
+      <p class="hint">Tap a message to open it · answer before the bar runs out</p>
+      <p class="progress" id="progress"></p></div></section></div>
+  <div class="feed" id="feed"></div>
+</div>
+
+<div class="overlay" id="startScreen">
+  <div class="card">
+    <h1>Is it <em>Phish</em> or Legit?</h1>
+    <p>Your phone keeps getting messages: SMS, email and chat. Some are real. Some are phishing: fake messages made to steal your password, OTP, PIN or money.</p>
+    <ol>
+      <li>Tap a message in the <b>Inbox</b> to open it.</li>
+      <li><b>Inspect link</b> to see where the link really goes. The link text can lie. The real address cannot.</li>
+      <li><b>Open link</b> only if you trust it. A real link earns a bonus. A phishing link infects your phone.</li>
+      <li>Decide: <b>PHISHING</b> or <b>SAFE</b>.</li>
+    </ol>
+    <div class="tw"><table class="cmp">
+      <tbody><tr><th>Action</th><th>Points</th></tr>
+      <tr><td>Flag a phishing message</td><td class="p plus">+100</td></tr>
+      <tr><td>Mark a real message safe</td><td class="p plus">+100</td></tr>
+      <tr><td>Open a real link</td><td class="p plus">+25</td></tr>
+      <tr><td>Flag a real message (false alarm)</td><td class="p minus">−50</td></tr>
+      <tr><td>Mark a phishing message safe</td><td class="p minus">−100</td></tr>
+      <tr><td>Open a phishing link (lose 1 shield)</td><td class="p minus">−150</td></tr>
+      <tr><td>Message left until it expires</td><td class="p minus">−25</td></tr>
+    </tbody></table></div>
+    <p><b>Tip:</b> read the domain from the right. In <code>bdo.com.ph.secure-verify.co</code> the real owner is <code>secure-verify.co</code>, not BDO.</p>
+    <p><b>Game over:</b> 3 minutes end, all 20 messages are answered, or your phone loses all 3 shields.</p>
+    <p><b>Activity 8 score:</b> your points out of the maximum (20 × 100), as a percentage. Your best run is kept. Play as many times as you like.</p>
+    <div class="btnrow"><button class="go" id="startBtn" type="button">Unlock phone</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <p class="hint" id="bestLine" style="text-align:left">Your best: 66% (1325 pts, 80% accurate) · Runs: 1</p>
+    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
+  </div>
+</div>
+
+<div class="overlay" id="endScreen" hidden="">
+  <div class="card">
+    <div class="result" id="endResult">DONE</div>
+    <p id="endReason"></p>
+    <div class="bigscore"><b id="endPts">0</b><span id="endPct">0%</span></div>
+    <p class="scoreline" id="scoreLine"></p>
+    <div class="kpis" id="endKpis"></div>
+    <div class="debrief"><b>Debrief:</b> Which warning sign did you check most: the sender, the link's real domain, or what the message asked you to do? Which messages fooled you, and why did they look real?</div>
+    <div class="review" id="review"></div>
+    <div class="btnrow"><button class="go" id="againBtn" type="button">Play again</button><button class="go home" id="endHomeBtn" type="button">‹ Activities</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden=""></div>
+<div class="notes" id="notes" aria-live="polite"></div>
+
+<script>
+/* ===== CONFIG (edit to rebalance) ===== */
+const CFG = {
+  hubUrl: 'index.html',
+  gameSeconds: 180,
+  messages: 20, phishCount: 10,   // per run: 10 phishing + 10 legit, shuffled
+  startMessages: 2,
+  gapStart: 9, gapEnd: 5, gapJitter: 1.2,   // seconds between new messages
+  maxInbox: 6,
+  expire: 45,                     // seconds before an unanswered message expires
+  scanTime: 0.8,                  // seconds to inspect a link
+  shields: 3,
+  pts: { flagOk:100, safeOk:100, linkOk:25, falseAlarm:-50, missed:-100, infected:-150, expired:-25 },
+  warnAt: 0.35, urgentAt: 0.15
+};
+
+/* ===== MESSAGE BANK =====
+   ch: SMS | EMAIL | CHAT · from: display name · addr: sender number/address
+   lt: link text shown in the message · url: real destination
+   notes: why it is phishing / why it is legit (shown in the review)
+   page: what a legit link shows */
+const PHISH = [
+  { ch:'SMS', from:'GCash', addr:'+63 951 ••• 7718 (unknown number)',
+    body:'GCash ALERT: Your account will be SUSPENDED in 24 hrs due to unverified KYC. Verify now to keep your balance:',
+    lt:'https://gcash.com/verify', url:'gcash-verify.help/kyc/login',
+    notes:['Link text says gcash.com but the real domain is gcash-verify.help','Sent from a random mobile number, not the GCash sender ID','Threat plus a 24-hour deadline to make you panic'] },
+  { ch:'EMAIL', from:'BDO Unibank', addr:'security@bdo-online-alert.com', subj:'Unusual login detected',
+    body:'We detected a login from a new device. To avoid your account being locked, confirm your identity and enter the OTP we sent you.',
+    lt:'Confirm my identity', url:'bdo.com.ph.secure-verify.co/login',
+    notes:['Read the domain from the right: the owner is secure-verify.co, not bdo.com.ph','Banks never ask you to enter an OTP from an email link','Sender domain bdo-online-alert.com is not BDO'] },
+  { ch:'SMS', from:'LBC', addr:'+63 966 ••• 2051 (unknown number)',
+    body:'LBC: Your parcel is ON HOLD due to incomplete address. Pay the ₱35 re-delivery fee within today:',
+    lt:'lbc-ph.parcel-fee.top/pay', url:'lbc-ph.parcel-fee.top/pay',
+    notes:['Real domain is parcel-fee.top, not lbcexpress.com','Small fee scam: they want your card details, not ₱35','You may not even be expecting a parcel'] },
+  { ch:'CHAT', from:'Mika (classmate)', addr:'Messenger',
+    body:'OMG is this you in this video?? 😱😱 everyone is sharing it',
+    lt:'fb-video-viewer.click/v/8832', url:'fb-video-viewer.click/v/8832',
+    notes:['Shock bait from a friend whose account was likely hacked','fb-video-viewer.click is not facebook.com','Fake video pages ask you to "log in" and steal your account'] },
+  { ch:'EMAIL', from:'Shopee', addr:'promo@shopee-ph-rewards.net', subj:'🎉 You WON an iPhone 17!',
+    body:'Congratulations! You are the lucky winner of our 9.9 raffle. Claim within 2 hours or your prize goes to the next winner.',
+    lt:'CLAIM MY PRIZE', url:'shopee-ph-rewards.net/claim',
+    notes:['You did not join a raffle','shopee-ph-rewards.net is not shopee.ph','2-hour deadline is pressure to stop you from thinking'] },
+  { ch:'SMS', from:'PhilHealth', addr:'+63 917 ••• 0093 (unknown number)',
+    body:'PhilHealth: Your ₱5,000 benefit is ready for release. Enter your card PIN to receive it:',
+    lt:'philhealth.gov.ph/claim', url:'philhealth-gov.ph-claim.xyz/release',
+    notes:['Real domain is ph-claim.xyz; ".gov.ph" is just part of the name','Government agencies never ask for your card PIN','Free money you did not apply for'] },
+  { ch:'EMAIL', from:'Google', addr:'no-reply@accounts-google.security-check.io', subj:'Your password expires today',
+    body:'Your Google password expires today. Click below to keep your same password and avoid losing your email and files.',
+    lt:'Keep my password', url:'accounts-google.security-check.io/signin',
+    notes:['The owner is security-check.io, not google.com','Google passwords do not "expire" by email','Sender address is not @google.com'] },
+  { ch:'SMS', from:'SIM-REG', addr:'+63 998 ••• 4410 (unknown number)',
+    body:'NOTICE: Your SIM will be DEACTIVATED tonight. Register again here to keep your number:',
+    lt:'sim-register-ph.online', url:'sim-register-ph.online/form',
+    notes:['SIM registration is done only through your telco\'s official site or app','Unknown domain ending in .online','Deactivation threat to make you act fast'] },
+  { ch:'CHAT', from:'GEEL 1 Instructor', addr:'Messenger (new account)',
+    body:'Class site is down. Submit Activity 8 here instead and log in with your Gmail:',
+    lt:'rbresullar-arch.github.io/activity8', url:'rbresullar-arch.github-io.net/activity8',
+    notes:['github-io.net is not github.io (one dot changed to a dash)','Message comes from a new account, not the usual one','Asks you to change the usual process and log in'] },
+  { ch:'EMAIL', from:'Meralco', addr:'billing@meralco-payments.co', subj:'FINAL disconnection notice',
+    body:'Your power will be disconnected TODAY at 5 PM. Pay ₱2,418.00 now using the secure link below.',
+    lt:'Pay now', url:'meralco-payments.co/pay',
+    notes:['Domain is meralco-payments.co, not meralco.com.ph','Same-day disconnection threat','Payment link inside an email'] },
+  { ch:'SMS', from:'Lazada HR', addr:'+63 935 ••• 8827 (unknown number)',
+    body:'Hi! Earn ₱1,500/day just by liking products at home. No experience needed. Chat with our HR now:',
+    lt:'wa-lazada-jobs.vip', url:'wa-lazada-jobs.vip/hr',
+    notes:['Too good to be true: easy money for simple tasks','Unknown .vip domain, not lazada.com.ph','Task scams later ask you to "deposit" money'] },
+  { ch:'EMAIL', from:'Registrar Office', addr:'registrar.office.sec@gmail.com', subj:'Enrollment ON HOLD',
+    body:'Your enrollment is on hold. Log in with your student portal password to fix your records before Friday.',
+    lt:'Student Portal Login', url:'student-portal-login.weebly.com',
+    notes:['A school office using a free @gmail.com address','Free website builder domain (weebly.com), not the school','Asks for your password'] },
+  { ch:'SMS', from:'BPI', addr:'+63 947 ••• 3316 (unknown number)',
+    body:'BPI: ₱25,000.00 was transferred from your account. NOT YOU? Cancel the transaction here:',
+    lt:'bpi.com.ph/cancel', url:'bpi-cancel-txn.com/cancel',
+    notes:['Link text says bpi.com.ph but it goes to bpi-cancel-txn.com','Scary transaction you did not make, to make you panic','Call the number on your card instead of using a link'] },
+  { ch:'CHAT', from:'Ana | Crypto Coach', addr:'Messenger (stranger)',
+    body:'Double your money in 7 days, GUARANTEED 💸 Start with just ₱500:',
+    lt:'binance-ph.invest-now.cc', url:'binance-ph.invest-now.cc/start',
+    notes:['"Guaranteed" returns are a classic investment scam','A stranger messaging you first','Domain owner is invest-now.cc'] }
+];
+const LEGIT = [
+  { ch:'EMAIL', from:'GCash', addr:'no-reply@gcash.com', subj:'You received ₱500.00',
+    body:'You have received ₱500.00 from JU**N D. Ref. No. 1023 4456 7788. You can view this in your transaction history in the app.',
+    lt:'gcash.com/help', url:'gcash.com/help',
+    notes:['Sender and link are the official gcash.com','No request for MPIN, OTP or payment','Only tells you something; asks for nothing'],
+    page:{t:'GCash Help Center', l:['Search help articles','Report an unauthorized transaction']} },
+  { ch:'SMS', from:'LBC', addr:'LBC (official sender ID)',
+    body:'LBC: Your shipment 1234 5678 9012 is out for delivery today. Track it here:',
+    lt:'lbcexpress.com/track', url:'lbcexpress.com/track',
+    notes:['Official sender ID, not a random number','Official domain lbcexpress.com','No fee or personal details requested'],
+    page:{t:'Track your shipment', l:['1234 5678 9012','Status: Out for delivery']} },
+  { ch:'EMAIL', from:'BDO Unibank', addr:'advisory@bdo.com.ph', subj:'Security reminder',
+    body:'Reminder: BDO will NEVER ask for your OTP, password or PIN through calls, SMS, email or social media. Learn how to protect your account:',
+    lt:'bdo.com.ph/security', url:'bdo.com.ph/security',
+    notes:['Official domain bdo.com.ph','A warning about scams, not a request','No deadline or threat'],
+    page:{t:'Security Center', l:['Never share your OTP','How to report fraud']} },
+  { ch:'CHAT', from:'GEEL 1 Instructor', addr:'Messenger (class group chat)',
+    body:'Good morning class! Activity 8 is now open on our class site.',
+    lt:'rbresullar-arch.github.io/Elective---Living-in-the-IT-Era', url:'rbresullar-arch.github.io/Elective---Living-in-the-IT-Era',
+    notes:['Same class group chat as always','Correct github.io address of the class site','No login or payment requested'],
+    page:{t:'Living in the IT Era', l:['Activities · Examination · Reads','Activity 8 is open']} },
+  { ch:'EMAIL', from:'Google', addr:'no-reply@accounts.google.com', subj:'New sign-in on Android',
+    body:'Your Google Account was just signed in to from a new Android device. If this was you, you don\'t need to do anything.',
+    lt:'Check activity', url:'myaccount.google.com/notifications',
+    notes:['Sender is accounts.google.com','Link goes to myaccount.google.com','Says "you don\'t need to do anything": no pressure'],
+    page:{t:'Recent security activity', l:['New sign-in on Android','Was this you? Yes · No']} },
+  { ch:'EMAIL', from:'Shopee', addr:'info@mail.shopee.ph', subj:'Your order has shipped',
+    body:'Good news! Your order #2409SHP (1 item) has been shipped and is on its way.',
+    lt:'View my order', url:'shopee.ph/user/purchase',
+    notes:['Sender is a subdomain of shopee.ph','Link goes to shopee.ph','Matches an order you placed'],
+    page:{t:'My Purchases', l:['#2409SHP · To Receive','Estimated arrival: 3 days']} },
+  { ch:'SMS', from:'PhilHealth', addr:'PhilHealth (official sender ID)',
+    body:'PhilHealth: Check your member contributions anytime on the official member portal.',
+    lt:'philhealth.gov.ph', url:'philhealth.gov.ph',
+    notes:['Real domain ends in .gov.ph with nothing after it','Informational, no PIN or payment requested','Official sender ID'],
+    page:{t:'PhilHealth', l:['Member portal','Contributions and benefits']} },
+  { ch:'EMAIL', from:'Meralco', addr:'billing@meralco.com.ph', subj:'Your September bill is ready',
+    body:'Your bill is ready. Amount due: ₱1,982.40. Due date: October 10. You can view your bill online.',
+    lt:'View bill', url:'meralco.com.ph/bills',
+    notes:['Official domain meralco.com.ph','Normal due date, no same-day threat','Bill amount matches a normal month'],
+    page:{t:'Bill summary', l:['Amount due: ₱1,982.40','Due: October 10']} },
+  { ch:'EMAIL', from:'DICT', addr:'info@dict.gov.ph', subj:'Cybersecurity Awareness Month webinar',
+    body:'Join our free webinar on staying safe online on October 15. Registration is open.',
+    lt:'dict.gov.ph/events', url:'dict.gov.ph/events',
+    notes:['Official .gov.ph domain','Free event, no payment or password','No threat or deadline pressure'],
+    page:{t:'Events', l:['Cybersecurity Awareness Month','Webinar · October 15']} },
+  { ch:'CHAT', from:'Mika (classmate)', addr:'Messenger',
+    body:'Here\'s our group folder for the report. Put your part in slide 4 😊',
+    lt:'drive.google.com/drive/folders/1aB9x', url:'drive.google.com/drive/folders/1aB9x',
+    notes:['Expected message about your group work','Real drive.google.com link','Normal tone, no shock or prize'],
+    page:{t:'Group Report', l:['Shared folder · 6 files','Slides · Notes · References']} },
+  { ch:'EMAIL', from:'Lazada', addr:'no-reply@lazada.com.ph', subj:'Refund processed',
+    body:'Your refund of ₱349.00 for your returned item has been processed to your Lazada Wallet.',
+    lt:'lazada.com.ph/refund', url:'lazada.com.ph/refund',
+    notes:['Official lazada.com.ph domain','Matches a return you made','Asks for nothing'],
+    page:{t:'Refund status', l:['₱349.00 · Completed','Credited to Lazada Wallet']} },
+  { ch:'SMS', from:'Globe', addr:'Globe (official sender ID)',
+    body:'You have successfully loaded ₱99. Check your promos and balance here:',
+    lt:'globe.com.ph', url:'globe.com.ph',
+    notes:['Official sender ID','Official globe.com.ph domain','Confirms something you did'],
+    page:{t:'Globe', l:['Load successful','Balance and promos']} },
+  { ch:'EMAIL', from:'Google Classroom', addr:'no-reply@classroom.google.com', subj:'New assignment: Reflection paper',
+    body:'Your teacher posted a new assignment in GEEL 1. Due Friday, 11:59 PM.',
+    lt:'Open', url:'classroom.google.com/c/geel1',
+    notes:['Sender is classroom.google.com','Link stays on classroom.google.com','Expected school notification'],
+    page:{t:'GEEL 1 · Classwork', l:['Reflection paper','Due Friday 11:59 PM']} },
+  { ch:'EMAIL', from:'Facebook', addr:'security@facebookmail.com', subj:'Login alert',
+    body:'We noticed a login to your account from Chrome on Windows. If this was you, you can ignore this message.',
+    lt:'facebook.com/settings', url:'facebook.com/settings',
+    notes:['facebookmail.com is Meta\'s real email domain (looks odd, but it is official)','Link goes to facebook.com','No request for your password'],
+    page:{t:'Security and login', l:['Where you\'re logged in','Chrome · Windows']} }
+];
+
+/* ===== SOUND (8-bit, WebAudio) ===== */
+const Snd = (()=>{
+  let ctx, master, music, sfx, noiseBuf, timer, nextT=0, step=0, muted=false;
+  const mf = m => 440*Math.pow(2,(m-69)/12);
+  const CH = [[57,60,64,67],[53,57,60,64],[50,53,57,60],[52,56,59,62]]; // Am7 Fmaj7 Dm7 E7
+  const ARP = [0,2,1,3,2,1,3,2];
+  const EIGHTH = 60/100/2;
+  function init(){
+    if(ctx) return;
+    const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    try{ ctx = new AC(); }catch(e){ ctx = null; return; }
+    master = ctx.createGain(); master.gain.value = muted?0:1; master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2200; lp.connect(master);
+    music = ctx.createGain(); music.gain.value=0.45; music.connect(lp);
+    sfx = ctx.createGain(); sfx.gain.value=0.6; sfx.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.6, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  function tone(type,f,t,dur,g,dest,slideTo){
+    const o=ctx.createOscillator(), a=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+    a.gain.setValueAtTime(0.0001,t); a.gain.linearRampToValueAtTime(g,t+0.006); a.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(a); a.connect(dest); o.start(t); o.stop(t+dur+0.03);
+  }
+  function noise(t,dur,g,dest,freq,type){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const f=ctx.createBiquadFilter(); f.type=type||'highpass'; f.frequency.value=freq||7000; const a=ctx.createGain(); a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(0.0001,t+dur); s.connect(f); f.connect(a); a.connect(dest); s.start(t); s.stop(t+dur+0.02); }
+  function playStep(s,t){
+    const ch = CH[Math.floor(s/8)%4], i = s%8;
+    tone('square', mf(ch[ARP[i]]+12), t, EIGHTH*0.8, 0.032, music);
+    if(i%4===0) tone('triangle', mf(ch[0]-12), t, EIGHTH*3.5, 0.22, music);
+    if(i===0) ch.forEach(n=>tone('triangle', mf(n), t, EIGHTH*7.5, 0.028, music));
+    if(i%2===1) noise(t,0.05,0.05,music);
+    if(i===4) noise(t,0.09,0.09,music,1800,'bandpass');
+  }
+  function startMusic(){ init(); if(!ctx) return; if(ctx.state==='suspended') ctx.resume(); stopMusic(); nextT=ctx.currentTime+0.1; step=0;
+    timer=setInterval(()=>{ while(nextT<ctx.currentTime+0.15){ playStep(step,nextT); nextT+=EIGHTH; step++; } },25); }
+  function stopMusic(){ if(timer){clearInterval(timer); timer=null;} }
+  const now = ()=>ctx.currentTime;
+  const fx = {
+    ping(){ const t=now(); tone('square',1319,t,0.07,0.28,sfx); tone('square',1760,t+0.08,0.12,0.28,sfx); },
+    tap(){ tone('square',880,now(),0.05,0.12,sfx); },
+    select(){ tone('square',660,now(),0.04,0.1,sfx); },
+    scan(){ const t=now(); for(let i=0;i<6;i++) tone('square',600+i*180,t+i*0.11,0.06,0.12,sfx); },
+    reveal(){ const t=now(); tone('triangle',880,t,0.08,0.2,sfx); tone('triangle',1320,t+0.08,0.14,0.2,sfx); },
+    correct(){ const t=now(); tone('square',988,t,0.07,0.18,sfx); tone('square',1319,t+0.07,0.2,0.18,sfx); },
+    wrong(){ tone('sawtooth',200,now(),0.25,0.2,sfx,90); },
+    bonus(){ const t=now(); [784,988,1175].forEach((f,i)=>tone('square',f,t+i*0.06,0.08,0.16,sfx)); },
+    virus(){ const t=now(); noise(t,0.5,0.35,sfx,900,'lowpass'); for(let i=0;i<5;i++) tone('sawtooth',1200-i*180,t+i*0.1,0.09,0.2,sfx,200); tone('square',80,t+0.5,0.5,0.25,sfx,50); },
+    expire(){ tone('square',180,now(),0.3,0.18,sfx,110); },
+    warn(){ tone('square',1245,now(),0.07,0.18,sfx); },
+    urgent(){ const t=now(); tone('square',1480,t,0.06,0.24,sfx); tone('square',1480,t+0.1,0.06,0.24,sfx); },
+    win(){ const t=now(); [523,659,784,1047,784,1047].forEach((f,i)=>tone('square',f,t+i*0.11,0.12,0.2,sfx)); },
+    lose(){ const t=now(); [392,349,311,262].forEach((f,i)=>tone('square',f,t+i*0.18,0.2,0.2,sfx)); }
+  };
+  function play(name){ if(!ctx || muted) return; fx[name](); }
+  function toggle(){ muted=!muted; if(master) master.gain.value=muted?0:1; return muted; }
+  return {init,startMusic,stopMusic,play,toggle};
+})();
+
+/* ===== HELPERS ===== */
+const $ = id => document.getElementById(id);
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const pad = n => String(n).padStart(2,'0');
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sgn = n => (n>0?'+':n<0?'−':'') + Math.abs(n);
+const AVC = ['#06d6a0','#9b5de5','#ef476f','#ffbe0b','#118ab2','#8ac926','#ff924c','#4cc9f0'];
+const avColor = s => AVC[[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)%AVC.length];
+const SLD = ['com.ph','gov.ph','edu.ph','net.ph','org.ph'];
+function rootOf(host){
+  const p = host.split('.'); const last2 = p.slice(-2).join('.');
+  return SLD.includes(last2) ? p.slice(-3).join('.') : last2;
+}
+function urlHtml(url){
+  const host = url.split('/')[0], path = url.slice(host.length), root = rootOf(host);
+  const sub = host.slice(0, host.length - root.length);
+  return `https://${esc(sub)}<span class="root">${esc(root)}</span>${esc(path)}`;
+}
+
+/* ===== STATE ===== */
+let S = null, lastFrame = 0, dirty = true, lastKey = '';
+function newState(){
+  return { t:0, running:false, nextId:1, queue:[], spawned:0, nextSpawn:0, inbox:[], cur:null, screen:'inbox', bview:null,
+    score:0, shields:CFG.shields, log:[], feed:[], notes:[], noteKey:'', nextWarn:0, scanning:null,
+    stats:{flagOk:0,safeOk:0,linkOk:0,falseAlarm:0,missed:0,infected:0,expired:0} };
+}
+function buildQueue(){
+  const p = shuffle(PHISH).slice(0,CFG.phishCount).map(m=>Object.assign({phish:true},m));
+  const l = shuffle(LEGIT).slice(0,CFG.messages-CFG.phishCount).map(m=>Object.assign({phish:false},m));
+  return shuffle(p.concat(l));
+}
+function spawn(silent){
+  if(!S.queue.length || S.inbox.length >= CFG.maxInbox) return false;
+  const m = Object.assign({ id:S.nextId++, born:S.t, read:false, inspected:false, linkOpened:false, fresh:true }, S.queue.shift());
+  S.inbox.unshift(m); S.spawned++; dirty = true;
+  S.notes.push({mid:m.id, until:S.t+2.5});
+  if(!silent) Snd.play('ping');
+  return true;
+}
+const curMsg = () => S.inbox.find(m=>m.id===S.cur) || null;
+function pushFeed(html, cls){ S.feed.unshift({html,cls,until:S.t+4}); S.feed=S.feed.slice(0,3); dirty=true; }
+let toastT;
+function toast(msg, cls){ const t=$('toast'); t.textContent=msg; t.className='toast'+(cls?' '+cls:''); t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 1400); }
+function hitFx(){ document.body.classList.remove('hit'); void document.body.offsetWidth; document.body.classList.add('hit'); setTimeout(()=>document.body.classList.remove('hit'),500); }
+
+/* ===== ACTIONS ===== */
+function go(screen){ S.screen = screen; dirty = true; }
+function goInbox(){ S.cur = null; S.bview = null; S.scanning = null; go('inbox'); }
+function openMsg(id){
+  if(!S.running) return;
+  const m = S.inbox.find(x=>x.id===id); if(!m) return;
+  m.read = true; S.cur = m.id; S.bview = null; Snd.play('select'); go('msg');
+}
+function resolve(m, outcome){
+  const pts = CFG.pts[outcome] + (m.linkOpened && !m.phish ? CFG.pts.linkOk : 0);
+  S.log.push({m, outcome, pts});
+  S.stats[outcome]++;
+  S.inbox = S.inbox.filter(x=>x!==m);
+  dirty = true;
+}
+function inspect(){
+  const m = curMsg(); if(!m || !S.running || m.inspected || S.scanning) return;
+  S.scanning = { id:m.id, until:S.t+CFG.scanTime }; Snd.play('scan'); dirty = true; lastKey='';
+}
+function openLink(){
+  const m = curMsg(); if(!m || !S.running) return;
+  if(m.phish){
+    S.score += CFG.pts.infected; S.shields--; resolve(m,'infected');
+    S.bview = { m, bad:true }; S.cur = null; go('browser');
+    Snd.play('virus'); hitFx(); toast(`INFECTED! ${CFG.pts.infected}`, 'bad');
+    pushFeed(`<span>Opened phishing link · ${esc(m.from)}</span><b>${sgn(CFG.pts.infected)} · −1 shield</b>`, 'bad');
+    if(S.shields<=0){ S.running = false; setTimeout(()=>endGame('shields'), 1600); }
+    return;
+  }
+  if(!m.linkOpened){ m.linkOpened = true; S.score += CFG.pts.linkOk; S.stats.linkOk++; Snd.play('bonus'); toast(`Real link +${CFG.pts.linkOk}`, 'good'); }
+  else Snd.play('tap');
+  S.bview = { m, bad:false }; go('browser');
+}
+function verdict(v, el){
+  const m = curMsg(); if(!m || !S.running) return;
+  let outcome;
+  if(v==='phish') outcome = m.phish ? 'flagOk' : 'falseAlarm';
+  else outcome = m.phish ? 'missed' : 'safeOk';
+  const base = CFG.pts[outcome]; S.score += base;
+  resolve(m, outcome);
+  const good = outcome==='flagOk' || outcome==='safeOk';
+  const label = {flagOk:'Phishing caught', safeOk:'Correct: safe', falseAlarm:'False alarm: it was real', missed:'Missed: it was phishing'}[outcome];
+  pushFeed(`<span>${label} · ${esc(m.from)}</span><b>${sgn(base)}</b>`, good?'good':'bad');
+  toast(`${label} ${sgn(base)}`, good?'good':'bad');
+  Snd.play(good?'correct':'wrong'); if(!good) hitFx();
+  goInbox();
+}
+
+/* ===== LOOP ===== */
+function gap(){
+  const p = Math.min(1, S.t / (CFG.gameSeconds*0.8));
+  return Math.max(2.5, CFG.gapStart + (CFG.gapEnd-CFG.gapStart)*p + (Math.random()*2-1)*CFG.gapJitter);
+}
+function tick(ts){
+  const dt = Math.min(0.1, (ts - (lastFrame||ts))/1000); lastFrame = ts;
+  if(S.running){
+    S.t += dt;
+    if(S.t >= S.nextSpawn){ if(spawn(false)) S.nextSpawn = S.t + gap(); else S.nextSpawn = S.t + 1; }
+    if(S.inbox.length===0 && S.queue.length && S.t < S.nextSpawn - 2) S.nextSpawn = S.t + 2;  // no dead air
+    if(S.scanning && S.t >= S.scanning.until){
+      const m = S.inbox.find(x=>x.id===S.scanning.id); if(m) m.inspected = true;
+      S.scanning = null; Snd.play('reveal'); dirty = true; lastKey='';
+    }
+    const exp = S.inbox.filter(m => S.t > m.born + CFG.expire);
+    for(const m of exp){
+      S.score += CFG.pts.expired; resolve(m,'expired');
+      pushFeed(`<span>Expired · ${esc(m.from)}</span><b>${sgn(CFG.pts.expired)}</b>`, 'bad'); Snd.play('expire');
+      if(S.cur===m.id){ toast('Message expired', 'bad'); goInbox(); }
+    }
+    const nf = S.feed.filter(f=>f.until>S.t); if(nf.length!==S.feed.length){ S.feed=nf; dirty=true; }
+    alarms();
+    if(S.t >= CFG.gameSeconds) endGame('time');
+    else if(!S.queue.length && !S.inbox.length && S.screen!=='browser') endGame('done');
+  }
+  if(dirty){ render(); dirty=false; }
+  renderNotes();
+  update();
+  requestAnimationFrame(tick);
+}
+const lifeLeft = m => Math.max(0, 1-(S.t-m.born)/CFG.expire);
+function alarms(){
+  const low = S.inbox.map(lifeLeft).filter(l=>l<CFG.warnAt);
+  if(low.length){
+    const urgent = Math.min(...low) < CFG.urgentAt;
+    if(S.t >= S.nextWarn){ Snd.play(urgent?'urgent':'warn'); S.nextWarn = S.t + (urgent?0.7:1.4); }
+  } else S.nextWarn = 0;
+  S.notes = S.notes.filter(n=>n.until>S.t);
+}
+
+/* ===== NOTIFICATIONS ===== */
+function noteList(){
+  const out = [];
+  for(const m of S.inbox){
+    const l = lifeLeft(m);
+    if(l < CFG.warnAt && m.id!==S.cur){
+      const u = l < CFG.urgentAt;
+      out.push({mid:m.id, cls:u?'n-urgent':'n-warn', tag:u?'EXPIRING':'WAITING', text:`${m.from} · ${m.ch}`, sec:true});
+    }
+  }
+  for(const n of S.notes){ const m=S.inbox.find(x=>x.id===n.mid); if(m && !m.read) out.push({mid:m.id, cls:'n-new', tag:m.ch, text:`New message from ${m.from}`}); }
+  return out.slice(0,3);
+}
+function renderNotes(){
+  const box = $('notes');
+  if(!S.running){ if(box.innerHTML) box.innerHTML=''; S.noteKey=''; return; }
+  const list = noteList();
+  const key = list.map(n=>n.mid+n.cls).join('|');
+  if(key !== S.noteKey){
+    S.noteKey = key;
+    box.innerHTML = list.map(n=>`<button type="button" class="note ${n.cls}" data-note="${n.mid}"><span class="tg">${n.tag}</span><span>${esc(n.text)}</span><span class="go2" ${n.sec?`data-sec="${n.mid}"`:''}>OPEN ›</span></button>`).join('');
+  }
+  box.querySelectorAll('[data-sec]').forEach(el=>{ const m=S.inbox.find(x=>x.id===+el.dataset.sec); if(m) el.textContent = Math.ceil(lifeLeft(m)*CFG.expire)+'s ›'; });
+}
+$('notes').addEventListener('pointerdown', e=>{ const b=e.target.closest('[data-note]'); if(b) openMsg(+b.dataset.note); });
+
+/* ===== RENDER ===== */
+function av(m){ return `<span class="av" style="--c:${avColor(m.from)}">${esc(m.from[0])}</span>`; }
+function renderScreen(){
+  const v = $('view'), sc = S.screen, m = curMsg();
+  const key = sc+'|'+(S.cur||'')+'|'+(m?(m.inspected?1:0)+(S.scanning?'s':''):'')+'|'+(S.bview?S.bview.m.id:'');
+  const changed = key !== lastKey; lastKey = key;
+  if(sc!=='inbox' && !changed) return;
+  const A = changed ? ' anim' : '';
+  if(sc==='inbox'){
+    const list = S.inbox.length ? S.inbox.map(x=>{
+      const cls = 'mrow'+(x.read?'':' unread')+(x.fresh?' enter':''); x.fresh=false;
+      const prev = x.subj || x.body;
+      return `<li><button type="button" class="${cls}" data-mid="${x.id}">${av(x)}<span class="mfrom">${esc(x.from)}</span><span class="chip ${x.ch}">${x.ch}</span><span class="mprev">${esc(prev)}</span><span class="bar"><i data-bar="${x.id}"></i></span></button></li>`;
+    }).join('') : `<li class="empty">${S.running?'No messages right now…':'Messages appear here'}</li>`;
+    v.innerHTML = `<section class="screen s-inbox${A}"><p class="eyebrow">Your Phone</p><h2>Phish or Legit</h2>
+      <div class="well"><h3>Inbox</h3><ul class="list">${list}</ul>
+      <p class="hint">Tap a message to open it · answer before the bar runs out</p>
+      <p class="progress" id="progress"></p></div></section>`;
+    return;
+  }
+  if(sc==='msg'){
+    if(!m){ goInbox(); return; }
+    const scanning = S.scanning && S.scanning.id===m.id;
+    const urlBlock = m.inspected
+      ? `<div class="urlbox"><span class="lab">REAL DESTINATION · owner highlighted</span>${urlHtml(m.url)}</div>`
+      : scanning ? `<div class="urlbox scan"><span class="lab">SCANNING LINK…</span>&nbsp;</div>` : '';
+    v.innerHTML = `<section class="screen s-msg${A}">
+      <div class="stepnav"><button class="back" type="button" data-act="back">‹ Inbox</button><span class="chip ${m.ch}">${m.ch}</span></div>
+      <div class="well">
+        <div class="mhead">${av(m)}<span class="who">${esc(m.from)}</span><span></span><span class="addr">${esc(m.addr)}</span></div>
+        ${m.subj?`<div class="subj">${esc(m.subj)}</div>`:''}
+        <p class="body">${esc(m.body)}</p>
+        <button type="button" class="lnk" data-act="open">${esc(m.lt)}</button>
+      </div>
+      ${urlBlock}
+      <div class="tools">
+        <button type="button" class="tbtn" data-act="inspect" ${m.inspected||scanning?'disabled':''}>INSPECT LINK<small>${m.inspected?'Checked':'See the real address'}</small></button>
+        <button type="button" class="tbtn open" data-act="open">OPEN LINK<small>Real +25 · Phish −150</small></button>
+      </div>
+      <div class="verdicts">
+        <button type="button" class="vbtn phish" data-verdict="phish">PHISHING<small>Flag and delete</small></button>
+        <button type="button" class="vbtn safe" data-verdict="safe">SAFE<small>Mark as real</small></button>
+      </div></section>`;
+    return;
+  }
+  if(sc==='browser'){
+    const b = S.bview; if(!b){ goInbox(); return; }
+    const bm = b.m;
+    if(b.bad){
+      v.innerHTML = `<section class="screen s-browser infected${A}">
+        <div class="stepnav"><button class="back" type="button" data-act="back">‹ Inbox</button><span class="chip" style="background:var(--bad);color:#fff">DANGER</span></div>
+        <div class="bchrome"><div class="bbar"><span class="bdots"><i></i><i></i><i></i></span><span class="burl">⚠ ${esc('https://'+bm.url)}</span></div>
+        <div class="bpage bad"><div class="skull">▓▒░ MALWARE ░▒▓</div><h4>PHONE INFECTED</h4>
+          <p>This fake page installed malware and captured what you typed.</p>
+          <p class="pen">${sgn(CFG.pts.infected)} pts · −1 shield · ${S.shields} left</p>
+          <p><b>What you missed:</b></p><ul>${bm.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>
+        </div></div></section>`;
+    } else {
+      v.innerHTML = `<section class="screen s-browser${A}">
+        <div class="stepnav"><button class="back" type="button" data-act="backmsg">‹ Message</button><span class="chip" style="background:var(--mint)">SECURE</span></div>
+        <div class="bchrome"><div class="bbar"><span class="bdots"><i></i><i></i><i></i></span><span class="burl">🔒 ${esc('https://'+bm.url)}</span></div>
+        <div class="bpage"><h4>${esc(bm.page.t)}</h4>${bm.page.l.map(x=>`<p>${esc(x)}</p>`).join('')}
+          <p class="ok">This is the real site. Go back and decide: PHISHING or SAFE.</p></div></div></section>`;
+    }
+  }
+}
+function renderFeed(){ $('feed').innerHTML = S.feed.map(f=>`<div class="${f.cls||''}">${f.html}</div>`).join(''); }
+function render(){ renderScreen(); renderFeed(); }
+
+function update(){
+  if(S.screen==='inbox'){
+    for(const m of S.inbox){
+      const el = document.querySelector(`[data-bar="${m.id}"]`); if(!el) continue;
+      const l = lifeLeft(m);
+      el.style.width = (l*100)+'%'; el.style.background = l<0.3?'var(--bad)':l<0.6?'var(--warn)':'var(--good)';
+    }
+    const pg = $('progress'); if(pg) pg.textContent = S.running ? `ANSWERED ${S.log.length} / ${CFG.messages}` : '';
+  }
+  const tl = Math.max(0, CFG.gameSeconds - S.t);
+  $('hudTime').textContent = `${Math.floor(tl/60)}:${pad(Math.floor(tl%60))}`;
+  $('stTime').className = 'stat' + (tl<=30 && S.running ? ' low':'');
+  $('hudScore').textContent = S.score;
+  $('stScore').className = 'stat' + (S.score>0?' ok':S.score<0?' low':'');
+  $('hudShield').textContent = '■'.repeat(Math.max(0,S.shields)) + '□'.repeat(CFG.shields-Math.max(0,S.shields));
+  $('stShield').className = 'stat shields' + (S.shields<=1?' low':' ok');
+}
+
+/* ===== EVENTS ===== */
+$('view').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b || b.disabled) return;
+  if(b.dataset.mid){ if(e.detail===0) openMsg(+b.dataset.mid); }
+  else if(b.dataset.act==='back'){ Snd.play('select'); goInbox(); }
+  else if(b.dataset.act==='backmsg'){ Snd.play('select'); S.bview=null; if(curMsg()) go('msg'); else goInbox(); }
+  else if(b.dataset.act==='inspect') inspect();
+  else if(b.dataset.act==='open') openLink();
+  else if(b.dataset.verdict) verdict(b.dataset.verdict, b);
+});
+$('view').addEventListener('pointerdown', e=>{ const b=e.target.closest('[data-mid]'); if(b) openMsg(+b.dataset.mid); });
+
+/* ===== GAME FLOW ===== */
+function startGame(){
+  Snd.init(); Snd.startMusic();
+  S = newState(); S.queue = buildQueue(); S.running = true; lastKey='';
+  for(let i=0;i<CFG.startMessages;i++) spawn(true);
+  S.nextSpawn = gap();
+  Snd.play('ping');
+  $('startScreen').hidden = true; $('endScreen').hidden = true; dirty = true;
+}
+const OUT_LABEL = {flagOk:'Flagged phishing', safeOk:'Marked safe', falseAlarm:'Flagged (false alarm)', missed:'Marked safe (wrong)', infected:'Opened phishing link', expired:'Expired'};
+function endGame(reason){
+  if(S.ended) return; S.ended = true;
+  S.running = false; Snd.stopMusic(); S.cur = null; S.bview = null; S.screen = 'inbox';
+  // messages never answered count as expired (no extra penalty for ones never delivered)
+  const max = CFG.messages * 100;
+  const pct = Math.max(0, Math.min(100, Math.round(S.score / max * 100)));
+  const correct = S.stats.flagOk + S.stats.safeOk;
+  const answered = S.log.length;
+  const acc = answered ? Math.round(correct / answered * 100) : 0;
+  const res = $('endResult');
+  if(reason==='shields'){ res.textContent = 'PHONE HACKED'; res.className='result lose'; }
+  else if(pct>=75){ res.textContent = 'SCAM BUSTER'; res.className='result win'; }
+  else if(pct>=50){ res.textContent = 'STAY ALERT'; res.className='result mid'; }
+  else { res.textContent = 'EASY TARGET'; res.className='result lose'; }
+  $('endReason').textContent = reason==='shields' ? 'You opened 3 phishing links. Your phone lost all its shields.'
+    : reason==='time' ? 'Time is up.' : 'You answered every message.';
+  $('endPts').textContent = S.score + ' pts';
+  $('endPct').textContent = `${pct}% of ${max} · Accuracy ${acc}%`;
+  const k = [[S.stats.flagOk,'Phish caught'],[S.stats.safeOk,'Real marked safe'],[S.stats.falseAlarm,'False alarms'],[S.stats.missed,'Phish missed'],[S.stats.infected,'Bad links opened'],[S.stats.linkOk,'Real links opened'],[S.stats.expired,'Expired']];
+  $('endKpis').innerHTML = k.map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('review').innerHTML = `<h4>MESSAGE REVIEW</h4>` + S.log.map(({m,outcome,pts})=>{
+    const ok = outcome==='flagOk'||outcome==='safeOk';
+    return `<div class="rv ${ok?'ok':'bad'}"><div class="rvh"><span class="tag ${m.phish?'P':'L'}">${m.phish?'PHISHING':'LEGIT'}</span><b>${esc(m.from)}</b><span class="chip ${m.ch}">${m.ch}</span><span class="pts">${sgn(pts)}</span></div>
+      <div>You: ${OUT_LABEL[outcome]}</div><div class="rvu">${urlHtml(m.url)}</div><ul>${m.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`;
+  }).join('');
+  $('endScreen').hidden = false; dirty = true;
+  Snd.play(reason!=='shields' && pct>=50 ? 'win' : 'lose');
+  saveResult(pct, acc);
+}
+
+/* ===== ACTIVITY 8 RESULT (hub format, 4-layer storage) ===== */
+const RESULT_KEY = 'itict_activity8_result', RESULT_IDB = 'activity8_result';
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeAll(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null;
+  try{ const s=localStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(!r) try{ const m=document.cookie.match(new RegExp('(?:^|; )'+RESULT_KEY+'=([^;]*)')); if(m) r=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+  if(!r) r = await idbRead(RESULT_IDB);
+  if(!r) try{ const s=sessionStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(r) await writeAll(r);   // backfill every layer
+  return r;
+}
+async function saveResult(pct, acc){
+  const prev = await loadResult();
+  const runs = (prev && prev.runs || 0) + 1;
+  const better = !prev || pct > (prev.percentage||0) || (pct === (prev.percentage||0) && S.score > (prev.bestPoints||-1e9));
+  const best = better ? {
+    score: pct, maxScore: 100, percentage: pct,
+    bestPoints: S.score, bestAccuracy: acc,
+    caught: S.stats.flagOk, safe: S.stats.safeOk, falseAlarms: S.stats.falseAlarm, missed: S.stats.missed, infected: S.stats.infected
+  } : prev;
+  const rec = Object.assign({}, best, { runs, lastPercentage: pct, lastPoints: S.score, lastAccuracy: acc, completedAt: new Date().toISOString() });
+  await writeAll(rec);
+  $('scoreLine').innerHTML = `<b>Activity 8 score: ${pct}%</b> · Best: ${rec.percentage}% (${rec.bestPoints} pts) · Runs: ${runs}` + (better && prev ? ' · New best!' : '');
+  showBest(rec);
+}
+function showBest(r){ $('bestLine').textContent = r ? `Your best: ${r.percentage}% (${r.bestPoints} pts, ${r.bestAccuracy}% accurate) · Runs: ${r.runs}` : ''; }
+loadResult().then(showBest);
+
+/* ===== BUTTONS ===== */
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+function goHub(){ if(S) S.running = false; Snd.stopMusic(); location.href = CFG.hubUrl; }
+let homeArmT;
+$('homeBtn').addEventListener('click', e=>{
+  const b = e.currentTarget;
+  if(!S.running){ goHub(); return; }
+  if(b.classList.contains('armed')){ clearTimeout(homeArmT); goHub(); return; }
+  b.classList.add('armed'); b.textContent = 'Quit? Tap again';
+  homeArmT = setTimeout(()=>{ b.classList.remove('armed'); b.textContent = 'Home'; }, 2500);
+});
+$('endHomeBtn').addEventListener('click', goHub);
+$('muteBtn').addEventListener('click', e=>{ const m=Snd.toggle(); e.currentTarget.textContent = 'Sound: '+(m?'Off':'On'); });
+$('dlBtn').addEventListener('click', async ()=>{
+  let html;
+  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
+  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'phish_flag.html';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+
+S = newState();
+requestAnimationFrame(tick);
+</script>
+
+
+</body></html>
