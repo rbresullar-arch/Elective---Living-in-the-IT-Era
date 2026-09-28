@@ -233,7 +233,7 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     <p><b>Patience:</b> the bar refills every time you finish a step on an order. If it runs out, the customer leaves (1★). A NEW order nobody opens for 40 s is cancelled.</p>
     <p><b>Stars:</b> based on total time from opening the order to delivery. Faster gets more stars.</p>
     <p><b>Clear the game:</b> reach ₱2,500 profit before the 3 minutes end.</p>
-    <p><b>Activity 7 score:</b> your star rating (out of 5★) in a cleared game. Your best cleared run is kept. Play as many times as you like.</p>
+    <p><b>Activity 7 score:</b> your star rating in a cleared game, as a percentage (rating ÷ 5 × 100, so 4.0★ = 80%). Your best cleared run is kept. Play as many times as you like.</p>
     <div class="btnrow"><button class="go" id="startBtn" type="button">Open the store</button><a class="go home" id="startHomeBtn" href="index.html">‹ Activities</a></div>
     <p class="hint" id="bestLine"></p>
   </div>
@@ -633,7 +633,7 @@ function endGame(){
   $('endResult').textContent = win ? 'CLEARED' : 'NOT CLEARED';
   $('endResult').className = 'result ' + (win?'win':'lose');
   const sc = a===null ? 0 : a;
-  $('endReason').textContent = win ? `You reached ${peso(CFG.targetProfit)}. Your score is your rating: ${sc.toFixed(1)}★.` : `You were ${peso(CFG.targetProfit - S.profit)} short of ${peso(CFG.targetProfit)}. Clear the game to earn a score.`;
+  $('endReason').textContent = win ? `You reached ${peso(CFG.targetProfit)}. Your score: ${Math.round(sc/5*100)}% (${sc.toFixed(1)}★).` : `You were ${peso(CFG.targetProfit - S.profit)} short of ${peso(CFG.targetProfit)}. Clear the game to earn a score.`;
   const k = [[peso(S.profit),'Profit'],[a===null?'–':a.toFixed(1)+'★','Rating (score)'],[S.stats.https,'HTTPS delivered'],[S.stats.http,'HTTP delivered'],[S.stats.stolen,'Stolen (HTTP)'],[S.stats.left,'Customers left'],[S.stats.cancelled,'Never opened']];
   $('endKpis').innerHTML = k.map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
   $('endScreen').hidden = false; dirty = true;
@@ -659,7 +659,7 @@ async function saveResult(stars, cleared){
   const prev = await loadResult();
   runs = Math.max(runs, (prev && prev.runs || 0) + 1);
   if(!cleared){
-    $('scoreLine').innerHTML = `<b>Not cleared.</b> Reach ${peso(CFG.targetProfit)} to earn a score.` + (prev ? ` Best score: ${(+prev.bestStars).toFixed(1)}★` : '');
+    $('scoreLine').innerHTML = `<b>Not cleared.</b> Reach ${peso(CFG.targetProfit)} to earn a score.` + (prev ? ` Best score: ${prev.percentage}%` : '');
     if(prev){ prev.runs = runs; const j=JSON.stringify(prev); try{ localStorage.setItem(RESULT_KEY,j); }catch(e){} await idbPut(RESULT_IDB, prev); showBest(prev); }
     return;
   }
@@ -678,10 +678,10 @@ async function saveResult(stars, cleared){
   try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
   try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
   await idbPut(RESULT_IDB, rec);
-  $('scoreLine').innerHTML = `<b>Activity 7 score: ${st1.toFixed(1)}★</b> · Best: ${(+rec.bestStars).toFixed(1)}★ · Runs: ${rec.runs}` + (better && prev ? ' · New best!' : '');
+  $('scoreLine').innerHTML = `<b>Activity 7 score: ${pct}%</b> (${st1.toFixed(1)}★) · Best: ${rec.percentage}% · Runs: ${rec.runs}` + (better && prev ? ' · New best!' : '');
   showBest(rec);
 }
-function showBest(r){ $('bestLine').textContent = r ? `Your best: ${(+r.bestStars).toFixed(1)}★ (${peso(r.bestProfit)}) · Runs: ${r.runs}` : ''; }
+function showBest(r){ $('bestLine').textContent = r ? `Your best: ${r.percentage}% (${(+r.bestStars).toFixed(1)}★, ${peso(r.bestProfit)}) · Runs: ${r.runs}` : ''; }
 loadResult().then(showBest);
 $('startBtn').addEventListener('click', startGame);
 $('againBtn').addEventListener('click', startGame);
