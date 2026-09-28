@@ -339,6 +339,10 @@ const A6_PERFECT = 150;
 const a6Pct = r => r.percentage != null ? r.percentage
   : r.bestTime ? Math.min(100, Math.round(A6_PERFECT / r.bestTime * 100)) : 0;
 
+/* Activity 7 (Qrispy Queen): score is the best star rating (out of 5).
+   The game saves { bestStars, bestProfit, runs, lastStars, percentage = stars/5 }. */
+const a7Stars = r => (+(r.bestStars || 0)).toFixed(1) + '★';
+
 const ACTIVITIES = [
   { label: 'Activity 1', href: 'it_ict_sentence_order_v2.html', key: 'itict_essay_result', idbKey: 'result' },
   { label: 'Activity 2', href: 'abacus_addition_activity.html', key: 'itict_abacus_result', idbKey: 'abacus_result' },
@@ -353,6 +357,9 @@ const ACTIVITIES = [
   { label: 'Activity 6', href: 'packet_auto.html',
     score: r => a6Pct(r) + '%',
     note: r => `Best ${r.bestTimeText || '—'} · Runs: ${r.runs || 1}` + (r.lastPercentage != null ? ` · Last run ${r.lastPercentage}%` : '') },
+  { label: 'Activity 7', href: 'qrispy_queen.html',
+    score: a7Stars,
+    note: r => `Qrispy Queen · Best ₱${(r.bestProfit || 0).toLocaleString('en-PH')} · Runs: ${r.runs || 1}` + (r.lastStars != null ? ` · Last run ${(+r.lastStars).toFixed(1)}★` : '') },
 ];
 
 const EXAMS = [
