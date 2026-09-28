@@ -333,6 +333,12 @@
    READS: { label, href }
    ===================================================================== */
 
+/* Activity 6 score: 2:30 or faster = 100%, slower = 150 / seconds.
+   Older saves have only bestTime, so compute it from that. */
+const A6_PERFECT = 150;
+const a6Pct = r => r.percentage != null ? r.percentage
+  : r.bestTime ? Math.min(100, Math.round(A6_PERFECT / r.bestTime * 100)) : 0;
+
 const ACTIVITIES = [
   { label: 'Activity 1', href: 'it_ict_sentence_order_v2.html', key: 'itict_essay_result', idbKey: 'result' },
   { label: 'Activity 2', href: 'abacus_addition_activity.html', key: 'itict_abacus_result', idbKey: 'abacus_result' },
@@ -345,8 +351,8 @@ const ACTIVITIES = [
   { label: 'Activity 5', href: 'packet_relay.html',
     note: r => `Retries: ${r.retries || 0} · Best time ${r.bestTimeText || '—'}` },
   { label: 'Activity 6', href: 'packet_auto.html',
-    score: r => r.bestTimeText || '—',
-    note: r => `Runs: ${r.runs || 1} · Best ${r.bestTimeText || '—'}` },
+    score: r => a6Pct(r) + '%',
+    note: r => `Best ${r.bestTimeText || '—'} · Runs: ${r.runs || 1}` + (r.lastPercentage != null ? ` · Last run ${r.lastPercentage}%` : '') },
 ];
 
 const EXAMS = [
