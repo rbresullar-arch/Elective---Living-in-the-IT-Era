@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Qrispy Queen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --www:#ff7250; --name:#dffcf8; --addr:#ffa383; --main:#fbb82e; --side:#fff3d8; --drink:#3b6689;
+  --http:#e8e9eb; --https:#5b636a;
+  --good:#1f9d55; --warn:#e8a200; --bad:#d62828; --gold:#f5b700; --sel:#fff6b3;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 24px;display:flex;flex-direction:column;gap:10px}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--ink);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--gold);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.mute.armed{background:var(--bad);border-color:var(--bad);color:#fff}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go.home{background:#fff;text-decoration:none;color:var(--ink);display:inline-block}
+.scoreline{background:#eafff2;border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+#bestLine{text-align:left}
+.mute{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;align-self:center}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
+.stat.ok b{color:#6ee7a0}.stat.low b{color:#ff8a80}
+
+/* Ticket strip */
+.ticketbar{background:#fff;border:3px dashed var(--ink);border-radius:14px;padding:8px 10px;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px}
+.ticketbar .tt{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-family:var(--pixel);font-size:11px}
+.ticketbar dt{font-family:var(--pixel);font-size:9.5px;padding-top:2px;color:#555}
+.ticketbar dd{margin:0;font-weight:500}
+.pat{grid-column:1/-1;height:7px;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;background:#eee;margin-top:3px}
+.pat i{display:block;height:100%;width:100%;background:var(--good)}
+
+/* Screen panel */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:8px;min-height:430px}
+.screen.anim,.anim .rider{animation:slide .22s ease-out}
+.screen h2{font-family:var(--display);font-weight:400;font-size:19px;margin:0;text-align:center;letter-spacing:.3px;line-height:1.15}
+.screen h3{font-family:var(--display);font-weight:400;font-size:21px;margin:0;text-align:center;letter-spacing:.3px}
+.eyebrow{font-family:var(--display);font-size:18px;margin:0}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:24px;padding:12px}
+.s-orders{background:var(--www)}
+.s-name{background:var(--name)}
+.s-addr{background:var(--addr)}
+.s-main{background:var(--main)}
+.s-side{background:var(--side)}
+.s-drink{background:var(--drink)}
+.s-rider{background:transparent;border:none;padding:0}
+.s-rider.anim{animation:none}
+.stepnav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.back{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:4px 10px;font-family:var(--pixel);font-size:10px}
+.steps{display:flex;gap:4px}
+.steps i{width:14px;height:8px;border:2px solid var(--ink);border-radius:3px;background:#fff}
+.steps i.on{background:var(--ink)}
+
+/* Orders list */
+.s-orders .well{flex:1;display:flex;flex-direction:column;gap:6px}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.order{width:100%;text-align:left;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 9px;display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center}
+.order:active{transform:translateY(2px)}
+.order .oid{font-family:var(--pixel);font-size:12px}
+.order .oitems{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font-family:var(--pixel);font-size:10px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap}
+.chip.new{background:#fff}.chip.prep{background:var(--sel)}.chip.cooking{background:var(--main)}.chip.ready{background:#6ee7a0;animation:blink .6s steps(2) infinite}
+.order .bar{grid-column:1/-1;height:6px;background:#eee;border-radius:3px;overflow:hidden;border:1px solid var(--ink)}
+.order .bar i{display:block;height:100%;width:100%}
+.order.enter{animation:pop .35s ease-out}
+.order.hot{background:#eafff2}
+.order.st-prep{background:#fff6b3}
+.order.st-cooking{background:#ff9f43}
+.order.st-cooking .chip{background:#fff}
+.order.st-cooking .oid::after{content:"";display:inline-block;width:6px;height:6px;margin-left:4px;border-radius:50%;background:var(--ink);animation:blink .5s steps(2) infinite;vertical-align:1px}
+.hint{font-size:11.5px;color:#555;text-align:center}
+.empty{font-size:12px;color:#666;text-align:center;padding:14px 0}
+.road{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.road h4{margin:0;font-family:var(--pixel);font-size:10px}
+.trip{border:2px solid var(--ink);border-radius:8px;padding:4px 7px;font-size:11.5px;display:grid;grid-template-columns:1fr auto;gap:3px;background:#fff}
+.trip.https{background:#eef0f2}
+.trip .pb{grid-column:1/-1;height:5px;background:#e5e5e5;border-radius:3px;overflow:hidden}
+.trip .pb i{display:block;height:100%;width:0;background:var(--https)}
+.trip.http .pb i{background:#a3a8ad}
+.trip .ph{font-family:var(--pixel);font-size:9px}
+
+/* Name / Address */
+.pickbox{font-family:var(--display);font-size:26px;text-align:center;min-height:86px;display:flex;align-items:center;justify-content:center;line-height:1.15;word-break:break-word}
+.pickbox.q{color:#aaa}
+.prompt{font-family:var(--pixel);font-size:11px;text-align:center;margin:4px 0 0}
+.choices{display:flex;flex-direction:column;gap:7px}
+.choice{width:100%;background:#fff;border:3px solid var(--ink);border-left:16px solid var(--c,#fff);border-radius:14px;padding:10px 12px;text-align:left;font-weight:500;font-size:15px;display:flex;align-items:center;gap:8px}
+.item{border-left:16px solid var(--c,#fff)!important}
+.sw{display:inline-block;width:12px;height:12px;border:2px solid var(--ink);border-radius:3px;background:var(--c);flex:none;vertical-align:-2px;margin-right:5px}
+.dots{display:inline-flex;gap:3px;margin-right:6px;vertical-align:-1px}
+.dots .sw{margin:0;width:10px;height:10px}
+.pickbox .sw{width:20px;height:20px;margin-right:10px}
+.choice:active,.item:active,.send:active{transform:translateY(2px)}
+
+/* Menu items */
+.items{display:flex;flex-direction:column;gap:10px}
+.item{width:100%;border:3px solid var(--ink);border-radius:16px;background:#fff;padding:14px 14px;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.item strong{font-family:var(--display);font-weight:400;font-size:22px;line-height:1.1}
+.item span{font-family:var(--pixel);font-size:10px;color:#444;text-align:right}
+.s-main .well,.s-side .well,.s-drink .well{flex:1}
+.cooknote{font-size:12px;text-align:center}
+.s-drink .cooknote,.s-drink .prompt{color:#fff}
+
+.wrong{background:var(--bad)!important;color:#fff!important;animation:shake .25s linear}
+.wrong span{color:#fff!important}
+.right{background:#6ee7a0!important}
+
+/* Riders */
+.riders{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rider{border:4px solid var(--ink);border-radius:28px;padding:12px 10px 14px;display:flex;flex-direction:column;gap:8px}
+.rider.http{background:var(--http)}
+.rider.https{background:var(--https)}
+.rider .well{flex:1;display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:20px}
+.send{border:3px solid var(--ink);border-radius:14px;padding:14px 6px;font-family:var(--display);font-size:22px;letter-spacing:.4px;line-height:1.05}
+.http .send{background:var(--http)}
+.https .send{background:var(--https);color:#fff}
+.terms{margin:0;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.terms dt{font-family:var(--pixel);font-size:9.5px}
+.terms dd{margin:0}
+.risk{color:var(--bad);font-weight:700}
+.safe{color:var(--good);font-weight:700}
+
+/* Feed */
+.feed{display:flex;flex-direction:column;gap:5px}
+.feed div{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:5px 9px;font-size:12.5px;display:flex;justify-content:space-between;gap:8px;animation:pop .3s ease-out}
+.feed div.bad{background:#ffd0cc}
+.feed b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.leak{background:var(--bad)!important;color:#fff;flex-direction:column}
+.leak small{font-family:var(--pixel);font-size:10px}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.card{background:#fff;border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--www)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.tw{overflow-x:auto}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{border:2px solid var(--ink);padding:5px 8px;text-align:left}
+.cmp th{background:var(--main);font-family:var(--pixel);font-size:10px;font-weight:400}
+.go{align-self:flex-start;background:var(--www);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px}
+.go:active{transform:translateY(2px)}
+.result{font-family:var(--display);font-size:46px;line-height:1}
+.result.win{color:var(--good)}.result.lose{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{border:3px solid var(--ink);border-radius:12px;padding:6px 10px}
+.kpi b{display:block;font-family:var(--pixel);font-size:18px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.debrief{background:var(--side);border:3px solid var(--ink);border-radius:12px;padding:10px 12px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--ink);color:#fff;font-family:var(--pixel);font-size:12px;padding:8px 14px;border-radius:10px;z-index:9;pointer-events:none;max-width:90vw;text-align:center}
+
+/* Notifications */
+.notes{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:min(488px,calc(100% - 32px));display:flex;flex-direction:column-reverse;gap:6px;z-index:8;pointer-events:none}
+.note{pointer-events:auto;width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;text-align:left;border:3px solid var(--ink);border-radius:14px;padding:8px 10px;font-size:13px;font-weight:500;box-shadow:0 4px 0 var(--ink);animation:pop .25s ease-out}
+.note .tag{font-family:var(--pixel);font-size:10px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);background:#fff}
+.note .go2{font-family:var(--pixel);font-size:10px}
+.note.n-ready{background:#6ee7a0}
+.note.n-warn{background:#ffd23f;animation:pulse .6s steps(2) infinite}
+.note.n-urgent{background:var(--bad);color:#fff;animation:pulse .3s steps(2) infinite}
+.note.n-urgent .tag{color:var(--ink)}
+.note.n-new{background:#fff}
+.app{padding-bottom:180px}
+@keyframes pulse{50%{transform:translateY(-2px)}}
+@keyframes blink{50%{opacity:.45}}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
+@keyframes slide{0%{transform:translateX(18px);opacity:.2}100%{transform:none;opacity:1}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){
+  .riders{gap:8px}
+  .send{font-size:18px}
+  .pickbox{font-size:22px;min-height:70px}
+  .screen{min-height:380px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="brand">Qrispy Queen<small>HTTP vs HTTPS</small></div>
+    <div class="hudbtns"><button class="mute" id="homeBtn" type="button">Home</button><button class="mute" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat" id="stTime"><b id="hudTime">3:00</b><span>Time left</span></div>
+      <div class="stat" id="stProfit"><b id="hudProfit">₱0</b><span>Profit / ₱2,500</span></div>
+      <div class="stat" id="stStars"><b id="hudStars">–</b><span>Rating = score</span></div>
+    </div>
+  </header>
+
+  <div class="ticketbar" id="ticketbar" hidden></div>
+  <div id="view"></div>
+  <div class="feed" id="feed"></div>
+</div>
+
+<div class="overlay" id="startScreen">
+  <div class="card">
+    <h1>Run the <em>Qrispy Queen</em> server</h1>
+    <p>You are the server. Customers send orders over the web. Take each order through the screens, one at a time.</p>
+    <ol>
+      <li><b>Orders:</b> tap a NEW order. The customer starts waiting now.</li>
+      <li><b>Name</b> and <b>Address:</b> tap the ones on the ticket.</li>
+      <li><b>Main, Side, Drinks:</b> tap the ordered items. Each one starts cooking.</li>
+      <li>Back at Orders, take the next order while food cooks.</li>
+      <li>When an order says <b>READY</b>, tap it and pick a <b>Delivery Rider</b>.</li>
+    </ol>
+    <div class="tw"><table class="cmp">
+      <tr><th></th><th>HTTP rider</th><th>HTTPS rider</th></tr>
+      <tr><td>Fee</td><td>Free + ₱20 bonus</td><td>₱40</td></tr>
+      <tr><td>Time</td><td>2 s</td><td>4 s (2 s lock + 2 s travel)</td></tr>
+      <tr><td>Theft</td><td>40%: lose half the food price + ₱100, 1★, name and address leaked</td><td>0%</td></tr>
+    </table></div>
+    <p><b>Patience:</b> the bar refills every time you finish a step on an order. If it runs out, the customer leaves (1★). A NEW order nobody opens for 40 s is cancelled.</p>
+    <p><b>Stars:</b> based on total time from opening the order to delivery. Faster gets more stars.</p>
+    <p><b>Clear the game:</b> reach ₱2,500 profit before the 3 minutes end.</p>
+    <p><b>Activity 7 score:</b> your star rating (out of 5★) in a cleared game. Your best cleared run is kept. Play as many times as you like.</p>
+    <div class="btnrow"><button class="go" id="startBtn" type="button">Open the store</button><a class="go home" id="startHomeBtn" href="index.html">‹ Activities</a></div>
+    <p class="hint" id="bestLine"></p>
+  </div>
+</div>
+
+<div class="overlay" id="endScreen" hidden>
+  <div class="card">
+    <div class="result" id="endResult">WIN</div>
+    <p id="endReason"></p>
+    <p class="scoreline" id="scoreLine"></p>
+    <div class="kpis" id="endKpis"></div>
+    <div class="debrief"><b>Debrief:</b> HTTP looked faster and paid more per order. What happened to your profit and stars? Why do real websites use HTTPS?</div>
+    <div class="btnrow"><button class="go" id="againBtn" type="button">Play again</button><button class="go home" id="endHomeBtn" type="button">‹ Activities</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="notes" id="notes" aria-live="polite"></div>
+
+<script>
+/* ===== CONFIG (edit to rebalance) ===== */
+const CFG = {
+  hubUrl: 'index.html',           // Home = Living in the IT Era hub
+  gameSeconds: 180, targetProfit: 2500, targetStars: 4.0,
+  extraWait: 20,                  // seconds added to the sum of cook times (patience starts when the order is opened)
+  spawnStart: 14, spawnEnd: 7,    // seconds between new orders: slow at 3:00, fast near 0:00
+  spawnJitter: 1.5,
+  rushAt: 30, rushGap: 5,        // last 30 s: rush hour, a new order every ~5 s
+  maxQueue: 6, startOrders: 2, cancelAfter: 40,
+  warnAt: 0.35, urgentAt: 0.15,   // patience fractions that trigger the alarm
+  http:  { fee: 0,  bonus: 20, handshake: 0, travel: 2, theft: 0.40, theftPenalty: 100, foodCostRate: 0.5 },
+  https: { fee: 40, bonus: 0,  handshake: 2, travel: 2, theft: 0 },
+  stars: [[0.7,5],[0.9,4],[1.0,3]], lateStars: 2
+};
+const MENU = {
+  main:  [{id:'c1',name:'1 Pc. Chicken',short:'1 Pc',price:130,cook:6},{id:'c2',name:'2 Pc. Chicken',short:'2 Pc',price:220,cook:8},{id:'bs',name:'Burger Steak',short:'B.Steak',price:120,cook:7}],
+  side:  [{id:'ri',name:'Rice',short:'Rice',price:25,cook:2},{id:'fr',name:'Fries',short:'Fries',price:60,cook:4},{id:'mp',name:'Mashed Potatoes',short:'Mashed',price:55,cook:3}],
+  drink: [{id:'so',name:'Soda',short:'Soda',price:40,cook:2},{id:'wa',name:'Water',short:'Water',price:25,cook:1}]
+};
+const NAMES = ['Juan Dela Cruz','Maria Santos','Jose Reyes','Ana Villanueva','Carlo Mendoza'];
+const ADDRS = ['12 Rizal St., Brgy. Taft','45 Borromeo St., Brgy. Washington','8 Narciso St., Brgy. San Juan','Purok 3, Brgy. Luna','Km. 2, Brgy. Lipata'];
+const COLOR = {
+  'Juan Dela Cruz':'#06d6a0','Maria Santos':'#9b5de5','Jose Reyes':'#ef476f','Ana Villanueva':'#ffbe0b','Carlo Mendoza':'#118ab2',
+  '12 Rizal St., Brgy. Taft':'#8ac926','45 Borromeo St., Brgy. Washington':'#264653','8 Narciso St., Brgy. San Juan':'#ff595e','Purok 3, Brgy. Luna':'#6a4c93','Km. 2, Brgy. Lipata':'#ff924c',
+  c1:'#ff9f1c', c2:'#d62828', bs:'#7b4b2a', ri:'#4cc9f0', fr:'#ffd60a', mp:'#b5a1e5', so:'#ff4d9d', wa:'#3a86ff'
+};
+const sw = k => `<i class="sw" style="--c:${COLOR[k]}"></i>`;
+const CATS = ['main','side','drink'];
+const STEPS = ['name','addr','main','side','drink'];
+const byId = {}; CATS.forEach(c=>MENU[c].forEach(m=>byId[m.id]=m));
+
+/* ===== SOUND (8-bit, WebAudio) ===== */
+const Snd = (()=>{
+  let ctx, master, music, sfx, noiseBuf, timer, nextT=0, step=0, muted=false;
+  const mf = m => 440*Math.pow(2,(m-69)/12);
+  const CH = [[53,57,60,64],[52,55,59,62],[50,53,57,60],[48,52,55,59]]; // Fmaj7 Em7 Dm7 Cmaj7
+  const ARP = [0,1,2,3,2,1,2,3];
+  const EIGHTH = 60/84/2;
+  function init(){
+    if(ctx) return;
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = muted?0:1; master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000; lp.connect(master);
+    music = ctx.createGain(); music.gain.value=0.5; music.connect(lp);
+    sfx = ctx.createGain(); sfx.gain.value=0.6; sfx.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.2, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  function tone(type,f,t,dur,g,dest,slideTo){
+    const o=ctx.createOscillator(), a=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+    a.gain.setValueAtTime(0.0001,t); a.gain.linearRampToValueAtTime(g,t+0.006); a.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(a); a.connect(dest); o.start(t); o.stop(t+dur+0.03);
+  }
+  function hat(t,g){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000; const a=ctx.createGain(); a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(0.0001,t+0.05); s.connect(hp); hp.connect(a); a.connect(music); s.start(t); s.stop(t+0.06); }
+  function playStep(s,t){
+    const ch = CH[Math.floor(s/8)%4], i = s%8;
+    tone('square', mf(ch[ARP[i]]+12), t, EIGHTH*0.85, 0.035, music);
+    if(i%4===0) tone('triangle', mf(ch[0]-12), t, EIGHTH*3.6, 0.22, music);
+    if(i===0) ch.forEach(n=>tone('triangle', mf(n), t, EIGHTH*7.5, 0.03, music));
+    if(i%2===1) hat(t,0.05);
+  }
+  function startMusic(){ init(); if(ctx.state==='suspended') ctx.resume(); stopMusic(); nextT=ctx.currentTime+0.1; step=0;
+    timer=setInterval(()=>{ while(nextT<ctx.currentTime+0.15){ playStep(step,nextT); nextT+=EIGHTH; step++; } },25); }
+  function stopMusic(){ if(timer){clearInterval(timer); timer=null;} }
+  const now = ()=>ctx.currentTime;
+  const fx = {
+    ping(){ const t=now(); [1568,2093,1568,2093].forEach((f,i)=>tone('square',f,t+i*0.07,0.09,0.32,sfx)); },
+    tap(){ tone('square',880,now(),0.05,0.12,sfx); },
+    select(){ tone('square',660,now(),0.04,0.1,sfx); },
+    wrong(){ tone('sawtooth',180,now(),0.18,0.18,sfx,90); },
+    ready(){ const t=now(); tone('square',1047,t,0.07,0.14,sfx); tone('square',1319,t+0.07,0.1,0.14,sfx); },
+    lock(){ const t=now(); tone('square',300,t,0.04,0.2,sfx); tone('square',450,t+0.08,0.04,0.2,sfx); tone('triangle',220,t+0.16,0.12,0.25,sfx); },
+    whoosh(){ tone('triangle',400,now(),0.15,0.2,sfx,1200); },
+    coin(){ const t=now(); tone('square',988,t,0.07,0.18,sfx); tone('square',1319,t+0.07,0.2,0.18,sfx); },
+    theft(){ const t=now(); for(let i=0;i<3;i++) tone('sawtooth',900,t+i*0.16,0.14,0.22,sfx,300); },
+    leave(){ tone('square',110,now(),0.35,0.2,sfx,80); },
+    win(){ const t=now(); [523,659,784,1047,784,1047].forEach((f,i)=>tone('square',f,t+i*0.11,0.12,0.2,sfx)); },
+    lose(){ const t=now(); [392,349,311,262].forEach((f,i)=>tone('square',f,t+i*0.18,0.2,0.2,sfx)); },
+    readyLoop(){ const t=now(); tone('square',784,t,0.08,0.16,sfx); tone('square',988,t+0.1,0.08,0.16,sfx); tone('square',1175,t+0.2,0.12,0.16,sfx); },
+    warn(){ tone('square',1245,now(),0.07,0.2,sfx); },
+    urgent(){ const t=now(); tone('square',1480,t,0.06,0.26,sfx); tone('square',1480,t+0.1,0.06,0.26,sfx); }
+  };
+  function play(name){ if(!ctx) return; fx[name](); }
+  function toggle(){ muted=!muted; if(master) master.gain.value=muted?0:1; return muted; }
+  return {init,startMusic,stopMusic,play,toggle};
+})();
+
+/* ===== STATE ===== */
+let S = null, lastFrame = 0, dirty = true;
+const $ = id => document.getElementById(id);
+const rand = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const peso = n => (n<0?'−₱':'₱') + Math.abs(Math.round(n)).toLocaleString('en-PH');
+const pad = n => String(n).padStart(2,'0');
+const starStr = n => '★'.repeat(n)+'☆'.repeat(5-n);
+
+function newState(){
+  return { t:0, running:false, nextId:1, nextSpawn:0, orders:[], cur:null, screen:'orders', trips:[], profit:0, ratings:[],
+    feed:[], notes:[], noteKey:'', nextReady:0, nextWarn:0, stats:{http:0,https:0,stolen:0,left:0,cancelled:0} };
+}
+function makeOrder(){
+  const items = {main:rand(MENU.main).id, side:rand(MENU.side).id, drink:rand(MENU.drink).id};
+  const total = CATS.reduce((s,c)=>s+byId[items[c]].price,0);
+  const patience = CATS.reduce((s,c)=>s+byId[items[c]].cook,0) + CFG.extraWait;
+  return { id:S.nextId++, name:rand(NAMES), addr:rand(ADDRS), items, total, patience, born:S.t, opened:null, clock:null,
+    step:0, status:'new', cook:{}, fresh:true, nameOpts:shuffle(NAMES), addrOpts:shuffle(ADDRS) };
+}
+function spawn(silent){
+  if(S.orders.length >= CFG.maxQueue) return;
+  const no = makeOrder(); S.orders.push(no); dirty = true;
+  S.notes.push({oid:no.id, until:S.t+2.5});
+  if(!silent) Snd.play('ping');
+}
+const curOrder = () => S.orders.find(o=>o.id===S.cur) || null;
+const avgStars = () => S.ratings.length ? S.ratings.reduce((a,b)=>a+b,0)/S.ratings.length : null;
+function pushFeed(html, bad, cls){ S.feed.unshift({html,bad,cls,until:S.t+4}); S.feed=S.feed.slice(0,3); dirty=true; }
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, msg.startsWith('RUSH')?2500:1300); }
+function mark(el, ok){ const c = ok?'right':'wrong'; el.classList.remove('right','wrong'); void el.offsetWidth; el.classList.add(c); }
+
+/* ===== NAVIGATION ===== */
+function go(screen){ S.screen = screen; dirty = true; }
+function goOrders(){ S.cur = null; go('orders'); }
+
+function openOrder(id){
+  if(!S.running) return;
+  const o = S.orders.find(x=>x.id===id); if(!o) return;
+  if(o.status==='cooking'){ Snd.play('wrong'); toast('Still cooking'); return; }
+  S.cur = o.id; Snd.play('select');
+  if(o.status==='ready'){ o.clock = S.t; go('rider'); return; }
+  if(o.opened===null){ o.opened = S.t; o.clock = S.t; o.status='prep'; }
+  go(STEPS[o.step]);
+}
+function advance(o){
+  o.clock = S.t; o.step++;
+  if(o.step >= STEPS.length){ o.status='cooking'; goOrders(); }
+  else setTimeout(()=>{ if(S.cur===o.id && S.running) go(STEPS[o.step]); }, 180);
+}
+function pick(kind, value, el){
+  const o = curOrder(); if(!o || !S.running) return;
+  const want = kind==='name' ? o.name : o.addr;
+  if(value !== want){ Snd.play('wrong'); mark(el,false); return; }
+  Snd.play('tap'); mark(el,true);
+  document.querySelector('.pickbox').innerHTML = sw(value) + value; document.querySelector('.pickbox').classList.remove('q');
+  advance(o);
+}
+function tapItem(cat, id, el){
+  const o = curOrder(); if(!o || !S.running) return;
+  if(o.items[cat] !== id){ Snd.play('wrong'); mark(el,false); toast('Not on this order'); return; }
+  o.cook[cat] = {start:S.t, dur:byId[id].cook};
+  Snd.play('tap'); mark(el,true);
+  advance(o);
+}
+function send(mode, btn){
+  const o = curOrder(); if(!o || !S.running || o.status!=='ready') return;
+  const R = CFG[mode];
+  S.trips.push({ o, mode, start:S.t, hsEnd:S.t+R.handshake, end:S.t+R.handshake+R.travel, stolen: Math.random()<R.theft });
+  o.status='sent'; S.orders = S.orders.filter(x=>x!==o);
+  Snd.play(mode==='https'?'lock':'whoosh');
+  goOrders();
+}
+function arrive(tr){
+  const o = tr.o, R = CFG[tr.mode];
+  if(tr.stolen){
+    const loss = o.total*R.foodCostRate + R.theftPenalty;
+    S.profit -= loss; S.ratings.push(1); S.stats.stolen++;
+    pushFeed(`<span><small>#${pad(o.id)} STOLEN ON HTTP · DATA LEAKED</small><br>${o.name} · ${o.addr}</span><b>${peso(-loss)} ${starStr(1)}</b>`, true, 'leak');
+    Snd.play('theft'); return;
+  }
+  const ratio = (S.t - o.opened)/o.patience;
+  let stars = CFG.lateStars; for(const [lim,s] of CFG.stars){ if(ratio<=lim){ stars=s; break; } }
+  const pay = o.total - R.fee + R.bonus;
+  S.profit += pay; S.ratings.push(stars); S.stats[tr.mode]++;
+  pushFeed(`<span>#${pad(o.id)} delivered · ${tr.mode.toUpperCase()}</span><b>+${peso(pay)} ${starStr(stars)}</b>`, false);
+  Snd.play('coin');
+}
+
+/* ===== LOOP ===== */
+function spawnGap(){
+  const p = Math.min(1, S.t / CFG.gameSeconds);
+  let base = CFG.spawnStart + (CFG.spawnEnd - CFG.spawnStart) * p;
+  if(CFG.gameSeconds - S.t <= CFG.rushAt) base = CFG.rushGap;
+  return Math.max(2, base + (Math.random()*2-1)*CFG.spawnJitter);
+}
+function tick(ts){
+  const dt = Math.min(0.1, (ts - (lastFrame||ts))/1000); lastFrame = ts;
+  if(S.running){
+    S.t += dt;
+    if(S.t >= S.nextSpawn){ spawn(false); S.nextSpawn = S.t + spawnGap(); }
+    for(const o of S.orders){
+      if(o.status==='cooking' && CATS.every(c=>S.t >= o.cook[c].start+o.cook[c].dur)){ o.status='ready'; dirty=true; Snd.play('ready'); }
+    }
+    const left = S.orders.filter(o => o.clock!==null && S.t > o.clock + o.patience);
+    const cancelled = S.orders.filter(o => o.opened===null && S.t > o.born + CFG.cancelAfter);
+    for(const o of left){ S.ratings.push(1); S.stats.left++; pushFeed(`<span>#${pad(o.id)} ${o.name} left</span><b>${starStr(1)}</b>`, true); Snd.play('leave'); }
+    for(const o of cancelled){ S.stats.cancelled++; }
+    if(left.length || cancelled.length){
+      S.orders = S.orders.filter(o=>!left.includes(o) && !cancelled.includes(o));
+      if(S.cur!==null && !curOrder()){ toast('Customer left'); goOrders(); }
+      dirty = true;
+    }
+    const done = S.trips.filter(tr => S.t >= tr.end);
+    if(done.length){ done.forEach(arrive); S.trips = S.trips.filter(tr=>!done.includes(tr)); dirty=true; }
+    const nf = S.feed.filter(f=>f.until>S.t); if(nf.length!==S.feed.length){ S.feed=nf; dirty=true; }
+    if(!S.rush && CFG.gameSeconds - S.t <= CFG.rushAt){ S.rush = true; toast('RUSH HOUR! Orders are pouring in'); Snd.play('ping'); S.nextSpawn = Math.min(S.nextSpawn, S.t + 1); }
+    alarms();
+    if(S.t >= CFG.gameSeconds) endGame();
+  }
+  if(dirty){ render(); dirty=false; }
+  renderNotes();
+  update();
+  requestAnimationFrame(tick);
+}
+
+/* ===== ALARMS + NOTIFICATIONS ===== */
+const patLeft = o => o.clock===null ? 1 : Math.max(0, 1-(S.t-o.clock)/o.patience);
+function alarms(){
+  const anyReady = S.orders.some(o=>o.status==='ready');
+  if(anyReady && S.t >= S.nextReady){ Snd.play('readyLoop'); S.nextReady = S.t + 1.6; }
+  if(!anyReady) S.nextReady = 0;
+  const low = S.orders.map(patLeft).filter((l,i)=>S.orders[i].clock!==null && l<CFG.warnAt);
+  if(low.length){
+    const worst = Math.min(...low), urgent = worst < CFG.urgentAt;
+    if(S.t >= S.nextWarn){ Snd.play(urgent?'urgent':'warn'); S.nextWarn = S.t + (urgent?0.5:0.9); }
+  } else S.nextWarn = 0;
+  S.notes = S.notes.filter(n=>n.until>S.t);
+}
+function noteList(){
+  const out = [];
+  for(const o of S.orders){
+    const l = patLeft(o);
+    if(o.clock!==null && l<CFG.warnAt){
+      const urgent = l<CFG.urgentAt;
+      out.push({oid:o.id, cls:urgent?'n-urgent':'n-warn', tag:urgent?'HURRY':'WAITING', text:`#${pad(o.id)} ${o.name} is losing patience`, sec:true});
+    } else if(o.status==='ready'){
+      out.push({oid:o.id, cls:'n-ready', tag:'READY', text:`#${pad(o.id)} is ready · send a rider`});
+    }
+  }
+  for(const n of S.notes){ const o=S.orders.find(x=>x.id===n.oid); if(o && o.status==='new') out.push({oid:o.id, cls:'n-new', tag:'NEW', text:`Order #${pad(o.id)} received`}); }
+  return out.slice(0,4);
+}
+function renderNotes(){
+  const box = $('notes');
+  if(!S.running){ if(box.innerHTML) box.innerHTML=''; S.noteKey=''; return; }
+  const list = noteList();
+  const key = list.map(n=>n.oid+n.cls).join('|');
+  if(key !== S.noteKey){
+    S.noteKey = key;
+    box.innerHTML = list.map(n=>`<button type="button" class="note ${n.cls}" data-note="${n.oid}"><span class="tag">${n.tag}</span><span>${n.text}</span><span class="go2" ${n.sec?`data-sec="${n.oid}"`:''}>OPEN ›</span></button>`).join('');
+  }
+  box.querySelectorAll('[data-sec]').forEach(el=>{ const o=S.orders.find(x=>x.id===+el.dataset.sec); if(o) el.textContent = Math.ceil(patLeft(o)*o.patience)+'s ›'; });
+}
+$('notes').addEventListener('pointerdown', e=>{ const b=e.target.closest('[data-note]'); if(b) openOrder(+b.dataset.note); });
+
+/* ===== RENDER ===== */
+const HEAD = `<h2>Qrispy Queen - Server</h2>`;
+function stepNav(o){
+  return `<div class="stepnav"><button class="back" type="button" data-act="back">‹ Orders</button><span class="steps">${STEPS.map((_,i)=>`<i class="${i<=o.step?'on':''}"></i>`).join('')}</span></div>`;
+}
+function renderTicket(){
+  const o = curOrder(), tb = $('ticketbar');
+  if(!o || S.screen==='orders'){ tb.hidden = true; return; }
+  tb.hidden = false;
+  tb.innerHTML = `<div class="tt"><span>TICKET #${pad(o.id)}</span><span>₱${o.total}</span></div>
+    <dt>NAME</dt><dd>${sw(o.name)}${o.name}</dd><dt>ADDRESS</dt><dd>${sw(o.addr)}${o.addr}</dd>
+    <dt>ORDER</dt><dd>${CATS.map(c=>sw(o.items[c])+byId[o.items[c]].name).join('&nbsp; ')}</dd>
+    <span class="pat"><i id="curPat"></i></span>`;
+}
+let lastKey = '';
+function renderScreen(){
+  const v = $('view'), o = curOrder(), sc = S.screen;
+  const key = sc+'|'+S.cur+'|'+(o?o.step:'');
+  const changed = key !== lastKey; lastKey = key;
+  if(sc!=='orders' && !changed) return;
+  const A = changed ? ' anim' : '';
+  if(sc==='orders'){
+    const list = S.orders.length ? S.orders.map(x=>{
+      const lab = {new:'NEW',prep:'OPEN',cooking:'COOKING',ready:'READY'}[x.status];
+      const cls = 'order st-'+x.status+(x.fresh?' enter':'')+(x.status==='ready'?' hot':''); x.fresh=false;
+      const items = `<span class="dots">${CATS.map(c=>sw(x.items[c])).join('')}</span>` + CATS.map(c=>byId[x.items[c]].short).join(' · ');
+      return `<li><button type="button" class="${cls}" data-oid="${x.id}"><span class="oid">#${pad(x.id)}</span><span class="oitems">${items}</span><span class="chip ${x.status}">${lab}</span><span class="bar"><i data-bar="${x.id}"></i></span></button></li>`;
+    }).join('') : `<li class="empty">${S.running?'Waiting for orders…':'Orders appear here'}</li>`;
+    const trips = S.trips.length ? `<div class="road"><h4>ON THE ROAD</h4>${S.trips.map((t,i)=>`<div class="trip ${t.mode}"><span>#${pad(t.o.id)} ${t.mode.toUpperCase()} → ${t.o.addr.split(', ')[1]}</span><span class="ph" data-ph="${i}"></span><span class="pb"><i data-tp="${i}"></i></span></div>`).join('')}</div>` : '';
+    v.innerHTML = `<section class="screen s-orders${A}"><p class="eyebrow">The World Wide Web</p>${HEAD}
+      <div class="well"><h3>Orders</h3><ul class="list">${list}</ul><p class="hint">Tap NEW to take an order · tap READY to send it</p>${trips}</div></section>`;
+    return;
+  }
+  if(!o){ goOrders(); return; }
+  if(sc==='name' || sc==='addr'){
+    const isName = sc==='name', opts = isName ? o.nameOpts : o.addrOpts;
+    v.innerHTML = `<section class="screen ${isName?'s-name':'s-addr'}${A}">${stepNav(o)}${HEAD}<h3>${isName?'Name':'Address'}</h3>
+      <div class="well pickbox q">?</div>
+      <p class="prompt">Tap the ${isName?'name':'address'} on ticket #${pad(o.id)}</p>
+      <div class="choices">${opts.map(n=>`<button type="button" class="choice" style="--c:${COLOR[n]}" data-pick="${sc}" data-val="${n}">${n}</button>`).join('')}</div></section>`;
+    return;
+  }
+  if(CATS.includes(sc)){
+    const title = {main:'Main Menu',side:'Side Order',drink:'Drinks'}[sc];
+    v.innerHTML = `<section class="screen s-${sc}${A}">${stepNav(o)}${HEAD}<h3>${title}</h3>
+      <div class="well"><div class="items">${MENU[sc].map(m=>`<button type="button" class="item" style="--c:${COLOR[m.id]}" data-cat="${sc}" data-id="${m.id}"><strong>${m.name}</strong><span>₱${m.price}<br>${m.cook}s cook</span></button>`).join('')}</div></div>
+      <p class="cooknote">Tapping the right item starts cooking it.</p></section>`;
+    return;
+  }
+  if(sc==='rider'){
+    v.innerHTML = `<section class="screen s-rider${A}"><div class="stepnav"><button class="back" type="button" data-act="back">‹ Orders</button><span class="chip ready">READY #${pad(o.id)}</span></div>
+      <div class="riders">
+        <div class="rider http">${HEAD}<h3>Delivery Rider</h3><div class="well">
+          <button class="send" type="button" data-send="http">HTTP<br>Open Bag</button>
+          <dl class="terms"><dt>FEE</dt><dd>Free + ₱20 speed bonus</dd><dt>TIME</dt><dd>2 s</dd><dt>RISK</dt><dd class="risk">40% stolen, data leaked</dd></dl></div></div>
+        <div class="rider https">${HEAD}<h3>Delivery Rider</h3><div class="well">
+          <button class="send" type="button" data-send="https">HTTPS<br>Sealed Box</button>
+          <dl class="terms"><dt>FEE</dt><dd>₱40</dd><dt>TIME</dt><dd>4 s (2 s lock)</dd><dt>RISK</dt><dd class="safe">None. Encrypted.</dd></dl></div></div>
+      </div></section>`;
+  }
+}
+function renderFeed(){
+  $('feed').innerHTML = S.feed.map(f=>`<div class="${f.bad?'bad':''} ${f.cls||''}">${f.html}</div>`).join('');
+}
+function render(){ renderTicket(); renderScreen(); renderFeed(); }
+
+function update(){
+  if(S.screen==='orders'){
+    for(const o of S.orders){
+      const el = document.querySelector(`[data-bar="${o.id}"]`); if(!el) continue;
+      let left, color;
+      if(o.opened===null){ left = Math.max(0,1-(S.t-o.born)/CFG.cancelAfter); color = '#b9b9b9'; }
+      else { left = Math.max(0,1-(S.t-o.clock)/o.patience); color = left<0.3?'var(--bad)':left<0.6?'var(--warn)':'var(--good)'; }
+      el.style.width = (left*100)+'%'; el.style.background = color;
+    }
+    S.trips.forEach((t,i)=>{
+      const bar=document.querySelector(`[data-tp="${i}"]`), ph=document.querySelector(`[data-ph="${i}"]`); if(!bar) return;
+      bar.style.width = (Math.min(1,(S.t-t.start)/(t.end-t.start))*100)+'%';
+      ph.textContent = S.t < t.hsEnd ? 'LOCKING…' : 'ON THE ROAD';
+    });
+  }
+  const o = curOrder(), cp = $('curPat');
+  if(o && cp && o.clock!==null){
+    const left = Math.max(0,1-(S.t-o.clock)/o.patience);
+    cp.style.width=(left*100)+'%'; cp.style.background = left<0.3?'var(--bad)':left<0.6?'var(--warn)':'var(--good)';
+  }
+  const tl = Math.max(0, CFG.gameSeconds - S.t);
+  $('hudTime').textContent = `${Math.floor(tl/60)}:${pad(Math.floor(tl%60))}`;
+  $('stTime').className = 'stat' + (tl<=30 && S.running ? ' low':'');
+  $('hudProfit').textContent = peso(S.profit);
+  $('stProfit').className = 'stat' + (S.profit>=CFG.targetProfit?' ok':S.profit<0?' low':'');
+  const a = avgStars();
+  $('hudStars').textContent = a===null ? '–' : a.toFixed(1)+'★';
+  $('stStars').className = 'stat' + (a===null?'':a>=CFG.targetStars?' ok':' low');
+}
+
+/* ===== EVENTS ===== */
+$('view').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.oid){ if(e.detail===0) openOrder(+b.dataset.oid); }
+  else if(b.dataset.act==='back'){ Snd.play('select'); goOrders(); }
+  else if(b.dataset.pick) pick(b.dataset.pick, b.dataset.val, b);
+  else if(b.dataset.cat) tapItem(b.dataset.cat, b.dataset.id, b);
+  else if(b.dataset.send) send(b.dataset.send, b);
+});
+
+$('view').addEventListener('pointerdown', e=>{ const b=e.target.closest('[data-oid]'); if(b) openOrder(+b.dataset.oid); });
+
+/* ===== GAME FLOW ===== */
+function startGame(){
+  Snd.init(); Snd.startMusic();
+  S = newState(); S.running = true;
+  for(let i=0;i<CFG.startOrders;i++) spawn(true);
+  S.nextSpawn = spawnGap();
+  Snd.play('ping');
+  $('startScreen').hidden = true; $('endScreen').hidden = true; dirty = true;
+}
+function endGame(){
+  S.running = false; Snd.stopMusic(); S.cur = null; S.screen = 'orders';
+  const a = avgStars(), win = S.profit>=CFG.targetProfit;
+  $('endResult').textContent = win ? 'CLEARED' : 'NOT CLEARED';
+  $('endResult').className = 'result ' + (win?'win':'lose');
+  const sc = a===null ? 0 : a;
+  $('endReason').textContent = win ? `You reached ${peso(CFG.targetProfit)}. Your score is your rating: ${sc.toFixed(1)}★.` : `You were ${peso(CFG.targetProfit - S.profit)} short of ${peso(CFG.targetProfit)}. Clear the game to earn a score.`;
+  const k = [[peso(S.profit),'Profit'],[a===null?'–':a.toFixed(1)+'★','Rating (score)'],[S.stats.https,'HTTPS delivered'],[S.stats.http,'HTTP delivered'],[S.stats.stolen,'Stolen (HTTP)'],[S.stats.left,'Customers left'],[S.stats.cancelled,'Never opened']];
+  $('endKpis').innerHTML = k.map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('endScreen').hidden = false; dirty = true;
+  Snd.play(win?'win':'lose');
+  saveResult(a, win);
+}
+
+/* ===== ACTIVITY 7 RESULT (hub format) ===== */
+const RESULT_KEY = 'itict_activity7_result', RESULT_IDB = 'activity7_result';
+function runPercent(profit, stars){ return stars===null ? 0 : Math.round(stars / 5 * 100); }
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function loadResult(){
+  try{ const s=localStorage.getItem(RESULT_KEY); if(s) return JSON.parse(s); }catch(e){}
+  try{ const m=document.cookie.match(new RegExp('(?:^|; )'+RESULT_KEY+'=([^;]*)')); if(m) return JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+  return await idbRead(RESULT_IDB);
+}
+const ATTEMPTS_KEY = 'itict_activity7_attempts';
+async function saveResult(stars, cleared){
+  const st1 = stars===null ? 0 : +stars.toFixed(1);
+  let runs = 0; try{ runs = (+localStorage.getItem(ATTEMPTS_KEY) || 0) + 1; localStorage.setItem(ATTEMPTS_KEY, runs); }catch(e){}
+  const prev = await loadResult();
+  runs = Math.max(runs, (prev && prev.runs || 0) + 1);
+  if(!cleared){
+    $('scoreLine').innerHTML = `<b>Not cleared.</b> Reach ${peso(CFG.targetProfit)} to earn a score.` + (prev ? ` Best score: ${(+prev.bestStars).toFixed(1)}★` : '');
+    if(prev){ prev.runs = runs; const j=JSON.stringify(prev); try{ localStorage.setItem(RESULT_KEY,j); }catch(e){} await idbPut(RESULT_IDB, prev); showBest(prev); }
+    return;
+  }
+  const better = !prev || st1 > (prev.bestStars||0) || (st1 === (prev.bestStars||0) && S.profit > (prev.bestProfit||0));
+  const pct = runPercent(S.profit, stars);
+  const best = better ? {
+    score: pct, maxScore: 100, percentage: pct, cleared: true,
+    bestProfit: Math.round(S.profit), bestStars: st1,
+    httpsDelivered: S.stats.https, httpDelivered: S.stats.http, stolen: S.stats.stolen
+  } : prev;
+  const rec = Object.assign({}, best, {
+    runs, lastPercentage: pct, lastProfit: Math.round(S.profit), lastStars: st1,
+    completedAt: new Date().toISOString()
+  });
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  $('scoreLine').innerHTML = `<b>Activity 7 score: ${st1.toFixed(1)}★</b> · Best: ${(+rec.bestStars).toFixed(1)}★ · Runs: ${rec.runs}` + (better && prev ? ' · New best!' : '');
+  showBest(rec);
+}
+function showBest(r){ $('bestLine').textContent = r ? `Your best: ${(+r.bestStars).toFixed(1)}★ (${peso(r.bestProfit)}) · Runs: ${r.runs}` : ''; }
+loadResult().then(showBest);
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+function goHub(){ if(S) S.running = false; Snd.stopMusic(); location.href = CFG.hubUrl; }
+function goHome(){
+  if(S) S.running = false;
+  Snd.stopMusic();
+  S = newState(); lastKey = ''; dirty = true;
+  $('endScreen').hidden = true; $('startScreen').hidden = false;
+  const hb = $('homeBtn'); hb.classList.remove('armed'); hb.textContent = 'Home';
+}
+let homeArmT;
+$('homeBtn').addEventListener('click', e=>{
+  const b = e.currentTarget;
+  if(!S.running){ goHub(); return; }
+  if(b.classList.contains('armed')){ clearTimeout(homeArmT); goHub(); return; }
+  b.classList.add('armed'); b.textContent = 'Quit? Tap again';
+  homeArmT = setTimeout(()=>{ b.classList.remove('armed'); b.textContent = 'Home'; }, 2500);
+});
+$('endHomeBtn').addEventListener('click', goHub);
+$('muteBtn').addEventListener('click', e=>{ const m=Snd.toggle(); e.currentTarget.textContent = 'Sound: '+(m?'Off':'On'); });
+
+S = newState();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
