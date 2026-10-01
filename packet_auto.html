@@ -29,6 +29,9 @@ main{max-width:480px;height:100%;margin:0 auto;padding:12px 14px 12px;display:fl
 h1{font-family:var(--body);font-weight:800;font-size:1.7rem;margin:0;letter-spacing:-.01em}
 .top-r{display:flex;align-items:center;gap:8px}
 .mute{background:var(--fill);border:none;border-radius:10px;font-size:1.1rem;line-height:1;padding:6px 8px;cursor:pointer}
+.lite-btn{font-weight:800;font-size:.85rem;padding:8px 10px}
+.lite-btn[aria-pressed="true"]{background:#000;color:#fff}
+.mute:focus-visible{outline:3px solid #7aa7ff;outline-offset:2px}
 .clock{font-size:.9rem;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
 
 .hud{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px}
@@ -50,6 +53,7 @@ h1{font-family:var(--body);font-weight:800;font-size:1.7rem;margin:0;letter-spac
 #banner.warn{background:#ffe7a8}
 #banner.danger{background:var(--bad);color:#fff}
 #banner.action{background:var(--bad);color:#fff;cursor:pointer;animation:pulse 1s ease-in-out infinite}
+body.lite #banner.action{animation:none}
 #banner small{display:block;font-family:var(--body);font-size:.85rem;font-weight:700;letter-spacing:0;margin-top:2px}
 @keyframes pulse{50%{filter:brightness(1.25)}}
 
@@ -143,7 +147,7 @@ body.locked .gate{display:block}
 </head>
 <body>
 <main>
-  <div class="top"><h1>The Internet</h1><span class="top-r"><button type="button" class="mute" id="mute" aria-pressed="false">🔊</button><span class="clock" id="timer">0:00</span></span></div>
+  <div class="top"><h1>The Internet</h1><span class="top-r"><button type="button" class="mute lite-btn" id="lite" aria-pressed="false">Lite</button><button type="button" class="mute" id="mute" aria-pressed="false">🔊</button><span class="clock" id="timer">0:00</span></span></div>
 
   <div class="hud">
     <button type="button" class="sq log" id="log-open" aria-label="Open log"><span class="lbl">Log</span><span class="box"></span></button>
@@ -780,6 +784,11 @@ window.PR6 = (() => {
   const setQuick = (name, cost, year, desc) => { qName.textContent = name; qCost.textContent = cost; qYear.textContent = year; qDesc.textContent = desc; };
 
   let paused = false;
+  /* ===== lite mode (manual): 30 fps render cap, no glow/pops/pulses, no background music ===== */
+  const LITE_KEY = 'itict_lite';
+  let LITE = false;
+  try { LITE = localStorage.getItem(LITE_KEY) === '1'; } catch (e) {}
+  document.body.classList.toggle('lite', LITE);
 
   /* ===== the file: a pixel-art globe, one pixel per packet (row-major by sequence number) ===== */
   const FW = E.FILE_W, FH = E.FILE_H;
@@ -897,6 +906,7 @@ window.PR6 = (() => {
   }
 
   function pop(id, glyph, color) {
+    if (LITE) return;
     const p = pos[id] || pos.S0;
     const t = el('text', { class:'pop', x:p.x + 28, y:p.y - 10, fill:color || '#000' }, popLayer);
     t.textContent = glyph;
@@ -905,6 +915,7 @@ window.PR6 = (() => {
   }
 
   function orcaStrike(target) {
+    if (LITE) return;
     const p = pos[target];
     if (!p) return;
     const o = el('text', { class:'pop', x:p.x, y:p.y + 10, 'font-size':'40' }, popLayer);
@@ -929,10 +940,10 @@ window.PR6 = (() => {
     try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
     const last = {};
     // NES-style pulse wave with duty d
-    function pulse(d) {
+    function pulse(d, c) {
       const N = 32, re = new Float32Array(N), im = new Float32Array(N);
       for (let n = 1; n < N; n++) re[n] = 2 * Math.sin(Math.PI * n * d) / (Math.PI * n);
-      return ctx.createPeriodicWave(re, im);
+      return (c || ctx).createPeriodicWave(re, im);
     }
     function init() {
       if (ctx) { if (ctx.state === 'suspended' && !document.hidden) ctx.resume(); return; }
@@ -956,7 +967,7 @@ window.PR6 = (() => {
     const ok = () => ctx && !muted && ctx.state !== 'closed';
     // one oscillator note at absolute time t
     function voice(f, t, dur, wave, vol, dest, f2) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
+      const c = (dest || master).context, o = c.createOscillator(), g = c.createGain();
       if (typeof wave === 'string') o.type = wave; else o.setPeriodicWave(wave);
       o.frequency.setValueAtTime(f, t);
       if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -966,12 +977,12 @@ window.PR6 = (() => {
       o.connect(g); g.connect(dest || master);
       o.start(t); o.stop(t + dur + 0.02);
     }
-    function noiseAt(t, dur, freq, vol, freq2, dest, type) {
-      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-      const f = ctx.createBiquadFilter(); f.type = type || 'bandpass'; f.Q.value = 1.2;
+    function noiseAt(t, dur, freq, vol, freq2, dest, type, buf) {
+      const c = (dest || master).context, s = c.createBufferSource(); s.buffer = buf || noiseBuf;
+      const f = c.createBiquadFilter(); f.type = type || 'bandpass'; f.Q.value = 1.2;
       f.frequency.setValueAtTime(freq, t);
       if (freq2) f.frequency.exponentialRampToValueAtTime(freq2, t + dur);
-      const g = ctx.createGain();
+      const g = c.createGain();
       g.gain.setValueAtTime(vol, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       s.connect(f); f.connect(g); g.connect(dest || master);
@@ -1011,24 +1022,72 @@ window.PR6 = (() => {
     ];
     const ARP = [0, 1, 2, 1];
     let timer = null, nextT = 0, mi = 0;
-    function playStep(i, t) {
+    // K = { bus, p12, p25, nb }: destination, pulse waves and noise buffer of the target context
+    function playStep(i, t, K) {
       const bar = i >> 4, s = i & 15, ch = CHORDS[bar];
-      voice(mtof(ch[ARP[s & 3]] + 12), t, STEP * 0.9, pulse12, 0.08, musicBus);
+      voice(mtof(ch[ARP[s & 3]] + 12), t, STEP * 0.9, K.p12, 0.08, K.bus);
       if (!(s & 1)) {
-        voice(mtof(ch[0] - 12 + (s & 2 ? 12 : 0)), t, STEP * 1.8, 'triangle', 0.5, musicBus);
+        voice(mtof(ch[0] - 12 + (s & 2 ? 12 : 0)), t, STEP * 1.8, 'triangle', 0.5, K.bus);
         const n = LEAD[i >> 1];
-        if (n) voice(mtof(n), t, STEP * 1.9, pulse25, 0.15, musicBus);
+        if (n) voice(mtof(n), t, STEP * 1.9, K.p25, 0.15, K.bus);
       }
-      if ((s & 3) === 2) noiseAt(t, 0.04, 7000, 0.18, null, musicBus, 'highpass');
+      if ((s & 3) === 2) noiseAt(t, 0.04, 7000, 0.18, null, K.bus, 'highpass', K.nb);
     }
+
+    /* ----- pre-rendered loop: the 8 bars are rendered once offline, then played as one looping buffer ----- */
+    const LOOP_SEC = STEPS * STEP, TAIL = 0.4, OFF_SR = 22050;
+    let loopBuf = null, loopSrc = null, rendering = false, wantMusic = false;
+    function renderMusic() {
+      const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OAC || loopBuf || rendering) return;
+      rendering = true;
+      try {
+        const len = Math.ceil(LOOP_SEC * OFF_SR), tail = Math.ceil(TAIL * OFF_SR);
+        const oc = new OAC(1, len + tail, OFF_SR);
+        const nb = oc.createBuffer(1, OFF_SR, OFF_SR), nd = nb.getChannelData(0);
+        for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+        const bus = oc.createGain(); bus.connect(oc.destination);
+        const K = { bus, p12:pulse(0.125, oc), p25:pulse(0.25, oc), nb };
+        for (let i = 0; i < STEPS; i++) playStep(i, i * STEP + 0.001, K);
+        const done = rendered => {
+          // fold the tail (notes ringing past the loop end) back onto the start for a seamless loop
+          const src = rendered.getChannelData(0), buf = ctx.createBuffer(1, len, OFF_SR), out = buf.getChannelData(0);
+          out.set(src.subarray(0, len));
+          for (let i = 0; i < tail && i < len; i++) out[i] += src[len + i];
+          loopBuf = buf; rendering = false;
+          if (wantMusic) playLoop();
+        };
+        const fail = () => { rendering = false; loopBuf = null; liveLoop(); };
+        oc.oncomplete = e => { try { done(e.renderedBuffer); } catch (err) { fail(); } };
+        const p = oc.startRendering();
+        if (p && p.then) { oc.oncomplete = null; p.then(b => { try { done(b); } catch (err) { fail(); } }, fail); }
+      } catch (e) { rendering = false; }
+    }
+    function playLoop() {
+      if (loopSrc || !loopBuf || !ctx) return;
+      loopSrc = ctx.createBufferSource(); loopSrc.buffer = loopBuf; loopSrc.loop = true;
+      loopSrc.connect(musicBus); loopSrc.start();
+    }
+    // fallback for browsers without OfflineAudioContext: live step scheduler
     function tick() {
       if (!ok() || ctx.state !== 'running') return;
       const now = ctx.currentTime;
       if (nextT < now) nextT = now + 0.05;
-      while (nextT < now + 0.15) { playStep(mi, nextT); mi = (mi + 1) % STEPS; nextT += STEP; }
+      while (nextT < now + 0.15) { playStep(mi, nextT, { bus:musicBus, p12:pulse12, p25:pulse25 }); mi = (mi + 1) % STEPS; nextT += STEP; }
     }
-    const startMusic = () => { init(); if (!ctx || timer) return; mi = 0; nextT = 0; timer = setInterval(tick, 40); tick(); };
-    const stopMusic = () => { clearInterval(timer); timer = null; };
+    const offlineOk = () => !!(window.OfflineAudioContext || window.webkitOfflineAudioContext);
+    function liveLoop() { if (!wantMusic || timer) return; mi = 0; nextT = 0; timer = setInterval(tick, 40); tick(); }
+    const startMusic = () => {
+      init(); if (!ctx) return;
+      wantMusic = true;
+      if (offlineOk()) { renderMusic(); if (loopBuf || rendering) { playLoop(); return; } }
+      liveLoop();
+    };
+    const stopMusic = () => {
+      wantMusic = false;
+      clearInterval(timer); timer = null;
+      if (loopSrc) { try { loopSrc.stop(); } catch (e) {} loopSrc.disconnect(); loopSrc = null; }
+    };
 
     return {
       init, S, startMusic, stopMusic,
@@ -1040,6 +1099,16 @@ window.PR6 = (() => {
   const paintMute = () => { muteBtn.textContent = SFX.muted ? '🔇' : '🔊'; muteBtn.setAttribute('aria-label', SFX.muted ? 'Sound off. Tap to turn on' : 'Sound on. Tap to mute'); muteBtn.setAttribute('aria-pressed', SFX.muted ? 'true' : 'false'); };
   muteBtn.addEventListener('click', () => { SFX.init(); SFX.setMuted(!SFX.muted); paintMute(); if (!SFX.muted) SFX.S.blocked(); });
   paintMute();
+  const liteBtn = $('lite');
+  const paintLite = () => { liteBtn.setAttribute('aria-pressed', LITE ? 'true' : 'false'); liteBtn.setAttribute('aria-label', LITE ? 'Lite mode on. Tap for full graphics and music' : 'Lite mode off. Tap for low-power mode'); };
+  liteBtn.addEventListener('click', () => {
+    LITE = !LITE;
+    try { localStorage.setItem(LITE_KEY, LITE ? '1' : '0'); } catch (e) {}
+    document.body.classList.toggle('lite', LITE);
+    paintLite();
+    if (phase === 'play') { if (LITE) SFX.stopMusic(); else SFX.startMusic(); }
+  });
+  paintLite();
 
   const SOUND = { delivered:'deliver', sharkwarn:'sharkDun', bite:'bite', tapped:'block', orcahunt:'orca', heal:'heal',
     hackwarn:'hackWarn', hack:'down', blocked:'blocked', bhwarn:'siren', bhdown:'down', whitehat:'white',
@@ -1111,7 +1180,7 @@ window.PR6 = (() => {
       const sw = warns[k];
       if (sw && pos[sw.id]) {
         const p = pos[sw.id];
-        w.g.setAttribute('opacity', reduce ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(st.t * 6)));
+        setAttr(w.g, 'opacity', reduce || LITE ? 1 : (0.55 + 0.45 * Math.abs(Math.sin(st.t * 6))).toFixed(2));
         if (w.id !== sw.id) {
           w.id = sw.id;
           w.g.setAttribute('data-node', sw.id); w.g.style.pointerEvents = 'auto';
@@ -1120,16 +1189,17 @@ window.PR6 = (() => {
           w.tag.setAttribute('x', p.x); w.tag.setAttribute('y', p.y - 30);
         }
         setText(w.tag, Math.ceil(sw.left) + '…');
-      } else if (w.id !== null) { w.id = null; w.g.setAttribute('opacity', 0); w.g.removeAttribute('data-node'); w.g.style.pointerEvents = 'none'; }
+      } else if (w.id !== null) { w.id = null; setAttr(w.g, 'opacity', 0); w.g.removeAttribute('data-node'); w.g.style.pointerEvents = 'none'; }
     });
     const kids = msgLayer.children;
-    while (kids.length < st.msgs.length) el('circle', { r:7, 'stroke-width':3, filter:'url(#glow)' }, msgLayer);
+    while (kids.length < st.msgs.length) el('circle', { r:7, 'stroke-width':3 }, msgLayer);
     while (kids.length > st.msgs.length) msgLayer.lastChild.remove();
     st.msgs.forEach((m, k) => {
       const a = pos[m.path[m.i]], b = pos[m.path[Math.min(m.i + 1, m.path.length - 1)]];
       if (!a || !b) return;
       const c = kids[k];
       setAttr(c, 'r', m.seqs.length > 1 ? 10 : 7);
+      setAttr(c, 'filter', LITE ? 'none' : 'url(#glow)');
       setAttr(c, 'stroke', m.back ? '#15933a' : '#00b4ff'); setAttr(c, 'fill', m.back ? '#e3f7e8' : '#e8f8ff');
       c.setAttribute('cx', a.x + (b.x - a.x) * m.p);
       c.setAttribute('cy', a.y + (b.y - a.y) * m.p);
@@ -1295,6 +1365,7 @@ window.PR6 = (() => {
   function frame(now) {
     if (phase !== 'play') return;
     if (paused) { lastFrame = now; requestAnimationFrame(frame); return; }
+    if (LITE && now - lastFrame < 32) { requestAnimationFrame(frame); return; } // 30 fps cap; sim time accumulates
     let dt = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
     while (dt > 0) { const d = Math.min(0.05, dt); E.step(st, d, rng); dt -= d; }
@@ -1303,7 +1374,7 @@ window.PR6 = (() => {
     const won = st.won, failed = st.failed;
     handleEvents();
     render();
-    if (now - lastUi > 200 || won) { renderUi(); lastUi = now; }
+    if (now - lastUi > (LITE ? 400 : 200) || won) { renderUi(); lastUi = now; }
     if (won) { finish(); return; }
     if (failed) { failRun(); return; }
     requestAnimationFrame(frame);
@@ -1311,7 +1382,7 @@ window.PR6 = (() => {
 
   function start() {
     if (quiz) closeQuiz(false);
-    SFX.init(); SFX.S.start(); SFX.startMusic();
+    SFX.init(); SFX.S.start(); if (!LITE) SFX.startMusic();
     document.body.classList.remove('idle', 'done');
     st = E.create(rng); bhShow.next = 12; bhShow.until = -1;
     log.innerHTML = '';
