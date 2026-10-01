@@ -313,30 +313,35 @@
     <div id="examList"></div>
 
     <details class="help" id="examHelp">
-      <summary>How to open the downloaded exam</summary>
+      <summary>Downloadable Examinations</summary>
       <div class="help-body">
-        <p>The Prelim exam is a file you download and open on your device. It works without internet once downloaded.</p>
+        <p>You can take an examination in one of two ways:</p>
+        <ol>
+          <li><b>Online</b> — tap the examination's name. It opens on this page and needs internet.</li>
+          <li><b>Offline</b> — tap <b>Download … (offline)</b>. The file saves to your device and works without internet.</li>
+        </ol>
+        <div class="warn">Choose only one. Each examination accepts one attempt, and your QR code is your record.</div>
+        <h3>Opening a downloaded examination</h3>
+        <p>The file name ends in <b>_exam_ITEra.html</b> (for example, <b>prelim_exam_ITEra.html</b>).</p>
         <h3>Android</h3>
         <ol>
-          <li>Open this page in Chrome and tap <b>Prelim</b>. The file downloads.</li>
+          <li>Open this page in Chrome and tap the download button.</li>
           <li>In Chrome, tap <b>⋮</b> → <b>Downloads</b>.</li>
-          <li>Tap <b>prelim_exam_ITEra.html</b>. It opens in Chrome.</li>
+          <li>Tap the examination file. It opens in Chrome.</li>
         </ol>
         <h3>iPhone / iPad</h3>
         <ol>
           <li>Install <b>Microsoft Edge</b> from the App Store.</li>
-          <li>Open this page in Edge (not Safari) and tap <b>Prelim</b>, then <b>Download</b>.</li>
-          <li>In Edge, tap <b>⋯</b> → <b>Downloads</b>, then tap <b>prelim_exam_ITEra.html</b>.</li>
-          <li>Do not open the file from the Files app. The exam will not work there.</li>
+          <li>Open this page in Edge (not Safari), tap the download button, then tap <b>Download</b>.</li>
+          <li>In Edge, tap <b>⋯</b> → <b>Downloads</b>, then tap the examination file.</li>
+          <li>Do not open the file from the Files app. The examination will not work there.</li>
         </ol>
         <h3>Windows / Mac</h3>
         <ol>
-          <li>Tap <b>Prelim</b>. The file saves to your Downloads folder.</li>
-          <li>Double-click <b>prelim_exam_ITEra.html</b>, or right-click → <b>Open with</b> → Chrome or Edge.</li>
+          <li>Click the download button. The file saves to your Downloads folder.</li>
+          <li>Double-click the file, or right-click → <b>Open with</b> → Chrome or Edge.</li>
         </ol>
-        <div class="warn">
-          Keep the file until your QR code is saved. To resume, open the same file in the same browser. Do not clear your browser data during the exam.
-        </div>
+        <div class="warn">Keep the file until your QR code is saved. To resume, open the same file in the same browser. Do not clear your browser data during the examination.</div>
       </div>
     </details>
   </section>
@@ -369,8 +374,10 @@
    EXAMS: minimum { label, href, prefix }
      prefix must match the exam page's CFG.prefix (reads prefix_session /
      prefix_result from IndexedDB 'itict_exam' / 'kv').
-     Optional: download: true   row downloads the file instead of opening it
-               (status is not read; a downloaded file runs on its own origin).
+     Optional: offline: true    adds a "Download (offline)" row under the exam,
+               so students can take it online (main row) or offline (file).
+               Offline attempts are not shown here; a downloaded file keeps
+               its own storage on the device.
 
    READS: { label, href }
    ===================================================================== */
@@ -411,7 +418,7 @@ const ACTIVITIES = [
 ];
 
 const EXAMS = [
-  { id: 'examPrelim', label: 'Prelim',  href: 'prelim_exam_ITEra.html',  prefix: 'itict_prelim', download: true },
+  { id: 'examPrelim', label: 'Prelim',  href: 'prelim_exam_ITEra.html',  prefix: 'itict_prelim', offline: true },
   { id: 'exam1',      label: 'Midterm', href: 'midterm_exam_ITEra.html', prefix: 'itict_midterm' },  // id kept: existing sync files store the Midterm under 'exam1'
   // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
 ];
@@ -476,7 +483,6 @@ function buildRow(item, scoreText) {
   const btn = el('a', 'box pill');
   btn.id = item.id + 'Btn';
   btn.href = item.href;
-  if (item.download) btn.setAttribute('download', item.href.split('/').pop());
   const label = el('span', 'pill-label', item.label);
   label.id = item.id + 'Label';
   const end = el('span', 'pill-end', '›');
@@ -486,6 +492,20 @@ function buildRow(item, scoreText) {
   const note = el('div', 'note', 'Checking...');
   note.id = item.id + 'Note';
   wrap.append(row, note);
+  return wrap;
+}
+
+function buildDownloadRow(e) {
+  const wrap = el('div');
+  const row = el('div', 'row');
+  row.append(el('div', 'box score', '⤓'));
+  const btn = el('a', 'box pill');
+  btn.id = e.id + 'DlBtn';
+  btn.href = e.href;
+  btn.setAttribute('download', e.href.split('/').pop());
+  btn.append(el('span', 'pill-label', `Download ${e.label} (offline)`), el('span', 'pill-end', '›'));
+  row.append(btn);
+  wrap.append(row, el('div', 'note', 'Offline copy — see Downloadable Examinations below'));
   return wrap;
 }
 
@@ -519,7 +539,11 @@ function buildLists() {
 
   const examList = document.getElementById('examList');
   examList.innerHTML = '';
-  EXAMS.forEach(e => examList.append(buildRow(e)));
+  EXAMS.forEach(e => {
+    examList.append(buildRow(e));
+    if (e.offline) examList.append(buildDownloadRow(e));
+  });
+  document.getElementById('examHelp').hidden = !EXAMS.some(e => e.offline);
 
   const readList = document.getElementById('readList');
   readList.innerHTML = '';
@@ -756,10 +780,6 @@ async function loadExamRecord(key) {
 }
 
 async function refreshExam(e) {
-  if (e.download) {
-    setRow(e, { end: '⤓', note: 'Tap to download, then open the file (see below)' });
-    return;
-  }
   const result = await loadExamRecord(e.prefix + '_result');
   const session = await loadExamRecord(e.prefix + '_session');
   if (result || (session && session.submitted)) {
