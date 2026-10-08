@@ -272,6 +272,10 @@
   .ul-pick small { display: block; font-size: 11px; font-weight: 500; margin-top: 2px; }
   .ul-pick.sel { background: var(--yellow); }
   .ul-pick.cur { background: var(--green); }
+  .ul-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .ul-tab { flex: 1; background: var(--white); padding: 9px 6px 6px; font-size: 15px; font-weight: 800; cursor: pointer; }
+  .ul-tab.on { background: var(--cyan); }
+  .ul-pick.rsel { background: var(--coral); }
   .ul-status { font-size: 14px; font-weight: 500; text-align: center; margin: 12px 0 4px; min-height: 18px; line-height: 1.35; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -406,8 +410,12 @@
       </div>
     </div>
     <div id="ulStepPick" hidden>
-      <strong>Open up to which activity?</strong>
-      <p class="ul-note">Earlier activities with no result become Skipped (0%).</p>
+      <div class="ul-tabs">
+        <button type="button" class="box ul-tab on" id="ulTabUnlock">Unlock</button>
+        <button type="button" class="box ul-tab" id="ulTabReset">Reset scores</button>
+      </div>
+      <strong id="ulPickTitle">Open up to which activity?</strong>
+      <p class="ul-note" id="ulPickNote">Earlier activities with no result become Skipped (0%).</p>
       <div class="ul-grid" id="ulGrid"></div>
       <div class="ul-status" id="ulStatus"></div>
       <div class="ul-row">
@@ -1215,7 +1223,13 @@ const ul = {
   grid: document.getElementById('ulGrid'),
   status: document.getElementById('ulStatus'),
   confirm: document.getElementById('ulConfirm'),
-  stage: 1, pending: null, busy: false
+  stage: 1, pending: null, busy: false,
+  mode: 'unlock', resetSel: new Set(),
+  title: document.getElementById('ulPickTitle'),
+  note: document.getElementById('ulPickNote'),
+  relock: document.getElementById('ulRelock'),
+  tabUnlock: document.getElementById('ulTabUnlock'),
+  tabReset: document.getElementById('ulTabReset')
 };
 
 function ulResetCodes() {
@@ -1248,7 +1262,7 @@ async function ulSubmit() {
       ul.c1.disabled = false;
       if (h === UNLOCK_H2) {
         ulResetCodes(); ul.msg.textContent = '';
-        await ulShowPicker();
+        await ulShowPicker('unlock');
       } else {
         ulResetCodes(); ul.msg.textContent = 'Invalid'; ul.c1.focus();
       }
@@ -1256,12 +1270,35 @@ async function ulSubmit() {
   } finally { ul.busy = false; }
 }
 
-async function ulShowPicker() {
+function ulScoreText(a, r) {
+  try { return a.score ? a.score(r) : pctOf(r) + '%'; } catch (e) { return pctOf(r) + '%'; }
+}
+
+async function ulShowPicker(mode) {
+  if (mode) ul.mode = mode;
   ul.stepCode.hidden = true; ul.stepPick.hidden = false;
-  ul.pending = null; ul.confirm.hidden = true; ul.status.textContent = '';
+  ul.pending = null; ul.resetSel = new Set(); ul.confirm.hidden = true; ul.status.textContent = '';
+  ul.tabUnlock.classList.toggle('on', ul.mode === 'unlock');
+  ul.tabReset.classList.toggle('on', ul.mode === 'reset');
+  ul.relock.hidden = ul.mode !== 'unlock';
   const U = (await loadUnlock()) || { through: 0, skipped: [] };
   const recs = await Promise.all(ACTIVITIES.map(loadActivity));
   ul.grid.innerHTML = '';
+  if (ul.mode === 'reset') {
+    ul.title.textContent = 'Reset which activities?';
+    ul.note.textContent = 'Tap one or more. Their scores are erased so they can be taken again.';
+    ACTIVITIES.forEach((a, i) => {
+      const b = el('button', 'box ul-pick');
+      b.type = 'button';
+      const tag = recs[i] ? ulScoreText(a, recs[i]) : ((U.skipped || []).includes(a.n) ? 'Skipped' : 'No score');
+      b.append(document.createTextNode(a.label), el('small', null, tag));
+      b.addEventListener('click', () => ulToggleReset(a.n, b));
+      ul.grid.append(b);
+    });
+    return;
+  }
+  ul.title.textContent = 'Open up to which activity?';
+  ul.note.textContent = 'Earlier activities with no result become Skipped (0%).';
   ACTIVITIES.forEach((a, i) => {
     const b = el('button', 'box ul-pick' + (U.through === a.n ? ' cur' : ''));
     b.type = 'button';
@@ -1271,6 +1308,30 @@ async function ulShowPicker() {
     ul.grid.append(b);
   });
   if (U.through) ul.status.textContent = `Currently unlocked through ${ACTIVITIES[U.through - 1] ? ACTIVITIES[U.through - 1].label : 'Activity ' + U.through}.`;
+}
+
+function ulToggleReset(n, b) {
+  if (ul.resetSel.has(n)) ul.resetSel.delete(n); else ul.resetSel.add(n);
+  b.classList.toggle('rsel', ul.resetSel.has(n));
+  const list = Array.from(ul.resetSel).sort((x, y) => x - y);
+  if (!list.length) { ul.status.textContent = ''; ul.confirm.hidden = true; return; }
+  ul.status.textContent = `Reset ${list.length === 1 ? 'Activity' : 'Activities'} ${list.join(', ')}. Their scores will be erased and they can be taken again.`;
+  ul.confirm.hidden = false;
+}
+
+async function ulResetScores(list) {
+  for (const n of list) {
+    const a = ACTIVITIES[n - 1]; if (!a) continue;
+    await clearActivity(a);
+    if (a.redo) { try { localStorage.removeItem(a.redo.flagKey); } catch (e) {} }
+    if (a.href === 'qrispy_queen.html') { try { localStorage.removeItem('itict_activity7_attempts'); } catch (e) {} }
+  }
+  const U = await loadUnlock();
+  if (U) {
+    const skipped = (U.skipped || []).filter(n => !list.includes(n));
+    if (!U.through && !skipped.length) await clearUnlock();
+    else await writeUnlock(Object.assign({}, U, { skipped }));
+  }
 }
 
 function ulSelect(n, recs) {
@@ -1285,6 +1346,16 @@ function ulSelect(n, recs) {
 }
 
 async function ulApply() {
+  if (ul.mode === 'reset') {
+    const list = Array.from(ul.resetSel).sort((x, y) => x - y);
+    if (!list.length) return;
+    ul.confirm.hidden = true;
+    await ulResetScores(list);
+    await refreshActivities();
+    await ulShowPicker('reset');
+    ul.status.textContent = `Done. ${list.length === 1 ? 'Activity' : 'Activities'} ${list.join(', ')} reset.`;
+    return;
+  }
   if (!ul.pending) return;
   const prev = (await loadUnlock()) || { through: 0, skipped: [] };
   const skipped = Array.from(new Set([...(prev.skipped || []), ...ul.pending.toSkip])).sort((a, b) => a - b);
@@ -1309,6 +1380,8 @@ document.getElementById('ulCancel').addEventListener('click', ulCloseAll);
 document.getElementById('ulClose').addEventListener('click', ulCloseAll);
 document.getElementById('ulConfirm').addEventListener('click', ulApply);
 document.getElementById('ulRelock').addEventListener('click', ulRelock);
+ul.tabUnlock.addEventListener('click', () => ulShowPicker('unlock'));
+ul.tabReset.addEventListener('click', () => ulShowPicker('reset'));
 [ul.c1, ul.c2].forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ulSubmit(); } }));
 ul.panel.addEventListener('click', e => { if (e.target === ul.panel) ulCloseAll(); });
 
