@@ -378,6 +378,23 @@
   #selfDownloadBtn:active{ background:#eee; }
   #selfDownloadBtn:disabled{ opacity:.5; cursor:default; }
 </style>
+<script>
+/* Instructor unlock (set from the hub crest). Opens this page's gate when the
+   instructor unlocked exactly this activity, or skipped the activity before it.
+   Never opens an activity that was itself marked Skipped. */
+function itictGateBypass(n){
+  try{
+    var s=null;
+    try{ s=localStorage.getItem('itict_unlock'); }catch(e){}
+    if(!s){ var m=document.cookie.match(/(?:^|; )itict_unlock=([^;]*)/); if(m) s=decodeURIComponent(m[1]); }
+    if(!s){ try{ s=sessionStorage.getItem('itict_unlock'); }catch(e){} }
+    if(!s) return false;
+    var u=JSON.parse(s), sk=Array.isArray(u.skipped)?u.skipped:[];
+    if(sk.indexOf(n)>=0) return false;
+    return u.through===n || sk.indexOf(n-1)>=0;
+  }catch(e){ return false; }
+}
+</script>
 </head>
 <body>
 
@@ -968,7 +985,7 @@
       return;
     }
     const act1Done = await loadActivity1Result();
-    if(!act1Done){
+    if(!act1Done && !itictGateBypass(2)){
       document.getElementById('lockedOverlay').style.display = 'flex';
       startOverlay.classList.add('hidden');
       document.querySelector('.topbar').style.display = 'none';
