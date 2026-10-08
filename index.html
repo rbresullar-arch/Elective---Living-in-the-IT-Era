@@ -392,6 +392,9 @@ const a6Pct = r => r.percentage != null ? r.percentage
    The game saves { percentage, bestStars, bestProfit, runs, lastStars }. */
 const a7Pct = r => r.percentage != null ? r.percentage : Math.round((r.bestStars || 0) / 5 * 100);
 
+/* Activity 9 (Netiquette Desk): score = points / 60 as a percentage. First completed run is locked.
+   The game saves { score, maxScore, percentage, reputation, locked }. */
+
 /* Activity 8 (Phish or Legit): score = best points / 2000 as a percentage.
    The game saves { percentage, bestPoints, bestAccuracy, runs, lastPercentage }. */
 
@@ -415,6 +418,8 @@ const ACTIVITIES = [
   { label: 'Activity 8', href: 'phish_flag.html',
     score: r => (r.percentage || 0) + '%',
     note: r => `Best ${r.bestPoints || 0} pts · ${r.bestAccuracy || 0}% accurate · Runs: ${r.runs || 1}` + (r.lastPercentage != null ? ` · Last run ${r.lastPercentage}%` : '') },
+  { label: 'Activity 9', href: 'netiquette_desk.html',
+    note: r => `${r.score}/${r.maxScore || 60} pts · Reputation ${r.reputation != null ? r.reputation : '—'}% · Locked` },
 ];
 
 const EXAMS = [
