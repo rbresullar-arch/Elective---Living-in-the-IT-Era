@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Netiquette Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --www:#ff7250; --name:#dffcf8; --main:#fbb82e; --side:#fff3d8; --drink:#3b6689;
+  --grey:#5b636a; --light:#e8e9eb;
+  --good:#1f9d55; --warn:#e8a200; --bad:#d62828; --gold:#f5b700; --mint:#6ee7a0; --lilac:#c9b6ff; --sky:#9fd8ff; --rose:#ffb3c7;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 40px;display:flex;flex-direction:column;gap:10px}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--ink);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--gold);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.mute{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;align-self:center}
+.mute.armed{background:var(--bad);border-color:var(--bad);color:#fff}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
+.stat.ok b{color:#6ee7a0}.stat.low b{color:#ff8a80}
+.repbar{height:6px;background:#444;border-radius:3px;overflow:hidden;margin-top:3px}
+.repbar i{display:block;height:100%;background:var(--mint);transition:width .3s}
+
+/* Screen */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:9px;min-height:500px;background:var(--name)}
+.screen.anim{animation:slide .22s ease-out}
+.screen.s-reason{background:var(--side)}
+.screen.s-fix{background:var(--sky)}
+.screen.s-good{background:#c8f5da}
+.screen.s-bad{background:#ffc9c2}
+.screen.s-bad.shake{animation:shake .35s 2}
+.screen h2{font-family:var(--display);font-weight:400;font-size:21px;margin:0;text-align:center;letter-spacing:.3px;line-height:1.15}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qcount{font-family:var(--pixel);font-size:11px;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:3px 8px}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:12px}
+.hint{font-size:11.5px;color:#444;text-align:center;margin:2px 0 0}
+
+/* Meta */
+.meta{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center}
+.av{width:42px;height:42px;border:3px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:19px;background:var(--c,#fff);grid-row:span 2}
+.to{font-weight:700;font-size:14.5px;line-height:1.2}
+.to small{display:block;font-weight:400;font-size:11.5px;color:#444}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-family:var(--pixel);font-size:9.5px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap;background:#fff}
+.chip.EMAIL{background:var(--main)}.chip.SMS{background:var(--mint)}.chip.CHAT{background:var(--lilac)}
+.chip.POST{background:var(--www)}.chip.COMMENT{background:var(--rose)}.chip.GC{background:var(--sky)}
+.rel{font-family:var(--pixel);font-size:9.5px;padding:2px 6px;border-radius:6px;background:var(--ink);color:#fff}
+.rel.SUPERIOR{background:#6a1b9a}.rel.TEACHER{background:var(--drink)}.rel.COLLEAGUE{background:#455a64}.rel.PUBLIC{background:var(--bad)}
+.from{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin-bottom:8px;padding-bottom:8px;border-bottom:2px dashed #bbb}
+.from b{font-size:13px}
+.prog{font-family:var(--pixel);font-size:9.5px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);background:var(--gold)}
+.from small{color:#555;width:100%}
+.time{font-family:var(--pixel);font-size:9.5px;padding:2px 6px;border-radius:6px;border:2px solid var(--ink);background:#fff}
+
+/* Draft bubble */
+.draft{margin-top:10px;border:3px solid var(--ink);border-radius:16px;padding:10px 12px;background:#fafafa;position:relative}
+.draft .subj{font-family:var(--display);font-size:17px;line-height:1.15;margin:0 0 6px}
+.draft .subj span{font-family:var(--pixel);font-size:9.5px;display:block;color:#555;margin-bottom:2px}
+.draft .bd{font-size:14.5px;line-height:1.5;margin:0;white-space:pre-line;word-break:break-word}
+.draft.bubble{background:#e7f0ff;border-radius:18px 18px 4px 18px}
+.draft.post{background:#fff}
+.draft .ph{display:block;font-weight:700;font-size:12px;margin-bottom:6px}
+.draft.compact .bd{font-size:13px}
+.stamp{position:absolute;top:-12px;right:10px;font-family:var(--pixel);font-size:9.5px;background:var(--gold);border:2px solid var(--ink);border-radius:6px;padding:1px 6px}
+
+.tbar{height:9px;background:#fff;border:2px solid var(--ink);border-radius:5px;overflow:hidden}
+.tbar i{display:block;height:100%;width:100%;background:var(--good)}
+
+/* Decision buttons */
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vbtn{border:4px solid var(--ink);border-radius:18px;padding:14px 6px 12px;font-family:var(--display);font-size:25px;letter-spacing:.4px;line-height:1.05;color:#fff;box-shadow:0 4px 0 var(--ink)}
+.vbtn small{display:block;font-family:var(--pixel);font-size:9.5px;letter-spacing:0;margin-top:4px}
+.vbtn.no{background:var(--bad)}.vbtn.yes{background:var(--good)}
+.vbtn:active,.opt:active,.go:active{transform:translateY(2px)}
+
+/* Options */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{width:100%;text-align:left;background:#fff;border:3px solid var(--ink);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.4;white-space:pre-line;box-shadow:0 3px 0 var(--ink)}
+.opt .k{font-family:var(--pixel);font-size:10px;display:block;margin-bottom:2px;color:#555}
+.opt.right{background:#c8f5da}.opt.wrong{background:#ffc9c2}
+.opt[disabled]{cursor:default;box-shadow:none}
+.step{font-family:var(--pixel);font-size:10.5px;text-align:center}
+
+/* Result */
+.outcome{font-family:var(--display);font-size:30px;line-height:1;text-align:center;margin:4px 0 0}
+.ptsline{font-family:var(--pixel);font-size:12px;text-align:center}
+.replies{display:flex;flex-direction:column;gap:6px}
+.reply{background:#fff;border:3px solid var(--ink);border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:13px;animation:pop .3s ease-out both}
+.reply b{font-size:11.5px;display:block}
+.reply:nth-child(2){animation-delay:.25s}.reply:nth-child(3){animation-delay:.5s}
+.why{background:var(--side);border:3px solid var(--ink);border-radius:14px;padding:9px 11px;font-size:13px;line-height:1.45}
+.why b{font-family:var(--pixel);font-size:10px;display:block;margin-bottom:2px}
+.better{background:#c8f5da;border:3px solid var(--ink);border-radius:14px;padding:9px 11px;font-size:13px;line-height:1.45;white-space:pre-line}
+.better b{font-family:var(--pixel);font-size:10px;display:block;margin-bottom:2px}
+.next{align-self:stretch;background:var(--ink);color:#fff;border:4px solid var(--ink);border-radius:16px;padding:10px;font-family:var(--display);font-size:22px;letter-spacing:.5px}
+
+/* Overlay */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.card{background:#fff;border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--www)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.tw{overflow-x:auto}
+.cmp{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{border:2px solid var(--ink);padding:5px 8px;text-align:left;vertical-align:top}
+.cmp th{background:var(--main);font-family:var(--pixel);font-size:10px;font-weight:400}
+.cmp td.p{font-family:var(--pixel);font-size:12px;white-space:nowrap}
+.cmp td.p.plus{color:var(--good)}.cmp td.p.minus{color:var(--bad)}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go{align-self:flex-start;background:var(--www);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px;color:var(--ink)}
+.go.home{background:#fff;text-decoration:none;display:inline-block}
+.dl{background:none;border:none;text-decoration:underline;font-size:12px;color:#555;padding:0;align-self:flex-start}
+.lockline{background:var(--side);border:3px solid var(--ink);border-radius:12px;padding:8px 12px;font-size:13px}
+.result{font-family:var(--display);font-size:44px;line-height:1}
+.result.win{color:var(--good)}.result.mid{color:var(--warn)}.result.lose{color:var(--bad)}
+.bigscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bigscore b{font-family:var(--display);font-size:56px;line-height:1;font-weight:400}
+.bigscore span{font-family:var(--pixel);font-size:12px}
+.scoreline{background:#eafff2;border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{border:3px solid var(--ink);border-radius:12px;padding:6px 10px}
+.kpi b{display:block;font-family:var(--pixel);font-size:18px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.debrief{background:var(--side);border:3px solid var(--ink);border-radius:12px;padding:10px 12px}
+.review{display:flex;flex-direction:column;gap:7px}
+.review h4{margin:0;font-family:var(--pixel);font-size:11px}
+.rv{border:3px solid var(--ink);border-radius:12px;padding:7px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.rv.ok{background:#eafff2}.rv.part{background:#fff6d6}.rv.bad{background:#ffe3e0}
+.rvh{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.rvh .pts{margin-left:auto;font-family:var(--pixel);font-size:11px}
+.rvq{font-style:italic;color:#333;white-space:pre-line}
+.tag{font-family:var(--pixel);font-size:9.5px;padding:1px 5px;border-radius:5px;border:2px solid var(--ink)}
+.tag.OK{background:var(--good);color:#fff}.tag.NO{background:var(--bad);color:#fff}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--ink);color:#fff;font-family:var(--pixel);font-size:12px;padding:8px 14px;border-radius:10px;z-index:9;pointer-events:none;max-width:90vw;text-align:center}
+.toast.good{background:var(--good)}.toast.bad{background:var(--bad)}
+#gate{z-index:20}
+
+@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes slide{0%{transform:translateX(18px);opacity:.2}100%{transform:none;opacity:1}}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.vbtn{font-size:21px}.bigscore b{font-size:46px}.screen{min-height:440px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="brand">Netiquette Desk<small>APPROVE BEFORE IT GOES OUT</small></div>
+    <div class="hudbtns"><button class="mute" id="homeBtn" type="button">Home</button><button class="mute" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat" id="stQ"><b id="hudQ">0/20</b><span>Drafts</span></div>
+      <div class="stat" id="stScore"><b id="hudScore">0</b><span>Points</span></div>
+      <div class="stat" id="stRep"><b id="hudRep">100%</b><span>Reputation</span><div class="repbar"><i id="repFill" style="width:100%"></i></div></div>
+    </div>
+  </header>
+  <div id="view"></div>
+</div>
+
+<div class="overlay" id="startScreen">
+  <div class="card">
+    <h1>You run the <em>Comms Desk</em>.</h1>
+    <p>You are the social media and communications manager for nine students on clinical duty or OJT: <b>BSRT, BSN, BSEE, BSCE, BSME, BSECE, BSIT, BSA and BSBA</b>. Every message, email and post they draft lands on your desk first. <b>Nothing goes out until you approve it.</b></p>
+    <ol>
+      <li>Read the draft. Check <b>who</b> sent it, <b>who</b> it is for, the <b>channel</b> and the <b>time</b>.</li>
+      <li><b>APPROVE</b> if it is proper for that person. <b>REJECT</b> if it breaks netiquette.</li>
+      <li>If you reject: pick <b>why</b>, then pick the <b>better version</b> to send.</li>
+    </ol>
+    <div class="tw"><table class="cmp">
+      <tr><th>Recipient</th><th>Expected tone</th></tr>
+      <tr><td>Superior (OJT/duty supervisor, head nurse, site engineer, audit senior, manager, program chair)</td><td>Formal. Greeting, title, clear request, sign-off. Office hours.</td></tr>
+      <tr><td>Teacher / instructor / adviser</td><td>Formal. Ma'am/Sir, Engr. or Dr., full sentences, your name and section.</td></tr>
+      <tr><td>Colleague (classmate, fellow intern or trainee)</td><td>Friendly but professional. Clear and specific. No confidential data.</td></tr>
+      <tr><td>Public (Facebook)</td><td>No patient, client, customer or company data, no rants, verify before sharing, ask before posting others.</td></tr>
+    </table></div>
+    <div class="tw"><table class="cmp">
+      <tr><th>Action</th><th>Points</th></tr>
+      <tr><td>Approve a proper draft</td><td class="p plus">+3</td></tr>
+      <tr><td>Reject an improper draft</td><td class="p plus">+1</td></tr>
+      <tr><td>Correct reason</td><td class="p plus">+1</td></tr>
+      <tr><td>Correct better version</td><td class="p plus">+1</td></tr>
+      <tr><td>Approve an improper draft (it goes public)</td><td class="p minus">0 · −15 rep</td></tr>
+      <tr><td>Reject a proper draft</td><td class="p minus">0 · −5 rep</td></tr>
+      <tr><td>Draft left until its timer ends</td><td class="p minus">0 · −5 rep</td></tr>
+    </table></div>
+    <p><b>Activity 9 score:</b> points out of 60 (20 drafts × 3), as a percentage. <b>Your first completed run is recorded and locked.</b> Later runs are practice only.</p>
+    <p class="lockline" id="lockLine" hidden></p>
+    <div class="btnrow"><button class="go" id="startBtn" type="button">Open the desk</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
+  </div>
+</div>
+
+<div class="overlay" id="endScreen" hidden>
+  <div class="card">
+    <div class="result" id="endResult">DONE</div>
+    <div class="bigscore"><b id="endPts">0</b><span id="endPct">0%</span></div>
+    <p class="scoreline" id="scoreLine"></p>
+    <div class="kpis" id="endKpis"></div>
+    <div class="debrief"><b>Debrief:</b> Which recipient was hardest to write for: a superior, a teacher, a colleague or the public? What confidential data does your own program handle? Which rule did you miss most? How would you change a message you sent this week?</div>
+    <div class="review" id="review"></div>
+    <div class="btnrow"><button class="go" id="againBtn" type="button">Practice again</button><button class="go home" id="endHomeBtn" type="button">‹ Activities</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <div class="card">
+    <h1>Open in a <em>real browser</em></h1>
+    <p id="gateMsg"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===== CONFIG ===== */
+const CFG = {
+  hubUrl: 'index.html',
+  drafts: 20, okCount: 7,          // per run: 7 proper + 13 improper, shuffled
+  itemSeconds: 60,                 // per draft, all steps included
+  rep: { start:100, badApprove:-15, overBlock:-5, expired:-5, good:+2 },
+  pts: { approveOk:3, reject:1, reason:1, fix:1 }
+};
+
+/* ===== RULES ===== */
+const REASONS = {
+  CAPS:"Shouting (ALL CAPS)",
+  SLANG:"Too casual / textspeak for this person",
+  NOGREET:"No greeting, subject or name",
+  TIME:"Wrong time to send",
+  PRIVACY:"Shares private, patient or confidential data",
+  UNVERIFIED:"Shares unverified information",
+  FLAME:"Rude, angry or public complaint",
+  TAG:"Posts or tags others without consent",
+  AUDIENCE:"Wrong audience (reply-all / group chat)",
+  SPAM:"Chain message / spam",
+  DEMAND:"Demanding tone to an elder or superior",
+  VAGUE:"Unclear, no context"
+};
+const REL_NAME = {SUPERIOR:"SUPERIOR",TEACHER:"TEACHER",COLLEAGUE:"COLLEAGUE",PUBLIC:"PUBLIC"};
+const CH_NAME = {EMAIL:"EMAIL",SMS:"SMS",CHAT:"MESSENGER",POST:"FB POST",COMMENT:"FB COMMENT",GC:"GROUP CHAT"};
+
+/* ===== CLIENTS (one student per program) ===== */
+const SENDERS = {
+  RT:  { name:"Jamie Cruz",    prog:"BSRT",  sec:"BSRT 2-A",  site:"Radiology duty, City Hospital" },
+  BN:  { name:"Andrea Lim",    prog:"BSN",   sec:"BSN 3-B",   site:"Ward duty, City Hospital" },
+  EE:  { name:"Carlo Mendoza", prog:"BSEE",  sec:"BSEE 4-A",  site:"OJT, Electric Cooperative" },
+  CE:  { name:"Paolo Aquino",  prog:"BSCE",  sec:"BSCE 4-B",  site:"OJT, Construction Site" },
+  ME:  { name:"Rina Torres",   prog:"BSME",  sec:"BSME 4-A",  site:"OJT, Manufacturing Plant" },
+  ECE: { name:"Miguel Tan",    prog:"BSECE", sec:"BSECE 4-A", site:"OJT, Telecom Company" },
+  IT:  { name:"Bea Flores",    prog:"BSIT",  sec:"BSIT 3-A",  site:"OJT, Software Company" },
+  BA:  { name:"Nicole Ramos",  prog:"BSA",   sec:"BSA 4-A",   site:"OJT, Audit Firm" },
+  BB:  { name:"Kevin Ong",     prog:"BSBA",  sec:"BSBA 3-B",  site:"OJT, Retail Company" }
+};
+
+/* ===== DRAFT BANK =====
+   s: sender key · to / who: recipient and role · rel: SUPERIOR TEACHER COLLEAGUE PUBLIC
+   ok:true → proper draft (approve). Otherwise r = violation, d = two wrong reasons,
+   fix[0] = proper rewrite, fix[1..2] = rewrites that still break a rule.
+   why: explanation shown after the decision. */
+const OK = [
+  /* BSRT */
+  { s:"RT", ch:"EMAIL", to:"Ma'am Reyes", who:"Clinical Instructor", rel:"TEACHER", time:"9:15 AM",
+    subj:"Request for Make-up Quiz – Jamie Cruz, BSRT 2-A",
+    body:"Good morning, Ma'am Reyes.\n\nI was absent last Monday because of a fever. I attached my medical certificate. May I ask if I could take the make-up quiz this week at your convenience?\n\nThank you very much.\n\nRespectfully,\nJamie Cruz\nBSRT 2-A",
+    why:"Clear subject with name and section, greeting with title, reason, polite request and a proper sign-off." },
+  { s:"RT", ch:"EMAIL", to:"Sir Dela Cruz", who:"Chief Rad Tech · Duty Supervisor", rel:"SUPERIOR", time:"7:30 AM",
+    subj:"Shift Swap Request – October 14",
+    body:"Good morning, Sir.\n\nI would like to request a shift swap with Mark Uy on October 14 (7 AM–3 PM) because of my scheduled board review. Mark has already agreed.\n\nThank you for considering this request.\n\nRespectfully,\nJamie Cruz\nRadiology Intern",
+    why:"Formal, specific (date, time, who), gives the reason, confirms the other person agreed, and asks instead of demands." },
+  /* BSN */
+  { s:"BN", ch:"GC", to:"BSN 3-B Group 2 GC", who:"Classmates", rel:"COLLEAGUE", time:"4:00 PM",
+    body:"Hi everyone! Reminder: our IV insertion return demo is on Thursday, 7 AM, at the skills lab. Complete uniform, please. Thanks!",
+    why:"Friendly, specific (what, when, where, what to wear), sent to the right group at a reasonable time." },
+  { s:"BN", ch:"EMAIL", to:"Ma'am Villanueva", who:"Clinical Instructor", rel:"TEACHER", time:"1:00 PM",
+    subj:"Submission: Nursing Care Plan – Andrea Lim, BSN 3-B",
+    body:"Good afternoon, Ma'am Villanueva.\n\nAttached is my nursing care plan for this week's ward rotation. Patient identifiers have been removed.\n\nThank you.\n\nRespectfully,\nAndrea Lim\nBSN 3-B",
+    why:"Complete subject, greeting, purpose, and it protects patient identity. Proper sign-off with name and section." },
+  /* BSEE */
+  { s:"EE", ch:"EMAIL", to:"Engr. Bautista", who:"OJT Supervisor, Electric Cooperative", rel:"SUPERIOR", time:"8:10 AM",
+    subj:"Weekly OJT Report – Week 6 – Carlo Mendoza",
+    body:"Good morning, Engr. Bautista.\n\nAttached is my OJT report for Week 6, including the distribution transformer inspection logs. Please let me know if any revisions are needed.\n\nThank you.\n\nRespectfully,\nCarlo Mendoza\nBSEE 4-A, OJT Trainee",
+    why:"Specific subject, polite, explains what is attached, invites corrections, and signs with role." },
+  { s:"EE", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"6:30 PM",
+    body:"Completed our lockout/tagout safety orientation at the electric cooperative today. Safety first! ⚡ #OJT #BSEE",
+    why:"Positive, shares learning, shows no restricted areas, customer data or people without consent." },
+  /* BSCE */
+  { s:"CE", ch:"EMAIL", to:"Engr. Ramos", who:"Site Engineer", rel:"SUPERIOR", time:"7:00 AM",
+    subj:"Request to Observe Slump Test – Paolo Aquino",
+    body:"Good morning, Engr. Ramos.\n\nMay I request permission to observe the slump test and concrete pouring for the second-floor slab on Friday? I will be in complete PPE.\n\nThank you for your consideration.\n\nRespectfully,\nPaolo Aquino\nBSCE 4-B, OJT Trainee",
+    why:"Asks permission formally, specific activity and date, mentions safety compliance." },
+  { s:"CE", ch:"GC", to:"Site OJT Trainees GC", who:"Fellow trainees", rel:"COLLEAGUE", time:"5:30 PM",
+    body:"Reminder: hard hat and safety shoes are required tomorrow. Pouring starts at 6 AM. See you!",
+    why:"Clear safety reminder to the right group, at a reasonable hour." },
+  /* BSME */
+  { s:"ME", ch:"EMAIL", to:"Engr. Lopez", who:"Thesis Adviser", rel:"TEACHER", time:"10:00 AM",
+    subj:"Request for Thesis Consultation – Rina Torres, BSME 4-A",
+    body:"Good morning, Engr. Lopez.\n\nMay I request a consultation this week about the heat exchanger design in Chapter 3 of our thesis? I am available Tuesday or Thursday afternoon.\n\nThank you.\n\nRespectfully,\nRina Torres\nBSME 4-A",
+    why:"States the topic, offers available times, polite and complete." },
+  { s:"ME", ch:"CHAT", to:"Jun Santos", who:"Fellow OJT trainee", rel:"COLLEAGUE", time:"2:00 PM",
+    body:"Hi Jun, thanks for helping me with the lathe setup earlier. I'll share my notes on the maintenance checklist tonight.",
+    why:"Friendly-professional, thanks a colleague, specific follow-up." },
+  /* BSECE */
+  { s:"ECE", ch:"EMAIL", to:"Engr. Navarro", who:"OJT Supervisor, Telecom Company", rel:"SUPERIOR", time:"4:30 PM",
+    subj:"Site Survey Completed – Cell Site 14",
+    body:"Good afternoon, Engr. Navarro.\n\nOur team completed the site survey for Cell Site 14 today. The signal measurements and photos are uploaded to the shared project folder.\n\nThank you.\n\nRespectfully,\nMiguel Tan\nBSECE 4-A, OJT Trainee",
+    why:"Reports completion, points to the official shared folder instead of attaching sensitive files everywhere." },
+  { s:"ECE", ch:"COMMENT", to:"Mika's post (passed the ECE board exam)", who:"Classmate", rel:"COLLEAGUE", time:"8:20 PM",
+    body:"Congratulations, Engr. Mika! Well deserved 🎉",
+    why:"Short, kind and public-appropriate." },
+  /* BSIT */
+  { s:"IT", ch:"EMAIL", to:"Sir Javier", who:"IT Manager · OJT Supervisor", rel:"SUPERIOR", time:"9:00 AM",
+    subj:"Request for Staging Server Access – Ticket #482",
+    body:"Good morning, Sir Javier.\n\nMay I request access to the staging server to test my fix for Ticket #482? I will not need production access.\n\nThank you.\n\nRespectfully,\nBea Flores\nBSIT 3-A, OJT Trainee",
+    why:"Specific request with ticket number, asks only for the access needed, formal and complete." },
+  { s:"IT", ch:"GC", to:"Capstone Team GC", who:"Classmates", rel:"COLLEAGUE", time:"3:10 PM",
+    body:"Hi team! Reminder: please push your modules to our repository by Thursday 8 PM so I can run the integration tests. Thanks!",
+    why:"Clear task and deadline, sent to the right group at a reasonable time." }
+  ,
+  /* BSA */
+  { s:"BA", ch:"EMAIL", to:"Ma'am Chua", who:"Audit Senior · OJT Supervisor", rel:"SUPERIOR", time:"4:15 PM",
+    subj:"Bank Reconciliation Workpapers – Client B, June",
+    body:"Good afternoon, Ma'am Chua.\n\nI have uploaded the June bank reconciliation workpapers for Client B to the engagement folder on the firm's shared drive. Please let me know if any adjustments are needed.\n\nThank you.\n\nRespectfully,\nNicole Ramos\nBSA 4-A, Audit Intern",
+    why:"Specific subject, uses the firm's secure shared drive instead of attaching client files, invites review, formal sign-off." },
+  { s:"BA", ch:"GC", to:"BSA 4-A Review Group GC", who:"Classmates", rel:"COLLEAGUE", time:"6:00 PM",
+    body:"Hi everyone! Our FAR review session is on Saturday, 9 AM, at the library discussion room. Please answer Problems 1–10 before we meet. Thanks!",
+    why:"Clear schedule, place and preparation, sent to the right group at a reasonable time." },
+  /* BSBA */
+  { s:"BB", ch:"EMAIL", to:"Ma'am Dizon", who:"Marketing Instructor", rel:"TEACHER", time:"10:20 AM",
+    subj:"Request for Endorsement Letter – Market Survey, Kevin Ong, BSBA 3-B",
+    body:"Good morning, Ma'am Dizon.\n\nMay I request an endorsement letter for our group's market survey at three retail stores downtown? The survey is scheduled for October 20–22.\n\nThank you.\n\nRespectfully,\nKevin Ong\nBSBA 3-B",
+    why:"Formal, gives purpose, places and dates, and asks politely." },
+  { s:"BB", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"5:00 PM",
+    body:"Sharing our store's official 11.11 sale announcement from the company's official page. Mechanics are in the link. See you there! 🛍️",
+    why:"Shares an officially released promo from the official source; no internal or unreleased information." }
+];
+
+const BAD = [
+  /* ---------- BSRT ---------- */
+  { s:"RT", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"9:40 PM",
+    body:"Grabe yung patient namin kanina, si Mrs. L. sa Room 204, may femur fracture. Tingnan niyo X-ray niya! 📸 [X-ray photo attached]",
+    r:"PRIVACY", d:["CAPS","SPAM"],
+    fix:["Learned a lot about femur fractures during today's duty. Grateful for the hands-on experience! 🩻",
+         "Patient sa Room 204 may femur fracture, name hidden na 😅 [X-ray photo attached]",
+         "Mrs. L. is doing better now! Get well soon po 🙏"],
+    why:"Patient names, room numbers and images are confidential (Data Privacy Act, RA 10173, and patient privacy rules). Share what you learned, never who." },
+  { s:"RT", ch:"SMS", to:"Sir Dela Cruz", who:"Duty Supervisor", rel:"SUPERIOR", time:"11:52 PM",
+    body:"Good evening, Sir. May I ask about tomorrow's schedule?",
+    r:"TIME", d:["CAPS","TAG"],
+    fix:["[Schedule for 7:00 AM]\nGood morning, Sir. May I ask about today's schedule? Thank you.\n– Jamie Cruz, Radiology Intern",
+         "[Send now]\nSir, sched tomorrow?",
+         "[Send now]\nSorry for the late message, Sir. May I ask about tomorrow's schedule?"],
+    why:"The words are polite, but almost midnight is not the time to message a superior. Schedule it for working hours." },
+  { s:"RT", ch:"CHAT", to:"Ma'am Reyes", who:"Clinical Instructor", rel:"TEACHER", time:"2:00 PM",
+    body:"MA'AM WHEN IS THE DEADLINE OF THE PROJECT??? PLS ANSWER",
+    r:"CAPS", d:["PRIVACY","TAG"],
+    fix:["Good afternoon, Ma'am. May I ask when our project is due? Thank you.\n– Jamie Cruz, BSRT 2-A",
+         "GOOD AFTERNOON MA'AM. MAY I ASK WHEN THE PROJECT IS DUE? THANK YOU.",
+         "Ma'am deadline po??"],
+    why:"All caps reads as shouting, and \"PLS ANSWER\" pressures a teacher. Ask politely and identify yourself." },
+  { s:"RT", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"6:20 PM",
+    body:"Screenshot ng chat ni Ma'am Reyes sa akin, buti pinayagan ako mag-late submit 😎 [screenshot attached]",
+    r:"TAG", d:["SLANG","SPAM"],
+    fix:["[Do not post. Keep private conversations private.]",
+         "[Same screenshot, name blurred] Buti pinayagan ako 😎",
+         "[Post to your Close Friends story only]"],
+    why:"A private conversation belongs to both people. Posting it without the teacher's consent is a breach of trust." },
+
+  /* ---------- BSN ---------- */
+  { s:"BN", ch:"GC", to:"Student Nurses Ward 3 GC", who:"Fellow student nurses", rel:"COLLEAGUE", time:"7:10 PM",
+    body:"Grabe si Mr. G. sa Bed 12, diabetic, ayaw sumunod sa diet niya. Pagod na ako sa kanya. 😤",
+    r:"PRIVACY", d:["SPAM","VAGUE"],
+    fix:["Tough shift today. Can we discuss diet compliance strategies with our CI tomorrow?",
+         "Grabe yung diabetic patient sa Bed 12, ayaw sumunod 😤",
+         "Si Mr. G. ulit 🙄 alam niyo na"],
+    why:"Even in a private group, naming a patient, bed number or diagnosis breaks confidentiality. Discuss the case, not the person." },
+  { s:"BN", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"7:50 PM",
+    body:"Share niyo! Lemon + baking soda cures cancer daw sabi ng nabasa ko 🍋 #HealthTips",
+    r:"UNVERIFIED", d:["CAPS","DEMAND"],
+    fix:["[Do not post. Check with DOH or a reliable medical source first.]",
+         "[Post with caption] Not sure if true, pero share ko lang 🍋",
+         "[Share only in the class GC]"],
+    why:"Health misinformation can hurt people, and as a future nurse your posts carry weight. Verify first." },
+  { s:"BN", ch:"GC", to:"BSN 3-B GC (with Ma'am Villanueva)", who:"Class + instructor", rel:"TEACHER", time:"9:10 AM",
+    body:"lol ok ma'am wat time ulit? hahaha 🤣🤣",
+    r:"SLANG", d:["PRIVACY","TAG"],
+    fix:["Good morning, Ma'am. May I ask what time the return demo starts? Thank you.",
+         "ok ma'am wat time po?",
+         "Ma'am time po ulit? 🤣"],
+    why:"Laughing emojis and textspeak are too casual when replying to an instructor, even in a group chat." },
+  { s:"BN", ch:"CHAT", to:"Ma'am Santos", who:"Head Nurse, Ward 3", rel:"SUPERIOR", time:"10:00 AM",
+    body:"Ma'am, kailangan ko na yung signature niyo sa duty log ngayon. Bago 3 PM po.",
+    r:"DEMAND", d:["UNVERIFIED","SPAM"],
+    fix:["Good morning, Ma'am Santos. May I kindly ask for your signature on my duty log when you are available? I need to submit it on Friday. Thank you.\n– Andrea Lim, BSN 3-B",
+         "Ma'am, duty log ko po? Today na po please.",
+         "MA'AM SIGNATURE PO PLS"],
+    why:"Setting a deadline for a superior sounds like an order. Ask, explain why you need it, and thank them." },
+
+  /* ---------- BSEE ---------- */
+  { s:"EE", ch:"GC", to:"BSEE OJT Batch GC", who:"Fellow trainees", rel:"COLLEAGUE", time:"8:30 PM",
+    body:"Tingnan niyo, ang laki ng bill ni Mr. Uy sa Purok 5 😂 [screenshot of customer billing list with names and account numbers]",
+    r:"PRIVACY", d:["TIME","VAGUE"],
+    fix:["[Do not send. Customer records stay inside the cooperative's system.]",
+         "[Same screenshot, names cropped] Ang laki ng bill dito 😂",
+         "[Send only to one trusted classmate]"],
+    why:"Customer names, accounts and billing data are confidential. OJT trainees are trusted with this data and must never share it." },
+  { s:"EE", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"9:15 PM",
+    body:"Brownout daw buong Surigao bukas 8 AM–5 PM sabi ng kakilala ko sa coop! Share niyo na!",
+    r:"UNVERIFIED", d:["NOGREET","TAG"],
+    fix:["[Share the cooperative's official power interruption advisory, with the link to its official page]",
+         "BROWNOUT BUKAS BUONG SURIGAO!! (source: kakilala ko)",
+         "Brownout daw bukas, not sure lang 🤷 share niyo na lang"],
+    why:"A rumor about an outage can cause panic or loss. Share only the official advisory." },
+  { s:"EE", ch:"EMAIL", to:"Engr. Bautista", who:"OJT Supervisor", rel:"SUPERIOR", time:"9:20 AM",
+    subj:"(no subject)",
+    body:"Attached.",
+    r:"NOGREET", d:["FLAME","TAG"],
+    fix:["Subject: Daily Time Record – Week 6 – Carlo Mendoza\n\nGood morning, Engr. Bautista. Attached is my daily time record for Week 6 for your signature. Thank you.\n\nRespectfully,\nCarlo Mendoza\nBSEE 4-A, OJT Trainee",
+         "Subject: DTR\n\nAttached. – C",
+         "Subject: URGENT!!!\n\nGood morning, attached is my DTR."],
+    why:"No subject, greeting or name. The supervisor cannot tell who sent it or what it is. Always include all three." },
+  { s:"EE", ch:"COMMENT", to:"Electric Cooperative's official page", who:"Public", rel:"PUBLIC", time:"10:45 PM",
+    body:"Ang bagal ng mga linemen niyo, laging brownout! Walang kwenta! 😡",
+    r:"FLAME", d:["NOGREET","SPAM"],
+    fix:["[Report it through the official channel] Good evening. May I report a recurring outage in Purok 3 since 6 PM? Thank you.",
+         "Ang BAGAL niyo, no offense 😡",
+         "Sana naman ayusin niyo trabaho niyo 🙄"],
+    why:"Insulting workers in public comments is flaming, and you are a trainee of that same cooperative. Report problems politely through proper channels." },
+
+  /* ---------- BSCE ---------- */
+  { s:"CE", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"12:30 PM",
+    body:"Tulog si Kuya foreman sa site 😂😂 [photo of a worker sleeping on a cement bag]",
+    r:"TAG", d:["SLANG","AUDIENCE"],
+    fix:["[Do not post photos of people without their consent.]",
+         "[Same photo, face covered with an emoji] Tulog si Kuya 😂",
+         "[Post it on your Story instead, 24 hours only]"],
+    why:"Posting someone's photo to mock them, without consent, is disrespectful and can cost them their job." },
+  { s:"CE", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"7:30 PM",
+    body:"Ang yabang ni Engr. R. sa site, akala mo kung sino 🙄 #OJTproblems",
+    r:"FLAME", d:["TIME","SPAM"],
+    fix:["[Private request to the OJT coordinator]\nGood afternoon, Sir. May I ask for advice on how to work better with my site supervisor? Thank you.\n– Paolo Aquino, BSCE 4-B",
+         "[Public post]\nMay isang engineer sa site namin na mayabang. Alam niyo na kung sino 🙄",
+         "[OJT trainees GC]\nSino pa dito ang inis kay Engr. R.?"],
+    why:"Public rants about a supervisor damage both reputations and solve nothing. Seek advice privately." },
+  { s:"CE", ch:"EMAIL", to:"REPLY ALL: Engr. Ramos + Supplier (Steel Corp.)", who:"Supervisor and supplier", rel:"SUPERIOR", time:"3:15 PM",
+    subj:"RE: Rebar Delivery Schedule",
+    body:"Sir, late na naman yung rebar, palpak talaga tong supplier na 'to.",
+    r:"AUDIENCE", d:["CAPS","UNVERIFIED"],
+    fix:["[Reply to Engr. Ramos only]\nGood afternoon, Sir. The rebar delivery is delayed again. Should I follow up with the supplier? Thank you.",
+         "[Reply All]\nSir, palpak po talaga ang supplier.",
+         "[Reply All]\nFYI LATE ULIT ANG DELIVERY"],
+    why:"The supplier is in the thread and will read the insult. Check the recipient list; raise internal concerns only with your supervisor." },
+  { s:"CE", ch:"CHAT", to:"Engr. Ramos", who:"Site Engineer", rel:"SUPERIOR", time:"1:20 PM",
+    body:"Sir yung ano po sa plan",
+    r:"VAGUE", d:["CAPS","TIME"],
+    fix:["Good afternoon, Sir. On Sheet S-3 of the structural plan, is the column spacing at grid C 4.0 m or 4.5 m? Thank you.\n– Paolo Aquino",
+         "Sir, yung sa plan po, alin po ba?",
+         "Sir? 🙏"],
+    why:"\"Yung ano\" gives your supervisor nothing to act on. Name the sheet, item and exact question." },
+
+  /* ---------- BSME ---------- */
+  { s:"ME", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"6:00 PM",
+    body:"Ganito pala ang design ng bagong conveyor nila! 🔧 [photo of the company's engineering drawing]",
+    r:"PRIVACY", d:["CAPS","AUDIENCE"],
+    fix:["Learned so much about conveyor design during OJT today! 🔧 #BSME",
+         "[Same photo, company logo cropped] Ganito pala ang design 🔧",
+         "[Post to Friends only] Ganito pala ang design 🔧"],
+    why:"Company drawings are confidential intellectual property. Share what you learned, not the company's documents." },
+  { s:"ME", ch:"EMAIL", to:"Engr. Castillo", who:"Plant Supervisor", rel:"SUPERIOR", time:"10:30 AM",
+    subj:"OJT Evaluation",
+    body:"Sir, I need you to sign my OJT evaluation today. I'll wait at your office until you do.",
+    r:"DEMAND", d:["UNVERIFIED","SPAM"],
+    fix:["Subject: Request for OJT Evaluation – Rina Torres\n\nGood morning, Engr. Castillo. May I request your evaluation of my OJT performance? It is due to our coordinator on Friday. Thank you.\n\nRespectfully,\nRina Torres\nBSME 4-A",
+         "Subject: OJT Evaluation\n\nSir, evaluation ko po. Today na po please.",
+         "Subject: URGENT\n\nSIR PLS SIGN MY EVALUATION"],
+    why:"Telling a superior what they must do and when sounds like an order. Request politely and give the deadline as context." },
+  { s:"ME", ch:"CHAT", to:"Engr. Castillo", who:"Plant Supervisor", rel:"SUPERIOR", time:"Sun 10:30 PM",
+    body:"Good evening, Sir. May I ask if we have overtime tomorrow?",
+    r:"TIME", d:["CAPS","PRIVACY"],
+    fix:["[Schedule for Monday 7:00 AM]\nGood morning, Sir. May I ask if there is overtime today? Thank you.\n– Rina Torres, OJT Trainee",
+         "[Send now]\nSir, OT bukas?",
+         "[Send now]\nSorry po sa oras, Sir. May OT po ba bukas?"],
+    why:"Sunday night is personal time. Unless it is urgent, schedule work messages for working hours." },
+  { s:"ME", ch:"GC", to:"Plant OJT GC (with Engr. Castillo)", who:"Trainees + supervisor", rel:"SUPERIOR", time:"9:00 PM",
+    body:"Forward this to 10 people or you'll have bad luck for 7 years! 🍀🍀 Totoo to!",
+    r:"SPAM", d:["NOGREET","PRIVACY"],
+    fix:["[Do not send. Delete the draft.]",
+         "[Forward to 5 people only]",
+         "[Send only to the trainees, not the supervisor]"],
+    why:"Chain messages clutter work group chats, look unprofessional, and are often used for scams." },
+
+  /* ---------- BSECE ---------- */
+  { s:"ECE", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"7:00 PM",
+    body:"First week sa telecom! Ito yung router config ng site namin 😎 [screenshot showing IP addresses and admin password]",
+    r:"PRIVACY", d:["SLANG","AUDIENCE"],
+    fix:["First week of OJT at a telecom company done! Learned a lot about network setup. 📡 #BSECE",
+         "[Same screenshot, password blurred, IP addresses visible] 😎",
+         "[Post to Close Friends only] Router config namin 😎"],
+    why:"Network configurations and credentials are security-sensitive. Posting them invites attacks on the company." },
+  { s:"ECE", ch:"EMAIL", to:"Leo Garcia", who:"Fellow OJT trainee", rel:"COLLEAGUE", time:"3:00 PM",
+    subj:"SURVEY DATA",
+    body:"PLEASE SEND THE SITE SURVEY DATA NOW. I NEED IT.",
+    r:"CAPS", d:["PRIVACY","TAG"],
+    fix:["Subject: Site Survey Data – Cell Site 14\n\nHi Leo, could you upload the signal readings to our shared folder when you have a moment? I need them before 5 PM to finish the report. Thanks!",
+         "Subject: SURVEY DATA\n\nPlease send the survey data NOW.",
+         "Subject: (none)\n\ndata pls"],
+    why:"All caps reads as shouting, even to a colleague. Be specific about what you need and when." },
+  { s:"ECE", ch:"GC", to:"BSECE 4-A GC", who:"Classmates", rel:"COLLEAGUE", time:"8:15 PM",
+    body:"FORWARDED: 5G towers cause headaches and cancer daw! Share niyo para aware lahat!",
+    r:"UNVERIFIED", d:["NOGREET","DEMAND"],
+    fix:["Has anyone seen a reliable study on this? WHO and our textbooks say radio-frequency exposure from towers is within safe limits. Let's check before sharing.",
+         "5G TOWERS CAUSE CANCER!! (source: forwarded)",
+         "Not sure if true pero share ko lang 🤷"],
+    why:"As future ECE engineers, your classmates trust you on this topic. Verify claims against reliable sources before forwarding." },
+  { s:"ECE", ch:"EMAIL", to:"Dr. Santos", who:"Program Chair", rel:"SUPERIOR", time:"10:30 AM",
+    subj:"hi",
+    body:"hello doc pde po b mgpa-sign ng clearance ko? asap lng po tnx 🙏",
+    r:"SLANG", d:["TIME","UNVERIFIED"],
+    fix:["Subject: Request for Clearance Signature – Miguel Tan, BSECE 4-A\n\nGood morning, Dr. Santos. May I request your signature on my clearance? I can bring it to your office at your convenience. Thank you.\n\nRespectfully,\nMiguel Tan",
+         "Subject: clearance\n\nHello doc, sign my clearance ASAP. Thanks.",
+         "Subject: hi\n\nGood morning Dr. Santos, pde po b pa-sign? tnx"],
+    why:"Textspeak (pde, b, tnx) and \"doc\" are too casual for a program chair. Use full words, a proper title and a clear subject." },
+
+  /* ---------- BSIT ---------- */
+  { s:"IT", ch:"GC", to:"BSIT OJT Batch GC", who:"Fellow trainees", rel:"COLLEAGUE", time:"4:40 PM",
+    body:"Guys pa-help, di ako maka-connect. Eto yung admin login ng client database: admin / Client@2026 😅",
+    r:"PRIVACY", d:["VAGUE","SPAM"],
+    fix:["[Ask your supervisor through the company ticket system] Good afternoon, Sir Javier. I cannot connect to the client database from the staging server. May I ask for help? Thank you.",
+         "[Same message, password replaced with ****] Eto yung admin login: admin / ****",
+         "[Send the password only to one classmate]"],
+    why:"Credentials and client data must never be shared outside authorized channels, even with fellow trainees." },
+  { s:"IT", ch:"EMAIL", to:"REPLY ALL: Sir Javier + Client (Mr. Lim)", who:"Supervisor and client", rel:"SUPERIOR", time:"5:10 PM",
+    subj:"RE: Website Revisions – Round 6",
+    body:"Sir, ang kulit ng client na 'to, panay revise 🙄",
+    r:"AUDIENCE", d:["CAPS","UNVERIFIED"],
+    fix:["[Reply to Sir Javier only]\nGood afternoon, Sir. The client sent a sixth round of revisions. Should we discuss a revision limit with him? Thank you.",
+         "[Reply All]\nSir, marami pong revisions ang client.",
+         "[Reply All]\nNOTED. REVISING AGAIN."],
+    why:"The client is in the thread and will read the complaint. Check recipients and raise internal concerns privately." },
+  { s:"IT", ch:"CHAT", to:"Sir Ocampo", who:"Instructor", rel:"TEACHER", time:"1:45 PM",
+    body:"Sir",
+    r:"VAGUE", d:["CAPS","TAG"],
+    fix:["Good afternoon, Sir. This is Bea Flores of BSIT 3-A. May I ask if our database project should be submitted as a .sql file or a GitHub link? Thank you.",
+         "Sir?",
+         "Hello po"],
+    why:"A one-word message forces the teacher to reply just to find out what you want. State who you are and your full question in one message." },
+  { s:"IT", ch:"EMAIL", to:"Sir Ocampo", who:"Instructor", rel:"TEACHER", time:"11:00 AM",
+    subj:"activity",
+    body:"sir heres my activity",
+    r:"NOGREET", d:["TAG","UNVERIFIED"],
+    fix:["Subject: Submission: Activity 9 – Bea Flores, BSIT 3-A\n\nGood morning, Sir Ocampo. Attached is my Activity 9. Thank you.\n\nRespectfully,\nBea Flores",
+         "Subject: ACTIVITY!!!\n\nSir here's my activity.",
+         "Subject: activity\n\nHere's my activity. – Bea"],
+    why:"No proper subject, greeting or name and section. Teachers handle many classes; make your email easy to identify." }
+  ,
+  /* ---------- BSA ---------- */
+  { s:"BA", ch:"POST", to:"Facebook timeline", who:"Public", rel:"PUBLIC", time:"8:45 PM",
+    body:"Grabe sweldo ng mga manager sa client namin 😳 [photo of the client's payroll register]",
+    r:"PRIVACY", d:["SLANG","SPAM"],
+    fix:["[Do not post. Client records stay inside the engagement files.]",
+         "[Same photo, names blurred, amounts visible] Grabe sweldo dito 😳",
+         "[Post to Close Friends only]"],
+    why:"Auditors are bound by client confidentiality. Payroll and financial data must never leave the engagement." },
+  { s:"BA", ch:"EMAIL", to:"REPLY ALL: Ma'am Chua + Client CFO", who:"Supervisor and client", rel:"SUPERIOR", time:"3:40 PM",
+    subj:"RE: Request for Supporting Documents",
+    body:"Ma'am, ang gulo ng records nila, parang may tinatago pa 🙄",
+    r:"AUDIENCE", d:["CAPS","SPAM"],
+    fix:["[Reply to Ma'am Chua only]\nGood afternoon, Ma'am. Several vouchers for March are missing supporting documents. Should I prepare a list for the client? Thank you.",
+         "[Reply All]\nMa'am, magulo po ang records ng client.",
+         "[Reply All]\nNOTED. MISSING DOCUMENTS."],
+    why:"The client's CFO is in the thread. Raise findings with your senior privately, stated as facts, not accusations." },
+  { s:"BA", ch:"CHAT", to:"Ma'am Chua", who:"Audit Senior", rel:"SUPERIOR", time:"12:40 AM",
+    body:"Good evening, Ma'am. May I ask how many samples we need for the vouching of disbursements?",
+    r:"TIME", d:["CAPS","TAG"],
+    fix:["[Schedule for 8:00 AM]\nGood morning, Ma'am. May I ask how many samples we need for the vouching of disbursements? Thank you.\n– Nicole Ramos, Audit Intern",
+         "[Send now]\nMa'am, ilan samples sa vouching?",
+         "[Send now]\nSorry po sa oras, Ma'am. Ilan po samples sa vouching?"],
+    why:"The question is fine, but past midnight is not the time to message a superior. Schedule it for working hours." },
+  { s:"BA", ch:"GC", to:"BSA 4-A GC", who:"Classmates", rel:"COLLEAGUE", time:"9:30 PM",
+    body:"Invest kayo dito! 30% monthly return, guaranteed! SEC-registered daw sabi ng agent 💸 Share niyo na!",
+    r:"UNVERIFIED", d:["NOGREET","TAG"],
+    fix:["Has anyone checked the SEC's advisories on this company? A guaranteed 30% monthly return is a red flag. Let's verify before investing or sharing.",
+         "INVEST NA KAYO!! 30% monthly (source: agent)",
+         "Not sure if legit pero share ko lang 🤷"],
+    why:"Guaranteed high returns are a classic investment-scam sign. Future accountants should verify registration with the SEC before sharing." },
+
+  /* ---------- BSBA ---------- */
+  { s:"BB", ch:"GC", to:"BSBA OJT Batch GC", who:"Fellow trainees", rel:"COLLEAGUE", time:"7:20 PM",
+    body:"Pa-share na lang ng customer list ng store with phone numbers, pang-leads ko sa side business ko 😅 [spreadsheet attached]",
+    r:"PRIVACY", d:["TIME","VAGUE"],
+    fix:["[Do not send. Customer data may only be used for the company's own purpose.]",
+         "[Same spreadsheet, names removed, phone numbers kept]",
+         "[Send only to one trusted trainee]"],
+    why:"Customer contact data is protected under the Data Privacy Act (RA 10173). Using it for personal business is a violation." },
+  { s:"BB", ch:"EMAIL", to:"Sir Lacson", who:"HR Manager", rel:"SUPERIOR", time:"9:00 AM",
+    subj:"Certificate",
+    body:"Sir, release my OJT certificate today. I already finished my hours.",
+    r:"DEMAND", d:["UNVERIFIED","SPAM"],
+    fix:["Subject: Request for OJT Certificate – Kevin Ong, BSBA 3-B\n\nGood morning, Sir Lacson. I completed my required OJT hours on October 3. May I request my certificate of completion? It is due to our coordinator next week. Thank you.\n\nRespectfully,\nKevin Ong",
+         "Subject: Certificate\n\nSir, certificate ko po. Today na po please.",
+         "Subject: URGENT\n\nSIR PLS RELEASE MY CERTIFICATE"],
+    why:"Commanding a manager sounds disrespectful. Request it, give the facts, and explain the deadline." },
+  { s:"BB", ch:"COMMENT", to:"Customer complaint on the store's official page", who:"Public", rel:"PUBLIC", time:"8:10 PM",
+    body:"Kayo nga po yung mali, basahin niyo kasi yung mechanics 🙄",
+    r:"FLAME", d:["NOGREET","SPAM"],
+    fix:["Good evening, and sorry for the inconvenience. May we ask you to send us a private message with your receipt so we can check? Thank you.",
+         "Hello po, nasa mechanics naman po yan. Basahin niyo na lang po 🙂",
+         "Sorry po pero kayo po talaga yung mali."],
+    why:"Arguing with a customer in public hurts the company's reputation. Apologize, stay polite, and move the issue to a private channel." },
+  { s:"BB", ch:"EMAIL", to:"Ma'am Dizon", who:"Marketing Instructor", rel:"TEACHER", time:"11:30 AM",
+    subj:"(no subject)",
+    body:"attached po marketing plan",
+    r:"NOGREET", d:["TAG","UNVERIFIED"],
+    fix:["Subject: Submission: Marketing Plan – Kevin Ong, BSBA 3-B\n\nGood morning, Ma'am Dizon. Attached is my marketing plan for MKTG 102. Thank you.\n\nRespectfully,\nKevin Ong",
+         "Subject: marketing plan\n\nattached po. – K",
+         "Subject: URGENT!!!\n\nGood morning, attached po marketing plan."],
+    why:"No subject, greeting or name. Your instructor cannot tell who sent it or for which class." }
+];
+
+/* Reactions shown after a decision */
+const OK_REPLY = {
+  SUPERIOR:["Received. I'll check and get back to you."],
+  TEACHER:["Noted. Thank you."],
+  COLLEAGUE:["Thanks! 🙌"],
+  PUBLIC:["❤️ 34 reactions · 5 comments"]
+};
+const BACKLASH = {
+  CAPS:["Why are you shouting? 😠","Seen ✓ · no reply"],
+  SLANG:["Please write properly when messaging your superiors.","Seen ✓ · no reply"],
+  NOGREET:["Who is this? Please include your name and section.","Seen ✓ · no reply"],
+  TIME:["It's very late. Please message during office hours.","Muted notifications from Jamie"],
+  PRIVACY:["Reported for privacy violation 🚩","Screenshot is now in 3 other group chats"],
+  UNVERIFIED:["This is fake. Please check before sharing.","Shared 48 times · Fact-check label added"],
+  FLAME:["This is disrespectful. 😞","Screenshot is now in 3 other group chats"],
+  TAG:["Please take this down. I didn't agree to this.","Untagged · Reported"],
+  AUDIENCE:["Uhh… wrong chat? 😬","Everyone saw it."],
+  SPAM:["Please don't post chain messages here.","Left the group"],
+  DEMAND:["Please watch your tone.","Seen ✓ · no reply"],
+  VAGUE:["Yes? What is it?","(waiting for your actual question…)"]
+};
+
+/* ===== SOUND (8-bit, WebAudio) ===== */
+const Snd = (()=>{
+  let ctx, master, music, sfx, noiseBuf, timer, nextT=0, step=0, muted=false;
+  const mf = m => 440*Math.pow(2,(m-69)/12);
+  const CH = [[60,64,67,71],[57,60,64,67],[53,57,60,64],[55,59,62,65]]; // Cmaj7 Am7 Fmaj7 G7
+  const ARP = [0,1,2,3,2,1,2,3];
+  const EIGHTH = 60/104/2;
+  function init(){
+    if(ctx) return;
+    const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    try{ ctx = new AC(); }catch(e){ ctx = null; return; }
+    master = ctx.createGain(); master.gain.value = muted?0:1; master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2200; lp.connect(master);
+    music = ctx.createGain(); music.gain.value=0.4; music.connect(lp);
+    sfx = ctx.createGain(); sfx.gain.value=0.6; sfx.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*0.6, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  function tone(type,f,t,dur,g,dest,slideTo){
+    const o=ctx.createOscillator(), a=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t+dur);
+    a.gain.setValueAtTime(0.0001,t); a.gain.linearRampToValueAtTime(g,t+0.006); a.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(a); a.connect(dest); o.start(t); o.stop(t+dur+0.03);
+  }
+  function noise(t,dur,g,dest,freq,type){ const s=ctx.createBufferSource(); s.buffer=noiseBuf; const f=ctx.createBiquadFilter(); f.type=type||'highpass'; f.frequency.value=freq||7000; const a=ctx.createGain(); a.gain.setValueAtTime(g,t); a.gain.exponentialRampToValueAtTime(0.0001,t+dur); s.connect(f); f.connect(a); a.connect(dest); s.start(t); s.stop(t+dur+0.02); }
+  function playStep(s,t){
+    const ch = CH[Math.floor(s/8)%4], i = s%8;
+    tone('square', mf(ch[ARP[i]]+12), t, EIGHTH*0.8, 0.028, music);
+    if(i%4===0) tone('triangle', mf(ch[0]-12), t, EIGHTH*3.5, 0.2, music);
+    if(i===0) ch.forEach(n=>tone('triangle', mf(n), t, EIGHTH*7.5, 0.024, music));
+    if(i%2===1) noise(t,0.05,0.04,music);
+  }
+  function startMusic(){ init(); if(!ctx) return; if(ctx.state==='suspended') ctx.resume(); stopMusic(); nextT=ctx.currentTime+0.1; step=0;
+    timer=setInterval(()=>{ while(nextT<ctx.currentTime+0.15){ playStep(step,nextT); nextT+=EIGHTH; step++; } },25); }
+  function stopMusic(){ if(timer){clearInterval(timer); timer=null;} }
+  const now = ()=>ctx.currentTime;
+  const fx = {
+    ping(){ const t=now(); tone('square',1319,t,0.07,0.25,sfx); tone('square',1760,t+0.08,0.12,0.25,sfx); },
+    select(){ tone('square',660,now(),0.04,0.1,sfx); },
+    stamp(){ const t=now(); noise(t,0.12,0.4,sfx,600,'lowpass'); tone('square',220,t,0.1,0.2,sfx,110); },
+    correct(){ const t=now(); tone('square',988,t,0.07,0.18,sfx); tone('square',1319,t+0.07,0.2,0.18,sfx); },
+    wrong(){ tone('sawtooth',200,now(),0.25,0.2,sfx,90); },
+    send(){ const t=now(); tone('triangle',660,t,0.25,0.2,sfx,1760); },
+    backlash(){ const t=now(); for(let i=0;i<4;i++) tone('square',1400-i*200,t+i*0.09,0.08,0.18,sfx); noise(t+0.35,0.3,0.25,sfx,900,'lowpass'); },
+    expire(){ tone('square',180,now(),0.3,0.18,sfx,110); },
+    tick(){ tone('square',1245,now(),0.05,0.12,sfx); },
+    win(){ const t=now(); [523,659,784,1047,784,1047].forEach((f,i)=>tone('square',f,t+i*0.11,0.12,0.2,sfx)); },
+    lose(){ const t=now(); [392,349,311,262].forEach((f,i)=>tone('square',f,t+i*0.18,0.2,0.2,sfx)); }
+  };
+  function play(name){ if(!ctx || muted) return; fx[name](); }
+  function toggle(){ muted=!muted; if(master) master.gain.value=muted?0:1; return muted; }
+  return {init,startMusic,stopMusic,play,toggle};
+})();
+
+/* ===== HELPERS ===== */
+const $ = id => document.getElementById(id);
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sgn = n => (n>0?'+':n<0?'−':'') + Math.abs(n);
+const AVC = ['#06d6a0','#9b5de5','#ef476f','#ffbe0b','#118ab2','#8ac926','#ff924c','#4cc9f0'];
+const avColor = s => AVC[[...s].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)%AVC.length];
+let toastT;
+function toast(msg, cls){ const t=$('toast'); t.textContent=msg; t.className='toast'+(cls?' '+cls:''); t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 1300); }
+
+/* ===== STATE ===== */
+let S = null, lastFrame = 0, lastTick = -1;
+function newState(){
+  return { running:false, ended:false, queue:[], idx:-1, cur:null, step:'draft', left:CFG.itemSeconds,
+    score:0, rep:CFG.rep.start, log:[], practice:false,
+    stats:{approvedOk:0, caught:0, reasonOk:0, fixOk:0, leaked:0, overBlocked:0, expired:0} };
+}
+function buildQueue(){
+  const ok = shuffle(OK).slice(0,CFG.okCount).map(m=>Object.assign({ok:true},m));
+  const bad = shuffle(BAD).slice(0,CFG.drafts-CFG.okCount).map(m=>Object.assign({ok:false},m));
+  return shuffle(ok.concat(bad)).map(m=>{
+    if(m.ok) return m;
+    return Object.assign({}, m, {
+      reasonOpts: shuffle([m.r].concat(m.d)),
+      fixOpts: shuffle([0,1,2])
+    });
+  });
+}
+function addRep(n){ S.rep = Math.max(0, Math.min(100, S.rep + n)); }
+
+/* ===== FLOW ===== */
+function nextDraft(){
+  S.idx++;
+  if(S.idx >= S.queue.length){ endGame(); return; }
+  S.cur = { m:S.queue[S.idx], decision:null, reason:null, fix:null, pts:0, outcome:null };
+  S.step = 'draft'; S.left = CFG.itemSeconds; lastTick = -1;
+  Snd.play('ping'); render(true);
+}
+function finish(outcome){
+  const c = S.cur; c.outcome = outcome;
+  S.score += c.pts;
+  S.log.push(c);
+  S.step = 'result';
+  render(true);
+}
+function decide(v){
+  const c = S.cur; if(!S.running || S.step!=='draft') return;
+  c.decision = v; Snd.play('stamp');
+  const m = c.m;
+  if(v==='approve'){
+    if(m.ok){ c.pts = CFG.pts.approveOk; S.stats.approvedOk++; addRep(CFG.rep.good); Snd.play('send'); toast('Sent ✓ '+sgn(c.pts),'good'); finish('approvedOk'); }
+    else { c.pts = 0; S.stats.leaked++; addRep(CFG.rep.badApprove); setTimeout(()=>Snd.play('backlash'),120); toast('It went out… '+sgn(CFG.rep.badApprove)+' rep','bad'); finish('leaked'); }
+  } else {
+    if(m.ok){ c.pts = 0; S.stats.overBlocked++; addRep(CFG.rep.overBlock); Snd.play('wrong'); toast('That one was fine','bad'); finish('overBlocked'); }
+    else { c.pts = CFG.pts.reject; S.stats.caught++; Snd.play('correct'); toast('Blocked '+sgn(CFG.pts.reject),'good'); S.step='reason'; render(true); }
+  }
+}
+function pickReason(r){
+  const c = S.cur; if(!S.running || S.step!=='reason') return;
+  c.reason = r;
+  const ok = r===c.m.r;
+  if(ok){ c.pts += CFG.pts.reason; S.stats.reasonOk++; Snd.play('correct'); toast('Right reason '+sgn(CFG.pts.reason),'good'); }
+  else { Snd.play('wrong'); toast('Not the main problem','bad'); }
+  S.step = 'reasonShown'; render(true);
+  setTimeout(()=>{ if(S.cur===c && S.step==='reasonShown'){ S.step='fix'; render(true); } }, 1100);
+}
+function pickFix(i){
+  const c = S.cur; if(!S.running || S.step!=='fix') return;
+  c.fix = i;
+  const ok = i===0;
+  if(ok){ c.pts += CFG.pts.fix; S.stats.fixOk++; addRep(CFG.rep.good); Snd.play('send'); toast('Sent the better version '+sgn(CFG.pts.fix),'good'); }
+  else { Snd.play('wrong'); toast('That version still breaks a rule','bad'); }
+  finish('caught');
+}
+function expire(){
+  const c = S.cur; Snd.play('expire');
+  S.stats.expired++; addRep(CFG.rep.expired);
+  toast('Draft timed out','bad');
+  finish(c.decision==='reject' ? 'caughtExpired' : 'expired');
+}
+
+/* ===== LOOP ===== */
+function tick(ts){
+  const dt = Math.min(0.1, (ts - (lastFrame||ts))/1000); lastFrame = ts;
+  if(S && S.running && S.cur && S.step!=='result'){
+    S.left -= dt;
+    const s = Math.ceil(S.left);
+    if(s<=10 && s>0 && s!==lastTick){ lastTick = s; Snd.play('tick'); }
+    if(S.left <= 0){ S.left = 0; expire(); }
+  }
+  hud();
+  requestAnimationFrame(tick);
+}
+function hud(){
+  if(!S) return;
+  $('hudQ').textContent = `${Math.min(S.log.length + (S.cur && S.step!=='result'?1:0), CFG.drafts)}/${CFG.drafts}`;
+  $('hudScore').textContent = S.score;
+  $('stScore').className = 'stat' + (S.score>0?' ok':'');
+  $('hudRep').textContent = S.rep + '%';
+  $('repFill').style.width = S.rep + '%';
+  $('repFill').style.background = S.rep<40?'var(--bad)':S.rep<70?'var(--warn)':'var(--mint)';
+  $('stRep').className = 'stat' + (S.rep<40?' low':' ok');
+  const b = $('tbarFill');
+  if(b){ const l = S.left/CFG.itemSeconds; b.style.width = (l*100)+'%'; b.style.background = l<0.2?'var(--bad)':l<0.45?'var(--warn)':'var(--good)'; }
+}
+
+/* ===== RENDER ===== */
+function metaHtml(m){
+  const f = SENDERS[m.s];
+  return `<div class="from">From: <b>${esc(f.name)}</b><span class="prog">${esc(f.prog)}</span><small>${esc(f.sec)} · ${esc(f.site)}</small></div><div class="meta"><span class="av" style="--c:${avColor(m.to)}">${esc(m.to.replace(/^REPLY ALL: /,'')[0])}</span>
+    <div class="to">To: ${esc(m.to)}<small>${esc(m.who)}</small></div>
+    <div class="chips"><span class="rel ${m.rel}">${REL_NAME[m.rel]}</span><span class="chip ${m.ch}">${CH_NAME[m.ch]}</span><span class="time">🕒 ${esc(m.time)}</span></div></div>`;
+}
+function draftHtml(m, compact, stamp){
+  const cls = (m.ch==='POST'?'post':(m.ch==='EMAIL'?'':'bubble')) + (compact?' compact':'');
+  const subj = m.subj ? `<p class="subj"><span>SUBJECT</span>${esc(m.subj)}</p>` : '';
+  const ph = m.ch==='POST' ? `<span class="ph">${esc(SENDERS[m.s].name)} · Public 🌐</span>` : (m.ch==='COMMENT' ? `<span class="ph">${esc(SENDERS[m.s].name)} commented:</span>` : '');
+  return `<div class="draft ${cls}">${stamp?`<span class="stamp">${stamp}</span>`:''}${ph}${subj}<p class="bd">${esc(m.body)}</p></div>`;
+}
+function render(anim){
+  const v = $('view'); if(!S || !S.cur){ v.innerHTML=''; return; }
+  const c = S.cur, m = c.m, A = anim ? ' anim' : '';
+  const tbar = `<div class="tbar"><i id="tbarFill"></i></div>`;
+  const top = `<div class="topline"><span class="qcount">DRAFT ${S.idx+1} / ${CFG.drafts}</span><span class="qcount">${S.practice?'PRACTICE':'RECORDED'}</span></div>`;
+
+  if(S.step==='draft'){
+    v.innerHTML = `<section class="screen${A}">${top}<h2>Pending Approval</h2>
+      <div class="well">${metaHtml(m)}${draftHtml(m,false,'DRAFT')}</div>${tbar}
+      <div class="verdicts">
+        <button type="button" class="vbtn no" data-v="reject">REJECT<small>Stop it</small></button>
+        <button type="button" class="vbtn yes" data-v="approve">APPROVE<small>Send / post it</small></button>
+      </div>
+      <p class="hint">Check the recipient, channel and time before you decide.</p></section>`;
+  }
+  else if(S.step==='reason' || S.step==='reasonShown'){
+    const shown = S.step==='reasonShown';
+    const opts = m.reasonOpts.map(r=>{
+      let cls = 'opt';
+      if(shown){ if(r===m.r) cls+=' right'; else if(r===c.reason) cls+=' wrong'; }
+      return `<button type="button" class="${cls}" data-r="${r}" ${shown?'disabled':''}>${esc(REASONS[r])}</button>`;
+    }).join('');
+    v.innerHTML = `<section class="screen s-reason${A}">${top}<h2>Why did you reject it?</h2>
+      <div class="well">${metaHtml(m)}${draftHtml(m,true,'REJECTED')}</div>${tbar}
+      <p class="step">STEP 2 OF 3 · PICK THE MAIN PROBLEM</p><div class="opts">${opts}</div></section>`;
+  }
+  else if(S.step==='fix'){
+    const opts = m.fixOpts.map((i,k)=>`<button type="button" class="opt" data-f="${i}"><span class="k">VERSION ${'ABC'[k]}</span>${esc(m.fix[i])}</button>`).join('');
+    v.innerHTML = `<section class="screen s-fix${A}">${top}<h2>Pick the better version</h2>
+      <div class="well"><div class="to" style="font-size:13px">From: ${esc(SENDERS[m.s].name)} (${esc(SENDERS[m.s].prog)}) · To: ${esc(m.to)} <span class="rel ${m.rel}">${REL_NAME[m.rel]}</span></div></div>${tbar}
+      <p class="step">STEP 3 OF 3 · WHICH ONE SHOULD JAMIE SEND?</p><div class="opts">${opts}</div></section>`;
+  }
+  else if(S.step==='result'){
+    const o = c.outcome;
+    const good = o==='approvedOk' || (o==='caught' && c.pts===3);
+    const bad = o==='leaked' || o==='overBlocked' || o==='expired';
+    const title = {approvedOk:'SENT ✓', leaked:'IT WENT PUBLIC 😬', overBlocked:'OVER-BLOCKED', expired:'TIMED OUT',
+      caught: c.pts===3?'PERFECT CATCH':'BLOCKED', caughtExpired:'BLOCKED · TIMED OUT'}[o];
+    let replies = '';
+    if(o==='approvedOk') replies = OK_REPLY[m.rel].map(t=>`<div class="reply"><b>${esc(m.to)}</b>${esc(t)}</div>`).join('');
+    if(o==='leaked') replies = BACKLASH[m.r].map((t,i)=>`<div class="reply"><b>${i?'Notification':esc(m.to)}</b>${esc(t)}</div>`).join('');
+    let detail = '';
+    if(!m.ok){
+      const reasonLine = c.reason ? (c.reason===m.r ? `You said: ${esc(REASONS[c.reason])} ✓` : `You said: ${esc(REASONS[c.reason])} ✗`) : '';
+      const fixLine = c.fix!=null ? (c.fix===0 ? 'You picked the proper version ✓' : 'You picked a version that still breaks a rule ✗') : '';
+      detail = `<div class="why"><b>PROBLEM: ${esc(REASONS[m.r]).toUpperCase()}</b>${esc(m.why)}${reasonLine?`<br><br>${reasonLine}`:''}${fixLine?`<br>${fixLine}`:''}</div>
+        <div class="better"><b>PROPER VERSION</b>${esc(m.fix[0])}</div>`;
+    } else {
+      detail = `<div class="why"><b>${o==='approvedOk'?'WHY IT WORKS':'IT WAS PROPER'}</b>${esc(m.why)}</div>`;
+    }
+    v.innerHTML = `<section class="screen ${good?'s-good':bad?'s-bad shake':''}${A}">${top}
+      <p class="outcome">${title}</p><p class="ptsline">${sgn(c.pts)||'0'} pts · ${c.pts}/3</p>
+      <div class="well">${metaHtml(m)}${draftHtml(m,true, o==='leaked'||o==='approvedOk'?'SENT':(m.ok?'HELD':'BLOCKED'))}</div>
+      ${replies?`<div class="replies">${replies}</div>`:''}
+      ${detail}
+      <button type="button" class="next" data-act="next">${S.idx+1>=CFG.drafts?'See results ›':'Next draft ›'}</button></section>`;
+  }
+  hud();
+}
+
+/* ===== EVENTS ===== */
+$('view').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b || b.disabled) return;
+  if(b.dataset.v) decide(b.dataset.v);
+  else if(b.dataset.r) pickReason(b.dataset.r);
+  else if(b.dataset.f!=null) pickFix(+b.dataset.f);
+  else if(b.dataset.act==='next'){ Snd.play('select'); nextDraft(); }
+});
+
+/* ===== GAME FLOW ===== */
+async function startGame(){
+  Snd.init(); Snd.startMusic();
+  const prev = await loadResult();
+  S = newState(); S.queue = buildQueue(); S.running = true; S.practice = !!prev;
+  $('startScreen').hidden = true; $('endScreen').hidden = true;
+  nextDraft();
+}
+const OUT_LABEL = {approvedOk:'Approved (correct)', leaked:'Approved (should have rejected)', overBlocked:'Rejected (it was proper)', expired:'Timed out', caught:'Rejected', caughtExpired:'Rejected, then timed out'};
+async function endGame(){
+  if(S.ended) return; S.ended = true;
+  S.running = false; Snd.stopMusic();
+  const max = CFG.drafts * 3;
+  const pct = Math.max(0, Math.min(100, Math.round(S.score / max * 100)));
+  const res = $('endResult');
+  if(pct>=85 && S.rep>=70){ res.textContent = 'NETIQUETTE PRO'; res.className='result win'; }
+  else if(pct>=60){ res.textContent = 'MOSTLY PROPER'; res.className='result mid'; }
+  else { res.textContent = 'NEEDS REVIEW'; res.className='result lose'; }
+  $('endPts').textContent = `${S.score}/${max}`;
+  $('endPct').textContent = `${pct}% · Reputation ${S.rep}%`;
+  const st = S.stats;
+  const k = [[st.approvedOk,'Proper approved'],[st.caught,'Improper blocked'],[st.reasonOk,'Right reason'],[st.fixOk,'Right rewrite'],[st.leaked,'Leaked out'],[st.overBlocked,'Over-blocked'],[st.expired,'Timed out']];
+  $('endKpis').innerHTML = k.map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('review').innerHTML = `<h4>DRAFT REVIEW</h4>` + S.log.map(c=>{
+    const m = c.m, cls = c.pts===3?'ok':c.pts>0?'part':'bad';
+    const extra = !m.ok ? `<div><b>Problem:</b> ${esc(REASONS[m.r])}${c.reason?` · You: ${esc(REASONS[c.reason])} ${c.reason===m.r?'✓':'✗'}`:''}</div>` : '';
+    return `<div class="rv ${cls}"><div class="rvh"><span class="tag ${m.ok?'OK':'NO'}">${m.ok?'PROPER':'IMPROPER'}</span><span class="prog">${esc(SENDERS[m.s].prog)}</span><b>${esc(m.to)}</b><span class="rel ${m.rel}">${REL_NAME[m.rel]}</span><span class="pts">${c.pts}/3</span></div>
+      <div class="rvq">“${esc(m.body)}”</div><div>You: ${OUT_LABEL[c.outcome]}</div>${extra}<div>${esc(m.why)}</div></div>`;
+  }).join('');
+  $('endScreen').hidden = false;
+  Snd.play(pct>=60 ? 'win' : 'lose');
+  await saveResult(pct);
+}
+
+/* ===== ACTIVITY 9 RESULT (hub format, 4-layer storage, first run locked) ===== */
+const RESULT_KEY = 'itict_activity9_result', RESULT_IDB = 'activity9_result';
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeAll(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null;
+  try{ const s=localStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(!r) try{ const m=document.cookie.match(new RegExp('(?:^|; )'+RESULT_KEY+'=([^;]*)')); if(m) r=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+  if(!r) r = await idbRead(RESULT_IDB);
+  if(!r) try{ const s=sessionStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(r) await writeAll(r);   // backfill every layer
+  return r;
+}
+async function saveResult(pct){
+  const prev = await loadResult();
+  if(prev){
+    $('scoreLine').innerHTML = `<b>Practice run: ${pct}%</b> · Recorded Activity 9 score stays <b>${prev.percentage}%</b> (${prev.score}/${prev.maxScore}).`;
+    showLock(prev); return;
+  }
+  const st = S.stats;
+  const rec = { score:S.score, maxScore:CFG.drafts*3, percentage:pct, reputation:S.rep,
+    approvedOk:st.approvedOk, caught:st.caught, reasonOk:st.reasonOk, fixOk:st.fixOk,
+    leaked:st.leaked, overBlocked:st.overBlocked, expired:st.expired,
+    locked:true, completedAt:new Date().toISOString() };
+  await writeAll(rec);
+  $('scoreLine').innerHTML = `<b>Activity 9 score recorded: ${pct}%</b> (${S.score}/${rec.maxScore}) · Locked. Later runs are practice.`;
+  showLock(rec);
+}
+function showLock(r){
+  const l = $('lockLine');
+  if(!r){ l.hidden = true; return; }
+  l.hidden = false;
+  l.innerHTML = `<b>Recorded score: ${r.percentage}%</b> (${r.score}/${r.maxScore}, reputation ${r.reputation}%). It is locked. New runs are practice only.`;
+  $('startBtn').textContent = 'Practice';
+}
+
+/* ===== BROWSER GATE ===== */
+function gateCheck(){
+  const ua = navigator.userAgent || '';
+  const inApp = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua);
+  const android = /Android/i.test(ua);
+  const chrome = /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser|; wv\))/i.test(ua);
+  let msg = '';
+  if(inApp) msg = 'This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X). Tap ⋮ or ⋯, choose "Open in browser" (Chrome on Android, any browser on iPhone), then open this activity again.';
+  else if(android && !chrome) msg = 'On Android, this activity requires Google Chrome. Open this page in Chrome and try again.';
+  if(msg){ $('gateMsg').textContent = msg; $('gate').hidden = false; $('startScreen').hidden = true; return false; }
+  return true;
+}
+
+/* ===== BUTTONS ===== */
+$('startBtn').addEventListener('click', startGame);
+$('againBtn').addEventListener('click', startGame);
+function goHub(){ if(S) S.running = false; Snd.stopMusic(); location.href = CFG.hubUrl; }
+let homeArmT;
+$('homeBtn').addEventListener('click', e=>{
+  const b = e.currentTarget;
+  if(!S || !S.running){ goHub(); return; }
+  if(b.classList.contains('armed')){ clearTimeout(homeArmT); goHub(); return; }
+  b.classList.add('armed'); b.textContent = S.practice ? 'Quit? Tap again' : 'Quit? Not saved';
+  homeArmT = setTimeout(()=>{ b.classList.remove('armed'); b.textContent = 'Home'; }, 2500);
+});
+$('endHomeBtn').addEventListener('click', goHub);
+$('muteBtn').addEventListener('click', e=>{ const m=Snd.toggle(); e.currentTarget.textContent = 'Sound: '+(m?'Off':'On'); });
+$('dlBtn').addEventListener('click', async ()=>{
+  let html;
+  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
+  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'netiquette_desk.html';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+
+S = newState(); hud();
+if(gateCheck()) loadResult().then(showLock);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
