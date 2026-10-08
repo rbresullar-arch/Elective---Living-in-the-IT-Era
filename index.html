@@ -457,9 +457,6 @@ const a6Pct = r => r.percentage != null ? r.percentage
    The game saves { percentage, bestStars, bestProfit, runs, lastStars }. */
 const a7Pct = r => r.percentage != null ? r.percentage : Math.round((r.bestStars || 0) / 5 * 100);
 
-/* Activity 10 (Cipher Vault): score = stars / 18 as a percentage. First completed run is locked.
-   The game saves { score, maxScore, percentage, stars, maxStars, locked }. */
-
 /* Activity 9 (Netiquette Desk): score = points / 60 as a percentage. First completed run is locked.
    The game saves { score, maxScore, percentage, reputation, locked }. */
 
@@ -488,8 +485,6 @@ const ACTIVITIES = [
     note: r => `Best ${r.bestPoints || 0} pts · ${r.bestAccuracy || 0}% accurate · Runs: ${r.runs || 1}` + (r.lastPercentage != null ? ` · Last run ${r.lastPercentage}%` : '') },
   { label: 'Activity 9', href: 'netiquette_desk.html',
     note: r => `${r.score}/${r.maxScore || 60} pts · Reputation ${r.reputation != null ? r.reputation : '—'}% · Locked` },
-  { label: 'Activity 10', href: 'password_cracker.html',
-    note: r => `${r.stars != null ? r.stars : r.score}/${r.maxStars || 18}★ · Locked` },
 ];
 
 const EXAMS = [
