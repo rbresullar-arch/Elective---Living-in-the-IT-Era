@@ -512,7 +512,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.08.1';
+const APP_VERSION = '2026.10.08.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -766,16 +766,18 @@ async function refreshActivities() {
       return;
     }
     const missing = a.requires.filter(n => !recs[n - 1] && !skippedList.includes(n));
-    if (missing.length && a.n !== U.through) {
-      const names = missing.map(n => ACTIVITIES[n - 1].label).join(' and ');
-      setRow(a, { end: '🔒', note: `Complete ${names} first`, locked: true });
-    } else if (recs[i]) {
+    if (recs[i]) {
+      /* An activity that has its own score always shows it, even if an
+         earlier activity was later reset or lost. */
       const r = recs[i];
       let note;
       try { note = (a.note || defaultNote)(r); } catch (e) { note = defaultNote(r); }
       let scoreText;
       try { scoreText = a.score ? a.score(r) : pctOf(r) + '%'; } catch (e) { scoreText = pctOf(r) + '%'; }
       setRow(a, { score: scoreText, end: '✓', note, done: true });
+    } else if (missing.length && a.n !== U.through) {
+      const names = missing.map(n => ACTIVITIES[n - 1].label).join(' and ');
+      setRow(a, { end: '🔒', note: `Complete ${names} first`, locked: true });
     } else {
       setRow(a, { note: a.n === U.through ? 'Unlocked by instructor' : 'Not yet attempted' });
     }
