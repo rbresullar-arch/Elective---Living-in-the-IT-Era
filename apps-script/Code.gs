@@ -18,7 +18,7 @@
  * `pin` is the client-side SHA-256 of 'itict|' + id + '|' + PIN; the 4-digit PIN never leaves the device.
  */
 
-var SHEET_ID = '1m_dZt__2WpBxVZx0q_aIsRBhz4msEUWUa0ZoBpXLNQ8';
+var SHEET_ID = '1n6qku2kUCGF51gi8BVrMqK-Gz8EajW1ubG0JxvSKiDU';
 var SHEET = { scores: 'Scores', data: 'Data', auth: 'Auth', log: 'Log' };
 var ACTIVITY_COUNT = 9;
 var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' }];
