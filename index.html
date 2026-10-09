@@ -576,8 +576,7 @@ const ACTIVITIES = [
   { label: 'Activity 2', href: 'abacus_addition_activity.html', key: 'itict_abacus_result', idbKey: 'abacus_result' },
   { label: 'Activity 3', href: 'pascaline.html', key: 'itict_pascaline_result', idbKey: 'pascaline_result',
     requires: [1, 2],
-    note: r => `Fast Play: ${r.score}/${r.maxScore || 100}`,
-    redo: { label: 'Redo Fast Play', flagKey: 'itict_pascaline_redo_used' } },
+    note: r => `Fast Play: ${r.score}/${r.maxScore || 100}` },
   { label: 'Activity 4', href: 'binary_activity.html', key: 'itict_binary_result', idbKey: 'binary_result',
     note: r => `${r.score} pts, ${r.solved} solved` },
   { label: 'Activity 5', href: 'packet_relay.html',
@@ -609,7 +608,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.10.2';
+const APP_VERSION = '2026.10.10.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1669,6 +1668,15 @@ async function applyCloud(m) {
 
 let cloudBusy = null;
 let cloudLastOk = 0;
+let cloudRetry = 0;
+const CLOUD_RETRY_MS = [8000, 20000, 45000, 90000];
+function cloudLockText(until) {
+  const t = until ? new Date(until).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'tomorrow';
+  return 'too many wrong PINs. This name is locked until ' + t + '. Your instructor can unlock it sooner.';
+}
+function cloudPinText(left) {
+  return 'Wrong PIN for this name.' + (left ? ` ${left} ${left === 1 ? 'try' : 'tries'} left before a 24-hour lock.` : '');
+}
 /* opts.create: allow the server to register this name if it is new. */
 function cloudSync(opts) {
   opts = opts || {};
@@ -1677,8 +1685,7 @@ function cloudSync(opts) {
   if (cloudBusy) return cloudBusy;
   cloudBusy = (async () => {
     setCloudStatus('Backing up…');
-    const data = await collectSyncData();
-    data.resets = cloudResets();
+    const data = await collectSyncData();   // score resets come only from the instructor's Sheet
     const uc = localStorage.getItem(UNLOCK_CLEARED_KEY);
     if (uc) data.unlockClearedAt = uc;
     const res = await cloudCall({
@@ -1692,10 +1699,17 @@ function cloudSync(opts) {
       refreshAll();
       const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       setCloudStatus('Scores backed up · ' + t);
+      cloudRetry = 0;
     } else if (res.error === 'pin') {
       setCloudStatus('Backup stopped: the PIN does not match this name. Ask your instructor.', true);
-    } else if (res.error === 'offline') {
-      setCloudStatus('Offline · scores will back up next time.', true);
+    } else if (res.error === 'locked') {
+      setCloudStatus('Backup paused: ' + cloudLockText(res.until), true);
+    } else if (res.error === 'offline' || res.error === 'busy' || res.error === 'server') {
+      /* queue: try again while this page stays open, then on the next visit */
+      const wait = CLOUD_RETRY_MS[cloudRetry];
+      if (wait && !opts.noRetry) { cloudRetry++; setTimeout(() => cloudSync(), wait); }
+      setCloudStatus(res.error === 'offline' ? 'Offline · scores are saved here and will back up when online.'
+        : 'Records busy · waiting in line to back up…', true);
     } else if (res.error !== 'nouser') {
       setCloudStatus('Backup failed · will retry next time.', true);
     }
@@ -1751,10 +1765,11 @@ cp.ok.addEventListener('click', async () => {
   if (res.error === 'pin') {
     cloudForget();
     cp.pin2.hidden = true; cp.pin.value = '';
-    cp.msg.textContent = 'This name already has a PIN. Enter that PIN. If it is not yours, ask your instructor.';
+    cp.msg.textContent = 'This name already has a PIN. Enter that PIN. ' + (res.left ? cloudPinText(res.left).replace('Wrong PIN for this name. ', '') : '') + ' If it is not yours, ask your instructor.';
     return;
   }
-  if (res.error === 'offline') { cloudClosePanel(); return; }   // kept; backs up when online
+  if (res.error === 'locked') { cloudForget(); cp.msg.textContent = 'Locked: ' + cloudLockText(res.until); return; }
+  if (res.error === 'offline' || res.error === 'busy' || res.error === 'server') { cloudClosePanel(); return; }   // kept; queued
   cloudForget();
   cp.msg.textContent = 'Could not save right now. Try again later.';
 });
@@ -1768,6 +1783,8 @@ const nf = {
   go: document.getElementById('nameGo')
 };
 if (!CLOUD_URL) document.getElementById('pinWrap').hidden = true;
+/* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
+if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
 function nameMsg(text, ok) { nf.msg.textContent = text; nf.msg.classList.toggle('ok', !!ok); }
 
 async function nameSubmit(create) {
@@ -1781,7 +1798,7 @@ async function nameSubmit(create) {
   nameMsg(create ? 'Creating your record…' : 'Looking for your saved scores…', true);
   cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
   localStorage.setItem(NAME_KEY, name);
-  const res = await cloudSync({ create: !!create });
+  const res = await cloudSync({ create: !!create, noRetry: true });
   nf.go.disabled = false;
   if (res.ok) { nameMsg(''); startLocal(localStorage.getItem(NAME_KEY) || name); return; }
   if (res.error === 'nouser') {
@@ -1792,8 +1809,13 @@ async function nameSubmit(create) {
   }
   if (res.error === 'pin') {
     cloudForget(); localStorage.removeItem(NAME_KEY);
-    nameMsg('Wrong PIN for this name. Try again. Same name as a classmate? Add your middle initial.');
+    nameMsg(cloudPinText(res.left) + ' Same name as a classmate? Add your middle initial.');
     nf.pin.value = ''; nf.pin.focus();
+    return;
+  }
+  if (res.error === 'locked') {
+    cloudForget(); localStorage.removeItem(NAME_KEY);
+    nameMsg('Locked: ' + cloudLockText(res.until));
     return;
   }
   /* offline or server trouble: continue on this device, back up later */
