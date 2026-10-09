@@ -72,11 +72,19 @@ h1{font-size:26px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
   var pending={}, timers={};
   try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
   function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
-  function send(key){
-    var data=pending[key]; delete pending[key]; clearTimeout(timers[key]);
+  var RETRY=[10000,30000,90000];
+  function send(key,data,attempt){
+    if(!data){ data=pending[key]; delete pending[key]; clearTimeout(timers[key]); }
     var a=acct(); if(!a||!data) return;
+    attempt=attempt||0;
     var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
-    try{ fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000}).catch(function(){}); }catch(e){}
+    function again(){ if(RETRY[attempt]!=null) setTimeout(function(){ send(key,data,attempt+1); },RETRY[attempt]); }
+    try{
+      fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j&&!j.ok&&(j.error==='busy'||j.error==='server')) again(); })   /* queue: wait and retry */
+        .catch(again);
+    }catch(e){}
   }
   function route(k,v){
     var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
