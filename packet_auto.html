@@ -375,7 +375,6 @@ window.PR6 = (() => {
   const hackStrength = st => Math.min(HACK_CAP, 1 + Math.floor(st.got / LEVEL_STEP) + Math.floor(Math.max(0, st.t - st.hackStart) / 300));
   const healUnit = st => !st.owned.baran ? 2 : st.owned.metcalfe ? HEAL_COST / 2 : HEAL_COST;
   const brokenList = st => st.list.filter(n => n.broken);
-  const healCost = st => brokenList(st).length * healUnit(st);
   const speedDiv = st => (st.owned.kleinrock ? QUEUE_X : 1) * (st.owned.fiber ? FIBER_X : 1);
   const blockSize = st => st.owned.davies ? 1 : BLOCK;
   // message switching sends one big block per message; same throughput, bigger losses
