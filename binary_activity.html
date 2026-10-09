@@ -540,11 +540,6 @@ function placeValues(bits){
   for(let i=bits-1;i>=0;i--) arr.push(1<<i);
   return arr;
 }
-function toBinaryString(n, bits){
-  let s = (n >>> 0).toString(2);
-  while(s.length < bits) s = '0' + s;
-  return s;
-}
 
 /* Build an interactive place-value trainer: toggle bits to hit a target number */
 function buildTrainer(target, bits){

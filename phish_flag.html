@@ -79,7 +79,7 @@
         // cannot be predicted by other frames in the tab.
         let callbacksMap = new Map();
         let streamControllers = new Map();
-        
+
         window.claude = {
           complete: (prompt) => {
             return new Promise((resolve, reject) => {
@@ -145,8 +145,8 @@
           return new Promise((resolve, reject) => {
             const id = newRequestId();
             const channelId = `fetch-${id}-${Date.now()}`;
-            
-            callbacksMap.set(id, { 
+
+            callbacksMap.set(id, {
               resolve: (response) => {
                 // Null-body statuses: Response(stream, {status: 204}) throws
                 // per the Fetch spec, which would escape this resolver and
@@ -175,7 +175,7 @@
                     streamControllers.delete(channelId);
                   }
                 });
-                
+
                 // Create and return the Response with the stream. Response()
                 // requires status in [200, 599]; an opaque/no-cors fetch
                 // forwards status 0, which would throw here and escape the
@@ -197,7 +197,7 @@
               reject,
               channelId
             });
-            
+
             realParent.postMessage({
               type: 'proxyFetch',
               id,
@@ -350,15 +350,15 @@
         window.addEventListener('click', (event) => {
           // Not instanceof Element: an artifact's own top-level class Element shadows the global.
           if (typeof event.target?.closest !== "function") return;
-    
+
           const linkEl = event.target.closest("a");
           const href = linkEl && resolvedHref(linkEl);
           if (!href) return;
           const filename = linkEl.getAttribute("download") ?? "";
-    
+
           event.preventDefault();
           event.stopImmediatePropagation();
-    
+
           if (href.startsWith("blob-request:")) {
             const blob = getBlobFromURL(href);
             if (!blob) return;
@@ -391,9 +391,9 @@
             } catch (error) {
               return;
             }
-    
+
             if (linkUrl.hostname === window.location.hostname) return;
-      
+
             realParent.postMessage({
               type: 'openExternal',
               href,

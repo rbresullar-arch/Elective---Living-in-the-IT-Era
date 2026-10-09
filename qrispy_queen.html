@@ -686,13 +686,6 @@ loadResult().then(showBest);
 $('startBtn').addEventListener('click', startGame);
 $('againBtn').addEventListener('click', startGame);
 function goHub(){ if(S) S.running = false; Snd.stopMusic(); location.href = CFG.hubUrl; }
-function goHome(){
-  if(S) S.running = false;
-  Snd.stopMusic();
-  S = newState(); lastKey = ''; dirty = true;
-  $('endScreen').hidden = true; $('startScreen').hidden = false;
-  const hb = $('homeBtn'); hb.classList.remove('armed'); hb.textContent = 'Home';
-}
 let homeArmT;
 $('homeBtn').addEventListener('click', e=>{
   const b = e.currentTarget;
