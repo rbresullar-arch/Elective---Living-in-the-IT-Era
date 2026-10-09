@@ -293,6 +293,24 @@
   .qr-msg { font-size: 14px; font-weight: 700; color: #b3261e; min-height: 18px; margin-bottom: 6px; }
   .app-version { max-width: 420px; margin: 26px auto 0; text-align: center; font-size: 12px; font-weight: 500; color: rgba(0,0,0,.6); letter-spacing: .3px; }
 
+  /* Cloud backup (name + PIN) */
+  .name-box .field-label { margin-top: 14px; }
+  #pinInput, .cp-pin { width: 100%; font-size: 22px; letter-spacing: 8px; text-align: center; padding: 8px 12px 5px; border: var(--bw) solid var(--ink); border-radius: 14px; }
+  .name-hint { font-size: 13px; font-weight: 500; margin-top: 8px; line-height: 1.35; }
+  .name-msg { min-height: 18px; font-size: 14px; font-weight: 700; color: #b3261e; margin-top: 10px; line-height: 1.35; }
+  .name-msg.ok { color: var(--ink); }
+  .name-choice { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+  .name-choice[hidden], #pinWrap[hidden], .cp-pin[hidden] { display: none; }
+  #pinInput::placeholder, .cp-pin::placeholder { letter-spacing: normal; font-size: 16px; }
+  .cp-pin + .cp-pin { margin-top: 10px; }
+  .name-choice .small-btn { font-size: 16px; background: var(--white); }
+  .name-choice .small-btn.primary { background: var(--yellow); }
+  #cloudStatus { color: var(--white); font-size: 13px; text-align: center; margin-top: 6px; min-height: 16px; }
+  #cloudStatus.error { color: #ffd2c7; }
+  #cloudPanel { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
+  #cloudPanel.show { display: flex; }
+  .cp-name { text-align: center; font-size: 17px; font-weight: 800; margin: 2px 0 12px; }
+
   @media (prefers-reduced-motion: reduce) {
     .panel { transition: none; }
   }
@@ -313,7 +331,17 @@
     <form class="box name-box" id="nameForm">
       <label for="nameInput">Enter your full name to begin</label>
       <input type="text" id="nameInput" required autocomplete="name">
-      <button type="submit" class="box small-btn">Continue</button>
+      <div id="pinWrap">
+        <label for="pinInput" class="field-label">Your 4-digit PIN</label>
+        <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+        <div class="name-hint">First time? Make up 4 digits and remember them. Your name and PIN bring your scores back if this phone loses them.</div>
+      </div>
+      <div class="name-msg" id="nameMsg" role="status"></div>
+      <div class="name-choice" id="nameChoice" hidden>
+        <button type="button" class="box small-btn" id="nameFix">Fix my name</button>
+        <button type="button" class="box small-btn primary" id="nameNew">Yes, start new</button>
+      </div>
+      <button type="submit" class="box small-btn" id="nameGo">Continue</button>
     </form>
   </section>
 
@@ -321,6 +349,7 @@
   <section class="screen" id="screen-home">
     <div class="box title">Living in the IT Era</div>
     <p class="greeting" id="greeting"></p>
+    <div id="cloudStatus" role="status"></div>
 
     <button type="button" class="box menu-btn yellow" data-go="activities">Activities</button>
     <button type="button" class="box menu-btn coral" data-go="exam">Examination</button>
@@ -444,6 +473,22 @@
 </div>
 
 <!-- Instructor unlock panel -->
+<div id="cloudPanel" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
+  <div class="box ul-card">
+    <strong id="cpTitle">Create your PIN</strong>
+    <div class="ul-note">Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor's records so they can come back.</div>
+    <div class="cp-name" id="cpName"></div>
+    <input type="password" class="cp-pin" id="cpPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="4 digits">
+    <input type="password" class="cp-pin" id="cpPin2" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="Repeat PIN">
+    <div class="ul-msg" id="cpMsg"></div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn" id="cpLater">Not now</button>
+      <button type="button" class="box small-btn primary" id="cpOk">Save PIN</button>
+    </div>
+    <div class="ul-note" style="margin:12px 0 0">Wrong name above? Tell your instructor before saving.</div>
+  </div>
+</div>
+
 <div id="unlockPanel" role="dialog" aria-modal="true" aria-labelledby="ulTitle">
   <div class="box ul-card">
     <div id="ulStepCode">
@@ -564,7 +609,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.10.1';
+const APP_VERSION = '2026.10.10.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -864,7 +909,9 @@ async function doRedo(a) {
   document.getElementById(a.id + 'RedoBtn').disabled = true;
   await clearActivity(a);
   localStorage.setItem(a.redo.flagKey, '1');
+  cloudMarkReset(a.id);
   await refreshActivities();
+  cloudSync();
 }
 
 /* ===== Exam statuses (read-only; exam pages own the data) ===== */
@@ -956,18 +1003,17 @@ function enterActivities(name) {
   if (!SCREEN_COLORS[last] || last === 'name') last = 'home';
   showScreen(last);
   refreshAll();
+  cloudAfterEnter();
 }
 
-document.getElementById('nameForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) return;
+function startLocal(name) {
   localStorage.setItem(NAME_KEY, name);
   if (!localStorage.getItem(DATE_KEY)) {
     localStorage.setItem(DATE_KEY, new Date().toISOString());
   }
   enterActivities(name);
-});
+}
+/* Name form submit: see "Cloud backup" below. */
 
 function isAndroid() {
   return /Android/i.test(navigator.userAgent);
@@ -1246,6 +1292,7 @@ async function writeUnlock(u) {
   try { sessionStorage.setItem(UNLOCK_KEY, json); } catch (e) {}
 }
 async function clearUnlock() {
+  try { localStorage.setItem('itict_unlock_cleared_at', new Date().toISOString()); } catch (e) {}
   try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {}
   try { sessionStorage.removeItem(UNLOCK_KEY); } catch (e) {}
   deleteCookie(UNLOCK_KEY);
@@ -1383,6 +1430,7 @@ async function ulResetScores(list) {
   for (const n of list) {
     const a = ACTIVITIES[n - 1]; if (!a) continue;
     await clearActivity(a);
+    cloudMarkReset(a.id);
     if (a.redo) { try { localStorage.removeItem(a.redo.flagKey); } catch (e) {} }
     if (a.href === 'qrispy_queen.html') { try { localStorage.removeItem('itict_activity7_attempts'); } catch (e) {} }
   }
@@ -1390,7 +1438,7 @@ async function ulResetScores(list) {
   if (U) {
     const skipped = (U.skipped || []).filter(n => !list.includes(n));
     if (!U.through && !skipped.length) await clearUnlock();
-    else await writeUnlock(Object.assign({}, U, { skipped }));
+    else await writeUnlock(Object.assign({}, U, { skipped, at: new Date().toISOString() }));
   }
 }
 
@@ -1414,6 +1462,7 @@ async function ulApply() {
     await refreshActivities();
     await ulShowPicker('reset');
     ul.status.textContent = `Done. ${list.length === 1 ? 'Activity' : 'Activities'} ${list.join(', ')} reset.`;
+    cloudSync();
     return;
   }
   if (!ul.pending) return;
@@ -1422,6 +1471,7 @@ async function ulApply() {
   await writeUnlock({ through: ul.pending.n, skipped, at: new Date().toISOString() });
   await refreshActivities();
   ul.status.textContent = `Done. ${ACTIVITIES[ul.pending.n - 1].label} is open.`;
+  cloudSync();
   ul.confirm.hidden = true; ul.pending = null;
   setTimeout(ulCloseAll, 1200);
 }
@@ -1429,6 +1479,7 @@ async function ulApply() {
 async function ulRelock() {
   await clearUnlock();
   await refreshActivities();
+  cloudSync();
   ul.status.textContent = 'Relocked. Skipped marks cleared on this device.';
   ul.confirm.hidden = true; ul.pending = null;
   ul.grid.querySelectorAll('.ul-pick').forEach(b => b.classList.remove('sel', 'cur'));
@@ -1536,6 +1587,223 @@ document.getElementById('qrDl').addEventListener('click', () => {
   const nm = ((localStorage.getItem(NAME_KEY) || 'student').replace(/[^\w-]+/g, '_')) || 'student';
   const a = document.createElement('a'); a.href = qrLastPNG; a.download = 'GEEL1_Activities_' + nm + '.png';
   document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ===== Cloud backup (instructor's Google Sheet via Apps Script) =====
+   Identity: the student's name (normalized) + a 4-digit PIN. Only a SHA-256 of
+   'itict|' + NAME + '|' + PIN is stored on the device or sent.
+   Each visit uploads everything this device has; the server merges (higher score
+   wins, resets/redo/relock are honored by time) and returns the merged record,
+   which is written back here. That is also how a wiped phone gets its scores back. */
+const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+const CLOUD_ACCT_KEY = 'itict_cloud';
+const CLOUD_RESETS_KEY = 'itict_cloud_resets';
+const UNLOCK_CLEARED_KEY = 'itict_unlock_cleared_at';
+const CLOUD_LATER_KEY = 'itict_cloud_later';
+
+function cloudNorm(name) { return String(name || '').replace(/\s+/g, ' ').trim().toUpperCase(); }
+function cloudNameOk(name) { return /^[\p{L}0-9.,'\- ]{3,80}$/u.test(cloudNorm(name)); }
+async function cloudPinHash(name, pin) { return sha256hex('itict|' + cloudNorm(name) + '|' + pin); }
+function cloudAcct() {
+  try { const a = JSON.parse(localStorage.getItem(CLOUD_ACCT_KEY) || 'null'); return a && a.id && a.pin ? a : null; }
+  catch (e) { return null; }
+}
+function cloudSetAcct(a) { try { localStorage.setItem(CLOUD_ACCT_KEY, JSON.stringify(a)); } catch (e) {} }
+function cloudForget() { try { localStorage.removeItem(CLOUD_ACCT_KEY); } catch (e) {} }
+function cloudResets() { try { return JSON.parse(localStorage.getItem(CLOUD_RESETS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function cloudMarkReset(id) {
+  const r = cloudResets(); r[id] = new Date().toISOString();
+  try { localStorage.setItem(CLOUD_RESETS_KEY, JSON.stringify(r)); } catch (e) {}
+}
+function cloudRecTime(r) {
+  const t = r && (r.endTime || r.savedAt || r.at || (r.updated ? new Date(r.updated).toISOString() : ''));
+  return t ? String(t) : '';
+}
+function setCloudStatus(msg, isError) {
+  const x = document.getElementById('cloudStatus');
+  if (!x) return;
+  x.textContent = msg;
+  x.classList.toggle('error', !!isError);
+}
+
+async function cloudCall(body) {
+  const ctl = ('AbortController' in window) ? new AbortController() : null;
+  const t = setTimeout(() => ctl && ctl.abort(), 25000);
+  try {
+    const r = await fetch(CLOUD_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      signal: ctl ? ctl.signal : undefined
+    });
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: 'offline' };
+  } finally { clearTimeout(t); }
+}
+
+/* Write the merged server record back to this device, including deletions
+   that came from a reset, redo or relock made on another device. */
+async function applyCloud(m) {
+  if (!m || typeof m !== 'object') return;
+  await applySyncData(m);
+  const resets = cloudResets();
+  Object.keys(m.resets || {}).forEach(k => { if (!resets[k] || m.resets[k] > resets[k]) resets[k] = m.resets[k]; });
+  try { localStorage.setItem(CLOUD_RESETS_KEY, JSON.stringify(resets)); } catch (e) {}
+  for (const a of ACTIVITIES) {
+    const r = m.resets && m.resets[a.id];
+    if (!m[a.id] && r) {
+      const local = await loadActivity(a);
+      if (local && !(cloudRecTime(local) > r)) await clearActivity(a);
+    }
+    if (a.redo && m.redoFlags && m.redoFlags[a.id] === false && r) {
+      try { localStorage.removeItem(a.redo.flagKey); } catch (e) {}
+    }
+  }
+  if (!m.unlock && m.unlockClearedAt) {
+    const U = await loadUnlock();
+    if (U && !((U.at || '') > m.unlockClearedAt)) await clearUnlock();
+    try { localStorage.setItem(UNLOCK_CLEARED_KEY, m.unlockClearedAt); } catch (e) {}
+  }
+}
+
+let cloudBusy = null;
+let cloudLastOk = 0;
+/* opts.create: allow the server to register this name if it is new. */
+function cloudSync(opts) {
+  opts = opts || {};
+  const acct = cloudAcct();
+  if (!acct || !CLOUD_URL) return Promise.resolve({ ok: false, error: 'noacct' });
+  if (cloudBusy) return cloudBusy;
+  cloudBusy = (async () => {
+    setCloudStatus('Backing up…');
+    const data = await collectSyncData();
+    data.resets = cloudResets();
+    const uc = localStorage.getItem(UNLOCK_CLEARED_KEY);
+    if (uc) data.unlockClearedAt = uc;
+    const res = await cloudCall({
+      action: 'save', id: acct.id, pin: acct.pin,
+      name: localStorage.getItem(NAME_KEY) || acct.name || '',
+      create: opts.create !== false, data
+    });
+    if (res.ok) {
+      cloudLastOk = Date.now();
+      await applyCloud(res.data);
+      refreshAll();
+      const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      setCloudStatus('Scores backed up · ' + t);
+    } else if (res.error === 'pin') {
+      setCloudStatus('Backup stopped: the PIN does not match this name. Ask your instructor.', true);
+    } else if (res.error === 'offline') {
+      setCloudStatus('Offline · scores will back up next time.', true);
+    } else if (res.error !== 'nouser') {
+      setCloudStatus('Backup failed · will retry next time.', true);
+    }
+    return res;
+  })();
+  return cloudBusy.finally(() => { cloudBusy = null; });
+}
+
+/* After entering the hub: ask existing students for a PIN once, otherwise sync. */
+function cloudAfterEnter() {
+  if (!CLOUD_URL || browserBlocked) return;
+  if (cloudAcct()) { if (Date.now() - cloudLastOk > 15000) cloudSync(); return; }
+  let later = null;
+  try { later = sessionStorage.getItem(CLOUD_LATER_KEY); } catch (e) {}
+  if (later) { setCloudStatus('Scores are not backed up yet · create a PIN', true); return; }
+  cloudOpenPanel();
+}
+
+/* ---- PIN panel for students who already have a name on this device ---- */
+const cp = {
+  panel: document.getElementById('cloudPanel'),
+  name: document.getElementById('cpName'),
+  pin: document.getElementById('cpPin'),
+  pin2: document.getElementById('cpPin2'),
+  msg: document.getElementById('cpMsg'),
+  ok: document.getElementById('cpOk')
+};
+function cloudOpenPanel() {
+  cp.name.textContent = localStorage.getItem(NAME_KEY) || '';
+  cp.pin.value = ''; cp.pin2.value = ''; cp.msg.textContent = '';
+  cp.pin2.hidden = false;
+  cp.panel.classList.add('show');
+  setTimeout(() => cp.pin.focus(), 50);
+}
+function cloudClosePanel() { cp.panel.classList.remove('show'); }
+document.getElementById('cpLater').addEventListener('click', () => {
+  try { sessionStorage.setItem(CLOUD_LATER_KEY, '1'); } catch (e) {}
+  cloudClosePanel();
+  setCloudStatus('Scores are not backed up yet · create a PIN', true);
+});
+document.getElementById('cloudStatus').addEventListener('click', () => { if (!cloudAcct() && CLOUD_URL) cloudOpenPanel(); });
+cp.ok.addEventListener('click', async () => {
+  const name = localStorage.getItem(NAME_KEY) || '';
+  const pin = cp.pin.value.trim();
+  if (!/^\d{4}$/.test(pin)) { cp.msg.textContent = 'Use exactly 4 digits.'; return; }
+  if (!cp.pin2.hidden && cp.pin2.value.trim() !== pin) { cp.msg.textContent = 'The two PINs are different.'; return; }
+  if (!cloudNameOk(name)) { cp.msg.textContent = 'Your saved name has unusual characters. Ask your instructor.'; return; }
+  cp.ok.disabled = true; cp.msg.textContent = 'Saving…';
+  cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
+  const res = await cloudSync({ create: true });
+  cp.ok.disabled = false;
+  if (res.ok) { cloudClosePanel(); return; }
+  if (res.error === 'pin') {
+    cloudForget();
+    cp.pin2.hidden = true; cp.pin.value = '';
+    cp.msg.textContent = 'This name already has a PIN. Enter that PIN. If it is not yours, ask your instructor.';
+    return;
+  }
+  if (res.error === 'offline') { cloudClosePanel(); return; }   // kept; backs up when online
+  cloudForget();
+  cp.msg.textContent = 'Could not save right now. Try again later.';
+});
+
+/* ---- Name screen: name + PIN, restore from the Sheet when it has a record ---- */
+const nf = {
+  name: document.getElementById('nameInput'),
+  pin: document.getElementById('pinInput'),
+  msg: document.getElementById('nameMsg'),
+  choice: document.getElementById('nameChoice'),
+  go: document.getElementById('nameGo')
+};
+if (!CLOUD_URL) document.getElementById('pinWrap').hidden = true;
+function nameMsg(text, ok) { nf.msg.textContent = text; nf.msg.classList.toggle('ok', !!ok); }
+
+async function nameSubmit(create) {
+  const name = nf.name.value.replace(/\s+/g, ' ').trim();
+  if (!name) return;
+  if (!CLOUD_URL) { startLocal(name); return; }
+  const pin = nf.pin.value.trim();
+  if (!cloudNameOk(name)) { nameMsg('Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
+  if (!/^\d{4}$/.test(pin)) { nameMsg('Enter a 4-digit PIN.'); nf.pin.focus(); return; }
+  nf.go.disabled = true; nf.choice.hidden = true;
+  nameMsg(create ? 'Creating your record…' : 'Looking for your saved scores…', true);
+  cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
+  localStorage.setItem(NAME_KEY, name);
+  const res = await cloudSync({ create: !!create });
+  nf.go.disabled = false;
+  if (res.ok) { nameMsg(''); startLocal(localStorage.getItem(NAME_KEY) || name); return; }
+  if (res.error === 'nouser') {
+    cloudForget(); localStorage.removeItem(NAME_KEY);
+    nameMsg(`No saved scores for "${name}". First time here? If you played before, check the spelling of your name.`);
+    nf.choice.hidden = false;
+    return;
+  }
+  if (res.error === 'pin') {
+    cloudForget(); localStorage.removeItem(NAME_KEY);
+    nameMsg('Wrong PIN for this name. Try again. Same name as a classmate? Add your middle initial.');
+    nf.pin.value = ''; nf.pin.focus();
+    return;
+  }
+  /* offline or server trouble: continue on this device, back up later */
+  startLocal(name);
+  setCloudStatus('Offline · scores will back up next time.', true);
+}
+document.getElementById('nameForm').addEventListener('submit', (e) => { e.preventDefault(); nameSubmit(false); });
+document.getElementById('nameNew').addEventListener('click', () => nameSubmit(true));
+document.getElementById('nameFix').addEventListener('click', () => {
+  nf.choice.hidden = true; nameMsg(''); nf.name.focus(); nf.name.select();
 });
 
 buildLists();

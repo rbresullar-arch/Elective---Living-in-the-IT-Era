@@ -3,6 +3,8 @@
  *
  * Standalone Apps Script project that writes to the "IT Era — Student Records" Google Sheet (SHEET_ID).
  * Deploy: Deploy → New deployment → Web app · Execute as: Me · Who has access: Anyone.
+ * Live: owner tellmei.282@gmail.com · web app URL is CLOUD_URL in index.html and the activity pages.
+ * After editing this file: Deploy → Manage deployments → edit → Version: New version (keeps the same URL).
  *
  * Tabs (created automatically on first request):
  *   Scores — one readable row per student (instructor view)

@@ -106,6 +106,49 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset
 .meta-box div{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-size:13px}
 #blockMsg{line-height:1.5}
 </style>
+<script id="itictCloudPush">
+/* Cloud backup: sends a result to the instructor's Google Sheet the moment this
+   page saves it. Works only after the student created a PIN on the hub
+   (localStorage 'itict_cloud'). Never blocks or changes the page; failures are
+   silent and the hub uploads everything on the next visit. */
+(function(){
+  var URL_='https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var ACT={itict_essay_result:'activity1',itict_abacus_result:'activity2',itict_pascaline_result:'activity3',itict_binary_result:'activity4',
+    itict_activity5_result:'activity5',itict_activity6_result:'activity6',itict_activity7_result:'activity7',itict_activity8_result:'activity8',itict_activity9_result:'activity9'};
+  var EXAM={itict_prelim:'examPrelim',itict_midterm:'exam1'};
+  var pending={}, timers={};
+  try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
+  function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
+  function send(key){
+    var data=pending[key]; delete pending[key]; clearTimeout(timers[key]);
+    var a=acct(); if(!a||!data) return;
+    var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
+    try{ fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000}).catch(function(){}); }catch(e){}
+  }
+  function route(k,v){
+    var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
+    if(!rec||typeof rec!=='object') return null;
+    if(ACT[k]){ var d={}; d[ACT[k]]=rec; return {wait:800,data:d}; }
+    var m=/^(itict_[a-z]+)_(result|session)$/.exec(k);
+    if(m&&EXAM[m[1]]){ var x={prefix:m[1]}; x[m[2]]=rec; var e={}; e[EXAM[m[1]]]=x; return {wait:m[2]==='session'?20000:800,data:{exams:e}}; }
+    return null;
+  }
+  var orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    var out=orig.apply(this,arguments);
+    try{
+      if(this===window.localStorage){
+        var key=String(k), r=route(key,String(v));
+        if(r){ pending[key]=r.data; clearTimeout(timers[key]); timers[key]=setTimeout(function(){ send(key); },r.wait); }
+      }
+    }catch(e){}
+    return out;
+  };
+  function flush(){ for(var k in pending) send(k); }
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') flush(); });
+})();
+</script>
 </head>
 <body>
 <div class="app">
