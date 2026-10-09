@@ -7,13 +7,15 @@
  * Tabs (created automatically on first request):
  *   Scores — one readable row per student (instructor view)
  *   Data   — full sync payload per student, JSON split across cells (used for restore)
- *   Auth   — student ID + salted PIN hash. Delete a student's row here to reset their PIN.
+ *   Auth   — student key (normalized name) + salted PIN hash. Delete a row here to reset that PIN.
  *   Log    — one line per request (time, ID, action, result)
  *
  * Requests: POST, Content-Type text/plain, body JSON:
- *   { action: 'save',    id, pin, name, data }  → merges data, returns { ok, data }
- *   { action: 'restore', id, pin }              → returns { ok, data }
- * `pin` is the client-side SHA-256 of 'itict|' + ID + '|' + PIN; the 4-digit PIN never leaves the device.
+ *   { action: 'save', id, pin, name, data, create } → merges data, returns { ok, data }
+ *     (an unknown id is registered only when create is true; otherwise error 'nouser')
+ *   { action: 'restore', id, pin }                    → returns { ok, data }
+ * `id` is the student's name normalized: upper case, single spaces.
+ * `pin` is the client-side SHA-256 of 'itict|' + id + '|' + PIN; the 4-digit PIN never leaves the device.
  */
 
 var SHEET_ID = '1m_dZt__2WpBxVZx0q_aIsRBhz4msEUWUa0ZoBpXLNQ8';
@@ -22,7 +24,7 @@ var ACTIVITY_COUNT = 9;
 var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' }];
 var CHUNK = 45000;          // chars per cell (cell limit is 50,000)
 var MAX_BODY = 600000;      // reject anything larger
-var ID_RE = /^[A-Z0-9-]{3,24}$/;
+var ID_RE = /^[\p{L}0-9.,'\- ]{3,80}$/u;
 
 function doGet() {
   return json_({ ok: true, service: 'itict-records', version: 1 });
@@ -37,7 +39,7 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: 'bad' });
   }
-  var id = String(req.id || '').trim().toUpperCase();
+  var id = String(req.id || '').replace(/\s+/g, ' ').trim().toUpperCase();
   var pin = String(req.pin || '');
   if (!ID_RE.test(id) || !/^[0-9a-f]{64}$/.test(pin)) return json_({ ok: false, error: 'bad' });
 
@@ -46,7 +48,7 @@ function doPost(e) {
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     ensureSheets_(ss);
-    var auth = checkPin_(ss, id, pin, req.action === 'save');
+    var auth = checkPin_(ss, id, pin, req.action === 'save' && req.create === true);
     if (auth === 'nouser') { log_(ss, id, req.action, 'nouser'); return json_({ ok: false, error: 'nouser' }); }
     if (auth !== 'ok' && auth !== 'new') { log_(ss, id, req.action, 'pin'); return json_({ ok: false, error: 'pin' }); }
 
@@ -177,13 +179,13 @@ function serverHash_(clientHash) {
 /* ---------------- storage ---------------- */
 function ensureSheets_(ss) {
   var heads = {};
-  heads[SHEET.scores] = ['Student ID', 'Name'];
+  heads[SHEET.scores] = ['Key', 'Name'];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) heads[SHEET.scores].push('A' + n + ' %');
   EXAMS.forEach(function (x) { heads[SHEET.scores].push(x.label); });
   heads[SHEET.scores].push('Last sync');
-  heads[SHEET.data] = ['Student ID', 'Name', 'Updated', 'JSON (split across columns)'];
-  heads[SHEET.auth] = ['Student ID', 'PIN hash (delete row to reset PIN)', 'Registered'];
-  heads[SHEET.log] = ['Time', 'Student ID', 'Action', 'Result'];
+  heads[SHEET.data] = ['Key', 'Name', 'Updated', 'JSON (split across columns)'];
+  heads[SHEET.auth] = ['Key (name)', 'PIN hash (delete row to reset PIN)', 'Registered'];
+  heads[SHEET.log] = ['Time', 'Key', 'Action', 'Result'];
   Object.keys(heads).forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (!sh) {
