@@ -2,381 +2,142 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Abacus Addition Activity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
-  *{
-    box-sizing:border-box; margin:0; padding:0;
-    -webkit-tap-highlight-color:transparent;
-    -webkit-user-select:none; user-select:none;
-    -webkit-touch-callout:none;
-    -webkit-user-drag:none;
-  }
-  html,body{
-    height:100%;
-    background:#ffffff;
-    color:#000000;
-    font-family:Georgia, 'Times New Roman', serif;
-    overscroll-behavior:none;
-  }
-  body{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:space-between;
-    height:100vh;
-    padding:18px;
-  }
+:root{
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --good:#1f9d55; --warn:#e8a200; --bad:#d62828; --gold:#f5b700;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+  /* Activity 2 identity: maple frame + amber */
+  --hud:#111111; --tag:#f6b26b;
+  --screen:#f3dcb5; --soft:#fff1dc;
+  --accent:#f6a04d; --accent-ink:#b4530a;
+  --wood:#5a3a1e; --bead:#0a0a0a; --next:#2f6fed; --urgent:#e2632c;
+}
+/* ===== Activity shell — shared with Activities 7–9 (HUD, card, buttons) ===== */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 40px;display:flex;flex-direction:column;gap:10px}
 
-  /* ---------- top: round label + 5-segment progress ---------- */
-  .topbar{
-    width:100%;
-    max-width:520px;
-  }
-  .round-label{
-    font-family: Arial, sans-serif;
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:#555;
-    margin-bottom:10px;
-    text-align:center;
-  }
-  .segments{
-    display:flex;
-    gap:5px;
-  }
-  .segment{
-    flex:1;
-    height:4px;
-    background:#e6e6e6;
-  }
-  .segment.done{
-    background:#000;
-  }
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--hud);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--tag);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.pill{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;line-height:1.3;text-decoration:none;white-space:nowrap}
+.pill:active{transform:translateY(1px)}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px;min-width:0}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-weight:400;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
 
-  /* ---------- question / answer / result stage (all share the same slot) ---------- */
-  .stage-wrap{
-    width:100%;
-    max-width:520px;
-    min-height:120px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:14px 0;
-  }
-  .stage-panel{ display:none; flex-direction:column; align-items:center; gap:16px; width:100%; }
-  .stage-panel.active{ display:flex; }
+/* Screen + well */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--screen)}
+.screen h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0;letter-spacing:.3px;line-height:1.15}
+.eyebrow{font-family:var(--pixel);font-size:10px;letter-spacing:1px;margin:0}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:12px}
 
-  .question{
-    font-family: Georgia, serif;
-    font-size:clamp(56px, 16vw, 96px);
-    font-weight:normal;
-    text-align:center;
-    opacity:1;
-    transition:opacity .15s ease;
-  }
-  .question.fade{ opacity:0; }
+/* Overlay card */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:30}
+.card{background:var(--paper);border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto;text-align:left}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--accent-ink)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go{background:var(--accent);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px;color:var(--ink);text-decoration:none;display:inline-block;line-height:1.2;text-transform:none}
+.go.home{background:#fff}
+.go:active{transform:translateY(2px)}
+.go:disabled{opacity:.45;cursor:default;transform:none}
+.dl{background:none;border:none;text-decoration:underline;font-size:12px;color:#555;padding:0;align-self:flex-start;font-family:var(--body)}
+.dl:disabled{opacity:.6;cursor:default}
+.result{font-family:var(--display);font-size:46px;line-height:1}
+.bigscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bigscore b{font-family:var(--display);font-size:56px;line-height:1;font-weight:400}
+.bigscore span{font-family:var(--pixel);font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{border:3px solid var(--ink);border-radius:12px;padding:6px 10px}
+.kpi b{display:block;font-family:var(--pixel);font-size:16px;font-weight:400;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.scoreline{background:var(--soft);border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+.note{font-size:12px;color:#555}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
+@keyframes slide{0%{transform:translateX(18px);opacity:.2}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.card h1{font-size:30px}.bigscore b{font-size:46px}}
 
-  .prompt-label{
-    font-family: Arial, sans-serif;
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:#555;
-  }
-  .answer-input{
-    font-family: Georgia, serif;
-    font-size:36px;
-    text-align:center;
-    width:160px;
-    border:none;
-    border-bottom:2px solid #000;
-    background:transparent;
-    padding:6px 0;
-    -webkit-appearance:none;
-  }
-  .answer-input:focus{ outline:none; }
+/* ===== Activity 2: abacus ===== */
+html,body{overscroll-behavior:none}
+.screen,.overlay{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.screen{align-items:center;min-height:560px}
 
-  .result-text{
-    font-family: Arial, sans-serif;
-    font-weight:bold;
-    font-size:38px;
-    letter-spacing:.04em;
-  }
-  .result-text.incorrect{ border-bottom:3px solid #000; padding-bottom:6px; }
+/* top: round label + 5-segment progress */
+.topbar{width:100%}
+.round-label{font-family:var(--pixel);font-size:10px;letter-spacing:1px;text-align:center;margin-bottom:8px}
+.segments{display:flex;gap:5px}
+.segment{flex:1;height:10px;background:#fff;border:2px solid var(--ink);border-radius:5px}
+.segment.done{background:var(--accent)}
 
-  /* ---------- start overlay ---------- */
-  .overlay{
-    position:fixed;
-    inset:0;
-    background:#fff;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:22px;
-    z-index:20;
-    padding:24px;
-    text-align:center;
-  }
-  .overlay.hidden{ display:none; }
+/* question / answer / result share one slot */
+.stage-wrap{width:100%;min-height:150px;display:flex;align-items:center;justify-content:center;background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:12px}
+.stage-panel{display:none;flex-direction:column;align-items:center;gap:12px;width:100%}
+.stage-panel.active{display:flex}
+.question{font-family:var(--display);font-size:clamp(64px,20vw,104px);line-height:1;text-align:center;transition:opacity .15s ease}
+.question.fade{opacity:0}
+.prompt-label{font-family:var(--pixel);font-size:10px;letter-spacing:1px}
+.answer-input{font-family:var(--display);font-size:40px;text-align:center;width:170px;border:none;border-bottom:4px solid var(--ink);background:transparent;padding:4px 0;-webkit-appearance:none;-webkit-user-select:text;user-select:text;color:var(--ink)}
+.answer-input:focus{outline:none;border-bottom-color:var(--accent-ink)}
+.result-text{font-family:var(--display);font-size:42px;line-height:1;letter-spacing:.5px;color:var(--good)}
+.result-text.incorrect{color:var(--bad)}
+.stage-panel .go{font-size:21px;padding:8px 18px}
 
-  h1{
-    font-size:22px;
-    font-weight:normal;
-    text-align:center;
-    max-width:340px;
-    line-height:1.5;
-  }
-  p.instructions{
-    font-family: Arial, sans-serif;
-    font-size:13px;
-    color:#555;
-    text-align:center;
-    max-width:320px;
-    line-height:1.6;
-  }
-  button{
-    font-family: Arial, sans-serif;
-    font-size:13px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    background:#000;
-    color:#fff;
-    border:none;
-    padding:13px 32px;
-    cursor:pointer;
-  }
-  button:active{ background:#333; }
+/* abacus */
+.abacus-wrap{width:100%;display:flex;justify-content:center;padding:2px 0}
+.abacus{display:flex;border:6px solid var(--wood);border-radius:18px;padding:14px 18px 10px;background:#fff8ec;box-shadow:0 0 0 3px var(--ink),0 6px 0 3px var(--ink)}
+.rod-group{display:flex;flex-direction:column;align-items:center}
+.rod-name{font-family:var(--pixel);font-size:9px;letter-spacing:1px;color:var(--wood);margin-bottom:8px}
+.rod{position:relative;width:52px;height:220px;touch-action:none}
+.rod-line{position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--wood);transform:translateX(-50%);pointer-events:none;border-radius:2px}
+.bar{position:absolute;left:-12px;right:-12px;height:4px;background:var(--wood);pointer-events:none;border-radius:2px;margin-top:-1px}
+.zone{position:absolute;left:-13px;right:-13px;touch-action:none;cursor:pointer;background:transparent;z-index:5;border-radius:10px}
+.zone-heaven{top:0;height:64px}
+.zone-earth{top:68px;bottom:0}
+.zone:active{background:rgba(0,0,0,.06)}
+.rod-group + .rod-group{border-left:2px dashed #d7b98f;padding-left:13px;margin-left:13px}
+.bead{position:absolute;left:50%;width:46px;height:24px;border-radius:50%;background:var(--bead);border:2px solid var(--ink);transform:translate(-50%,-50%);transition:top .16s ease-out,background .15s ease;box-shadow:inset 0 -4px 0 rgba(255,255,255,.12),0 2px 0 rgba(0,0,0,.35);pointer-events:none}
+.bead.next{background:var(--next)}
+.bead.next.urgent{background:var(--urgent);animation:beadPulse .9s ease-in-out infinite}
+@keyframes beadPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.18)}}
+.value-hint{font-size:11px;color:#6b4a2b;text-align:center;margin-top:12px}
+.value-hint i{display:inline-block;width:14px;height:8px;border-radius:50%;border:2px solid var(--ink);vertical-align:0;margin:0 3px 0 6px}
+@media (max-width:400px){
+  .abacus{padding:12px 10px 10px}
+  .rod{width:46px}
+  .bead{width:40px;height:22px}
+  .rod-group + .rod-group{padding-left:9px;margin-left:9px}
+  .zone{left:-9px;right:-9px}
+}
 
-  /* ---------- abacus ---------- */
-  .abacus-wrap{
-    width:100%;
-    max-width:520px;
-    display:flex;
-    justify-content:center;
-    padding:10px 0 6px;
-  }
-  .abacus{
-    display:flex;
-    gap:0;
-    border:1.5px solid #000;
-    padding:16px 20px 12px;
-    background:#fff;
-  }
-  .rod-group{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-  }
-  .rod-name{
-    font-family: Arial, sans-serif;
-    font-size:10px;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:#888;
-    margin-bottom:8px;
-  }
-  .rod{
-    position:relative;
-    width:52px;
-    height:220px;
-    touch-action:none;
-  }
-  .rod-line{
-    position:absolute;
-    left:50%;
-    top:0;
-    bottom:0;
-    width:2px;
-    background:#000;
-    transform:translateX(-50%);
-    pointer-events:none;
-  }
-  .bar{
-    position:absolute;
-    left:-12px;
-    right:-12px;
-    height:2px;
-    background:#000;
-    pointer-events:none;
-  }
+/* overlays that the script shows with style.display = 'flex' */
+#blockOverlay,#doneOverlay,#lockedOverlay{display:none}
+.overlay.hidden{display:none}
 
-  /* enlarged gesture hitboxes — wider than the rod, so swipes are easy to land */
-  .zone{
-    position:absolute;
-    left:-13px;
-    right:-13px;
-    touch-action:none;
-    cursor:pointer;
-    background:transparent;
-    z-index:5;
-  }
-  .zone-heaven{ top:0; height:64px; }
-  .zone-earth{ top:68px; bottom:0; }
-  .zone:active{ background:rgba(0,0,0,0.05); }
-
-  /* vertical separators between place-value rods */
-  .rod-group + .rod-group{
-    border-left:1px solid #ccc;
-    padding-left:13px;
-    margin-left:13px;
-  }
-
-  /* oblate bead: wider than tall, elliptical — visual only, moved by swipe */
-  .bead{
-    position:absolute;
-    left:50%;
-    width:46px;
-    height:24px;
-    border-radius:50%;
-    background:#0a0a0a;
-    transform:translate(-50%, -50%);
-    transition: top .16s ease-out, background .15s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.35);
-    pointer-events:none;
-  }
-  .bead.next{ background:#2f6fed; }
-  .bead.next.urgent{
-    background:#e2632c;
-    animation: beadPulse 0.9s ease-in-out infinite;
-  }
-  @keyframes beadPulse{
-    0%, 100% { transform:translate(-50%, -50%) scale(1); }
-    50%      { transform:translate(-50%, -50%) scale(1.18); }
-  }
-
-  .value-hint{
-    font-family: Arial, sans-serif;
-    font-size:10px;
-    color:#aaa;
-    text-align:center;
-    margin-top:10px;
-    letter-spacing:.06em;
-  }
-
-  @media (max-width:400px){
-    .abacus{ gap:0; padding:14px 10px 10px; }
-    .rod{ width:46px; }
-    .bead{ width:40px; height:22px; }
-    .rod-group + .rod-group{ padding-left:9px; margin-left:9px; }
-    .zone{ left:-9px; right:-9px; }
-  }
-
-  #homeLink{
-    position:fixed;
-    top:14px;
-    left:14px;
-    font-family: Arial, sans-serif;
-    font-size:13px;
-    color:#000;
-    text-decoration:none;
-    border:1.5px solid #000;
-    padding:6px 12px;
-    z-index:15;
-    background:#fff;
-  }
-  #homeLink:active{ background:#eee; }
-
-  #blockOverlay, #doneOverlay{
-    position:fixed;
-    inset:0;
-    background:#fff;
-    display:none;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:16px;
-    z-index:30;
-    padding:24px;
-    text-align:center;
-  }
-  #blockOverlay strong, #doneOverlay strong{
-    display:block;
-    font-size:19px;
-    margin-bottom:4px;
-  }
-  #doneOverlay .score{
-    font-family: Arial, sans-serif;
-    font-size:15px;
-    color:#555;
-  }
-  #lockedOverlay a.activity-btn,
-  #doneOverlay a.activity-btn{
-    font-family: Arial, sans-serif;
-    font-size:13px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    background:#000;
-    color:#fff;
-    text-decoration:none;
-    padding:13px 32px;
-    display:inline-block;
-  }
-
-  /* ---------- free play ---------- */
-  #freePlayBtn{
-    background:#fff;
-    color:#000;
-    border:1.5px solid #000;
-  }
-  #freePlayBtn:active{ background:#eee; }
-
-  #freePlayBar{
-    display:none;
-    width:100%;
-    max-width:520px;
-    flex-direction:column;
-    align-items:center;
-    gap:10px;
-    padding:10px 0 4px;
-  }
-  #freePlayBar.active{ display:flex; }
-  #freePlayBar .fp-label{
-    font-family: Arial, sans-serif;
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:#555;
-  }
-  #freePlayBar .fp-value{
-    font-family: Georgia, serif;
-    font-size:clamp(48px, 14vw, 80px);
-    line-height:1;
-    font-variant-numeric: tabular-nums;
-  }
-  #freePlayBar .fp-actions{
-    display:flex;
-    gap:10px;
-  }
-  #freePlayBar .fp-actions button{ padding:11px 26px; }
-  #fpExitBtn{
-    background:#fff;
-    color:#000;
-    border:1.5px solid #000;
-  }
-  #fpExitBtn:active{ background:#eee; }
-
-  /* ---------- self download ---------- */
-  #selfDownloadBtn{
-    position:fixed;
-    top:14px;
-    right:14px;
-    z-index:200;
-    background:#fff;
-    color:#000;
-    font-family: Arial, sans-serif;
-    font-size:13px;
-    letter-spacing:normal;
-    text-transform:none;
-    padding:6px 12px;
-    border:1.5px solid #000;
-    cursor:pointer;
-    box-shadow:0 2px 6px rgba(0,0,0,0.3);
-  }
-  #selfDownloadBtn:active{ background:#eee; }
-  #selfDownloadBtn:disabled{ opacity:.5; cursor:default; }
+/* free play */
+#freePlayBar{display:none;width:100%;flex-direction:column;align-items:center;gap:8px;background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:12px}
+#freePlayBar.active{display:flex}
+#freePlayBar .fp-label{font-family:var(--pixel);font-size:10px;letter-spacing:1px}
+#freePlayBar .fp-value{font-family:var(--display);font-size:clamp(56px,16vw,88px);line-height:1;font-variant-numeric:tabular-nums}
+#freePlayBar .btnrow .go{font-size:21px;padding:8px 18px}
 </style>
 <script>
 /* Instructor unlock (set from the hub crest). Opens this page's gate when the
@@ -398,106 +159,128 @@ function itictGateBypass(n){
 </head>
 <body>
 
-<button type="button" id="selfDownloadBtn">Download</button>
-
-
-  <a href="index.html" id="homeLink">Home</a>
-
-  <!-- BROWSER GATE -->
-  <div id="blockOverlay">
-    <strong>This activity requires Google Chrome on Android.</strong>
-    Please open this page in Google Chrome and try again.
-  </div>
-
-  <!-- ALREADY COMPLETED -->
-  <div id="doneOverlay">
-    <strong>Activity already completed on this device.</strong>
-    <div class="score" id="doneScoreText"></div>
-    <div class="score" style="font-size:11px;color:#999;">build: freeplay-v2</div>
-    <button id="freePlayBtn">Free Play</button>
-    <a class="activity-btn" href="index.html">Back to Home</a>
-  </div>
-
-  <!-- FREE PLAY BAR (shown only in free play mode) -->
-  <div id="freePlayBar">
-    <div class="fp-label">Free Play — no scoring</div>
-    <div class="fp-value" id="fpValue">0</div>
-    <div class="fp-actions">
-      <button id="fpResetBtn">Reset</button>
-      <button id="fpExitBtn">Exit</button>
+<div class="app">
+  <header class="hud">
+    <div class="brand">Abacus Addition<small>ACTIVITY 2 · BEAD BY BEAD</small></div>
+    <div class="hudbtns"><a class="pill" href="index.html" id="homeLink">Home</a></div>
+    <div class="stats">
+      <div class="stat"><b id="hudRound">1/5</b><span>Round</span></div>
+      <div class="stat"><b id="hudStep">0/5</b><span>Numbers</span></div>
+      <div class="stat"><b id="hudPts">0</b><span>Points</span></div>
     </div>
-  </div>
+  </header>
 
-  <!-- LOCKED: ACTIVITY 1 NOT DONE -->
-  <div id="lockedOverlay" style="position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:30;padding:24px;text-align:center;">
-    <strong style="display:block;font-size:19px;">Complete Activity 1 first.</strong>
-    <a class="activity-btn" href="it_ict_sentence_order_v2.html">Go to Activity 1</a>
-  </div>
-
-  <!-- START OVERLAY -->
-  <div class="overlay" id="startOverlay">
-    <h1>Abacus Addition Activity</h1>
-    <p class="instructions">
-      Numbers appear one at a time. Add each one to your running total on the
-      abacus — swipe up on a rod to add, down to subtract. The blue bead is
-      the next one that will move. When a rod is full, watch the next rod
-      over light up orange. The next number only appears once your total is
-      correct. Once all 5 numbers are done, type the total and check. This
-      repeats for 5 rounds.
-    </p>
-    <button id="startBtn">Start</button>
-  </div>
-
-  <div class="topbar">
-    <div class="round-label" id="roundLabel">Round 1 of 5</div>
-    <div class="segments" id="segments"></div>
-  </div>
-
-  <div class="stage-wrap">
-    <div class="stage-panel active" id="panelQuestion">
-      <div class="question" id="question"></div>
+  <main class="screen">
+    <div class="topbar">
+      <div class="round-label" id="roundLabel">Round 1 of 5</div>
+      <div class="segments" id="segments"></div>
     </div>
 
-    <div class="stage-panel" id="panelAnswer">
-      <div class="prompt-label">Type your total, then check</div>
-      <input type="number" inputmode="numeric" class="answer-input" id="answerInput" autocomplete="off">
-      <button id="submitBtn">Check</button>
-    </div>
-
-    <div class="stage-panel" id="panelResult">
-      <div class="result-text" id="resultText">CORRECT</div>
-      <button id="nextBtn">Next Round</button>
-    </div>
-  </div>
-
-  <div class="abacus-wrap">
-    <div>
-      <div class="abacus">
-        <div class="rod-group">
-          <div class="rod-name">Hundreds</div>
-          <div class="rod" id="rodHundreds">
-            <div class="rod-line"></div>
-            <div class="bar" style="top:66px;"></div>
-          </div>
-        </div>
-        <div class="rod-group">
-          <div class="rod-name">Tens</div>
-          <div class="rod" id="rodTens">
-            <div class="rod-line"></div>
-            <div class="bar" style="top:66px;"></div>
-          </div>
-        </div>
-        <div class="rod-group">
-          <div class="rod-name">Ones</div>
-          <div class="rod" id="rodOnes">
-            <div class="rod-line"></div>
-            <div class="bar" style="top:66px;"></div>
-          </div>
-        </div>
+    <div class="stage-wrap">
+      <div class="stage-panel active" id="panelQuestion">
+        <div class="prompt-label">Add this to your abacus</div>
+        <div class="question" id="question"></div>
       </div>
-      <div class="value-hint">Swipe a rod up to add, down to subtract</div>
+
+      <div class="stage-panel" id="panelAnswer">
+        <div class="prompt-label">Type your total, then check</div>
+        <input type="number" inputmode="numeric" class="answer-input" id="answerInput" autocomplete="off">
+        <button class="go" type="button" id="submitBtn">Check</button>
+      </div>
+
+      <div class="stage-panel" id="panelResult">
+        <div class="result-text" id="resultText">CORRECT</div>
+        <button class="go" type="button" id="nextBtn">Next Round</button>
+      </div>
     </div>
+
+    <!-- FREE PLAY BAR (shown only in free play mode) -->
+    <div id="freePlayBar">
+      <div class="fp-label">Free Play · no scoring</div>
+      <div class="fp-value" id="fpValue">0</div>
+      <div class="btnrow">
+        <button class="go" type="button" id="fpResetBtn">Reset</button>
+        <button class="go home" type="button" id="fpExitBtn">Exit</button>
+      </div>
+    </div>
+
+    <div class="abacus-wrap">
+      <div>
+        <div class="abacus">
+          <div class="rod-group">
+            <div class="rod-name">Hundreds</div>
+            <div class="rod" id="rodHundreds">
+              <div class="rod-line"></div>
+              <div class="bar" style="top:66px;"></div>
+            </div>
+          </div>
+          <div class="rod-group">
+            <div class="rod-name">Tens</div>
+            <div class="rod" id="rodTens">
+              <div class="rod-line"></div>
+              <div class="bar" style="top:66px;"></div>
+            </div>
+          </div>
+          <div class="rod-group">
+            <div class="rod-name">Ones</div>
+            <div class="rod" id="rodOnes">
+              <div class="rod-line"></div>
+              <div class="bar" style="top:66px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="value-hint">Swipe a rod up to add, down to subtract<br><i style="background:var(--next)"></i>moves next<i style="background:var(--urgent)"></i>carry soon</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- BROWSER GATE -->
+<div class="overlay" id="blockOverlay">
+  <div class="card">
+    <h1>Open this in <em>Chrome</em></h1>
+    <p><b>This activity requires Google Chrome on Android.</b><br>Please open this page in Google Chrome and try again.</p>
+    <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
+</div>
+
+<!-- ALREADY COMPLETED -->
+<div class="overlay" id="doneOverlay">
+  <div class="card">
+    <h1>Activity 2 <em>done</em></h1>
+    <p>Activity already completed on this device.</p>
+    <div class="scoreline" id="doneScoreText"></div>
+    <p class="note">Free Play lets you keep practicing. It does not change your score.</p>
+    <div class="btnrow"><button class="go" type="button" id="freePlayBtn">Free Play</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <p class="note" style="font-size:10px;color:#999">build: freeplay-v2</p>
+  </div>
+</div>
+
+<!-- LOCKED: ACTIVITY 1 NOT DONE -->
+<div class="overlay" id="lockedOverlay">
+  <div class="card">
+    <h1>Finish <em>Activity 1</em> first</h1>
+    <p>Activity 2 opens once your Activity 1 result is saved on this device.</p>
+    <div class="btnrow"><a class="go" href="it_ict_sentence_order_v2.html">Go to Activity 1</a><a class="go home" href="index.html">‹ Activities</a></div>
+  </div>
+</div>
+
+<!-- START OVERLAY -->
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <h1>Add it up on the <em>abacus</em></h1>
+    <p>Numbers appear one at a time. Keep a running total on the abacus.</p>
+    <ol>
+      <li><b>Swipe up</b> on a rod to add, <b>down</b> to subtract. Tap the top bead to add or remove 5.</li>
+      <li>The <b style="color:var(--next)">blue</b> bead is the next one that will move. When a rod is full, the next rod's bead turns <b style="color:var(--urgent)">orange</b>: carry over.</li>
+      <li>The next number appears only when your total is right.</li>
+      <li>After 5 numbers, type the total and press <b>Check</b>. That is one round. There are 5 rounds.</li>
+    </ol>
+    <p><b>Activity 2 score:</b> 5 points per round, minus 1 for each wrong total you check. Maximum 25.</p>
+    <div class="btnrow"><button class="go" type="button" id="startBtn">Start counting</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <button class="dl" type="button" id="selfDownloadBtn">Save offline copy</button>
+  </div>
+</div>
 
 <script>
   const RESULT_KEY = 'itict_abacus_result';
@@ -814,8 +597,16 @@ function itictGateBypass(n){
     currentSum = terms.reduce((a,b)=>a+b, 0);
   }
 
+  const hudRound = document.getElementById('hudRound');
+  const hudStep = document.getElementById('hudStep');
+  const hudPts = document.getElementById('hudPts');
+  function sumScores(){ return roundScores.reduce((a,b) => a+b, 0); }
+
   function startRound(){
     roundLabel.textContent = 'Round ' + round + ' of ' + TOTAL_ROUNDS;
+    hudRound.textContent = round + '/' + TOTAL_ROUNDS;
+    hudStep.textContent = '0/' + TERMS_PER_ROUND;
+    hudPts.textContent = sumScores();
     resetSegments();
     resetAbacus();
     generateTerms();
@@ -844,6 +635,7 @@ function itictGateBypass(n){
 
     awaitingAdvance = true;
     segmentEls[currentTermIndex].classList.add('done');
+    hudStep.textContent = (currentTermIndex + 1) + '/' + TERMS_PER_ROUND;
     questionEl.classList.add('fade');
 
     setTimeout(() => {
@@ -864,6 +656,7 @@ function itictGateBypass(n){
     const isCorrect = guess === currentSum;
     if(isCorrect){
       roundScores.push(Math.max(0, POINTS_PER_ROUND - roundWrongAttempts));
+      hudPts.textContent = sumScores();
       resultText.textContent = 'CORRECT';
       resultText.className = 'result-text';
       nextBtn.textContent = round >= TOTAL_ROUNDS ? 'Finish' : 'Next Round';
@@ -927,6 +720,9 @@ function itictGateBypass(n){
     document.querySelector('.topbar').style.display = 'none';
     document.querySelector('.stage-wrap').style.display = 'none';
     document.querySelector('.abacus-wrap').style.display = 'none';
+    hudRound.textContent = TOTAL_ROUNDS + '/' + TOTAL_ROUNDS;
+    hudStep.textContent = '—';
+    hudPts.textContent = record.score + '/' + record.maxScore;
     const doneOverlay = document.getElementById('doneOverlay');
     const started = formatDateTime(record.startTime);
     const ended = formatDateTime(record.endTime);
@@ -1006,7 +802,6 @@ function itictGateBypass(n){
   var FILE_NAME = "abacus_addition_activity.html";
   var btn = document.getElementById('selfDownloadBtn');
   if(!btn) return;
-  document.body.appendChild(btn);
 
   function saveBlob(text){
     var blob = new Blob([text], {type:'text/html;charset=utf-8'});
@@ -1022,7 +817,7 @@ function itictGateBypass(n){
     btn.textContent = 'Saving...';
     var done = function(msg){
       btn.textContent = msg;
-      setTimeout(function(){ btn.textContent = 'Download'; btn.disabled = false; }, 1800);
+      setTimeout(function(){ btn.textContent = 'Save offline copy'; btn.disabled = false; }, 1800);
     };
     fetch(location.href, {cache:'no-store'})
       .then(function(r){ if(!r.ok) throw 0; return r.text(); })

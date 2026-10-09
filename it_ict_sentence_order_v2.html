@@ -2,252 +2,195 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>IT and ICT in Our Lives — Sentence Ordering Activity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
-  * { box-sizing: border-box; }
-  body {
-    background: #ffffff;
-    color: #000000;
-    font-family: Georgia, 'Times New Roman', serif;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 24px 16px 80px;
-    line-height: 1.5;
-  }
-  h1 {
-    font-size: 22px;
-    text-align: center;
-    margin-bottom: 4px;
-  }
-  p.instructions {
-    text-align: center;
-    font-size: 14px;
-    color: #333;
-    margin-top: 0;
-    margin-bottom: 20px;
-  }
-  h2 {
-    font-size: 17px;
-    border-bottom: 2px solid #000;
-    padding-bottom: 4px;
-    margin-top: 32px;
-    margin-bottom: 12px;
-  }
-  .pool {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-height: 10px;
-  }
-  .block {
-    display: flex;
-    align-items: stretch;
-    border: 1.5px solid #000;
-    background: #fff;
-    user-select: none;
-  }
-  .block-text {
-    flex: 1;
-    padding: 10px 12px;
-    font-size: 15px;
-    touch-action: auto;
-  }
-  .handle {
-    flex: 0 0 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    color: #fff;
-    font-size: 18px;
-    letter-spacing: 2px;
-    cursor: grab;
-    touch-action: none;
-  }
-  .block.dragging {
-    opacity: 0.35;
-  }
-  .block.drag-ghost {
-    position: fixed;
-    z-index: 1000;
-    pointer-events: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-    width: var(--ghost-width);
-  }
-  .placeholder {
-    border: 1.5px dashed #999;
-    background: #f2f2f2;
-    height: 44px;
-  }
-  .btn-row {
-    text-align: center;
-    margin-top: 32px;
-  }
-  button {
-    font-family: Georgia, serif;
-    font-size: 16px;
-    padding: 10px 26px;
-    background: #000;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    margin: 0 6px 10px;
-  }
-  button:disabled {
-    background: #999;
-    cursor: not-allowed;
-  }
-  button:active:not(:disabled) {
-    background: #333;
-  }
-  .feedback {
-    text-align: center;
-    font-size: 15px;
-    margin-top: 14px;
-    min-height: 20px;
-    font-style: italic;
-  }
-  .section { display: none; }
-  .section.active { display: block; }
-  .timer-bar {
-    position: sticky;
-    top: 0;
-    background: #fff;
-    border-bottom: 2px solid #000;
-    text-align: center;
-    padding: 8px 0;
-    font-size: 16px;
-    font-weight: bold;
-    z-index: 50;
-    margin-bottom: 10px;
-  }
-  .timer-bar.warn { color: #b30000; }
-  #result .essay-p {
-    font-size: 15px;
-    margin-bottom: 16px;
-    text-align: justify;
-  }
-  .sentence-correct {
-    background: #c8f0c8;
-  }
-  .sentence-incorrect {
-    background: #f7c8c8;
-  }
-  .meta-box {
-    border-top: 2px solid #000;
-    margin-top: 28px;
-    padding-top: 14px;
-    font-size: 15px;
-  }
-  .meta-box div { margin-bottom: 6px; }
-  .trial-label {
-    text-align: center;
-    font-size: 13px;
-    color: #555;
-    margin-bottom: 16px;
-  }
-  #blockOverlay {
-    display: none;
-    text-align: center;
-    padding: 60px 20px;
-    font-size: 16px;
-  }
-  #blockOverlay strong {
-    display: block;
-    font-size: 19px;
-    margin-bottom: 12px;
-  }  #homeBtn {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 100;
-    background: #000;
-    color: #fff;
-    font-family: Georgia, serif;
-    font-size: 13px;
-    padding: 6px 14px;
-    text-decoration: none;
-    border: 1.5px solid #000;
-  }
-</style>
+:root{
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --good:#1f9d55; --warn:#e8a200; --bad:#d62828; --gold:#f5b700;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+  --serif:Georgia,"Times New Roman",serif;
+  /* Activity 1 identity: highlighter paper + blue ink */
+  --hud:#111111; --tag:#ffe14d;
+  --screen:#fff3a6; --soft:#e8f0ff;
+  --accent:#8fb8ff; --accent-ink:#2456d6;
+}
+/* ===== Activity shell — shared with Activities 7–9 (HUD, card, buttons) ===== */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 40px;display:flex;flex-direction:column;gap:10px}
 
-<style id="dlBtnStyle">
-  #selfDownloadBtn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 200;
-    background: #fff;
-    color: #000;
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-    padding: 6px 12px;
-    border: 1.5px solid #000;
-    cursor: pointer;
-    letter-spacing: normal;
-    text-transform: none;
-  }
-  #selfDownloadBtn:active { background: #eee; }
-  #selfDownloadBtn:disabled { opacity: .5; cursor: default; }
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--hud);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--tag);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.pill{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;line-height:1.3;text-decoration:none;white-space:nowrap}
+.pill:active{transform:translateY(1px)}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px;min-width:0}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-weight:400;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
+
+/* Screen + well */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--screen)}
+.screen h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0;letter-spacing:.3px;line-height:1.15}
+.eyebrow{font-family:var(--pixel);font-size:10px;letter-spacing:1px;margin:0}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:12px}
+
+/* Overlay card */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:30}
+.card{background:var(--paper);border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto;text-align:left}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--accent-ink)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go{background:var(--accent);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px;color:var(--ink);text-decoration:none;display:inline-block;line-height:1.2;text-transform:none}
+.go.home{background:#fff}
+.go:active{transform:translateY(2px)}
+.go:disabled{opacity:.45;cursor:default;transform:none}
+.dl{background:none;border:none;text-decoration:underline;font-size:12px;color:#555;padding:0;align-self:flex-start;font-family:var(--body)}
+.dl:disabled{opacity:.6;cursor:default}
+.result{font-family:var(--display);font-size:46px;line-height:1}
+.bigscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bigscore b{font-family:var(--display);font-size:56px;line-height:1;font-weight:400}
+.bigscore span{font-family:var(--pixel);font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{border:3px solid var(--ink);border-radius:12px;padding:6px 10px}
+.kpi b{display:block;font-family:var(--pixel);font-size:16px;font-weight:400;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.scoreline{background:var(--soft);border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+.note{font-size:12px;color:#555}
+@keyframes pop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
+@keyframes slide{0%{transform:translateX(18px);opacity:.2}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.card h1{font-size:30px}.bigscore b{font-size:46px}}
+
+/* ===== Activity 1: sentence blocks ===== */
+.hud{position:sticky;top:8px;z-index:50}
+.stat b.warn{color:#ff8a80;animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{opacity:.45}}
+.section{display:none}
+.section.active{display:flex;animation:slide .22s ease-out}
+.lead{margin:0;line-height:1.5}
+.pool{display:flex;flex-direction:column;gap:8px;min-height:10px}
+.block{display:flex;align-items:stretch;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow:hidden;user-select:none;-webkit-user-select:none}
+.block-text{flex:1;padding:10px 12px;font-family:var(--serif);font-size:15px;line-height:1.5;touch-action:auto}
+.handle{flex:0 0 44px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--tag);font-size:18px;letter-spacing:2px;cursor:grab;touch-action:none}
+.block.dragging{opacity:.35}
+.block.drag-ghost{position:fixed;z-index:1000;pointer-events:none;box-shadow:0 6px 0 var(--ink);width:var(--ghost-width);transform:rotate(-1deg)}
+.placeholder{border:3px dashed var(--accent-ink);border-radius:14px;background:var(--soft);height:44px}
+.para-head{font-family:var(--display);font-weight:400;font-size:20px;margin:6px 0 0;letter-spacing:.3px}
+#mainPools{display:flex;flex-direction:column;gap:8px}
+.feedback{min-height:20px;font-weight:500;line-height:1.4}
+.feedback:not(:empty){background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 12px;animation:pop .25s ease-out}
+.screen .btnrow{margin-top:4px}
+.screen .go{font-size:21px;padding:8px 18px}
+#result .essay-p{font-family:var(--serif);font-size:15px;line-height:1.65;margin:0 0 12px;text-align:left}
+#result .essay-p:last-child{margin-bottom:0}
+.sentence-correct{background:#c8f0c8}
+.sentence-incorrect{background:#f7c8c8}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px}
+.legend i{display:inline-block;width:12px;height:12px;border:2px solid var(--ink);border-radius:3px;vertical-align:-2px;margin-right:5px}
+.meta-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.meta-box div{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:6px 10px;font-size:13px}
+#blockMsg{line-height:1.5}
 </style>
 </head>
 <body>
+<div class="app">
+  <header class="hud">
+    <div class="brand">IT &amp; ICT in Our Lives<small>ACTIVITY 1 · PUT IT IN ORDER</small></div>
+    <div class="hudbtns"><a class="pill" id="homeBtn" href="index.html">Home</a></div>
+    <div class="stats">
+      <div class="stat"><b id="hudStage">Try 1/3</b><span>Stage</span></div>
+      <div class="stat"><b id="timerBar">30:00</b><span>Time left</span></div>
+      <div class="stat"><b id="hudScore">—</b><span>Score</span></div>
+    </div>
+  </header>
 
-<button type="button" id="selfDownloadBtn">Download</button>
+  <main class="screen">
+    <!-- PRACTICE -->
+    <section class="section active" id="section-practice" style="flex-direction:column;gap:10px">
+      <p class="eyebrow" id="trialLabel">Practice Trial 1 of 3</p>
+      <h2>Drag the sentences into order</h2>
+      <p class="lead">Hold the black handle on the right of a block and drag it up or down.</p>
+      <div class="pool" id="practicePool"></div>
+      <div class="feedback" id="practiceFeedback"></div>
+      <div class="btnrow">
+        <button class="go" type="button" id="checkBtn">Check</button>
+        <button class="go home" type="button" id="retryBtn" disabled>Retry</button>
+        <button class="go home" type="button" id="nextTrialBtn" disabled>Next</button>
+      </div>
+    </section>
 
+    <!-- MAIN INTRO -->
+    <section class="section" id="section-main-intro" style="flex-direction:column;gap:10px">
+      <p class="eyebrow">Practice done</p>
+      <h2>Now the real essay</h2>
+      <div class="well">
+        <p class="lead">5 paragraphs, 5 sentences each. You have <b>30 minutes</b>.</p>
+        <p class="lead" style="margin-top:6px">When you press <b>Finish</b>, or the time runs out, your arrangement is <b>final</b>. There is no redo.</p>
+      </div>
+      <div class="btnrow"><button class="go" type="button" id="startMainBtn">Start the essay</button></div>
+    </section>
 
-<a id="homeBtn" href="index.html">Home</a>
+    <!-- MAIN ACTIVITY -->
+    <section class="section" id="section-main" style="flex-direction:column;gap:10px">
+      <p class="eyebrow">The essay · 5 paragraphs</p>
+      <p class="lead">Put each paragraph's sentences in the order that makes sense.</p>
+      <div id="mainPools"></div>
+      <div class="btnrow"><button class="go" type="button" id="finishBtn">Finish</button></div>
+    </section>
 
-<h1>IT and ICT in Our Lives</h1>
-
-<div id="blockOverlay">
-  <strong>This activity requires Google Chrome on Android.</strong>
-  Please open this page in Google Chrome and try again.
+    <!-- RESULT -->
+    <section class="section" id="section-result" style="flex-direction:column;gap:10px">
+      <p class="eyebrow">Activity 1 · Result</p>
+      <h2>Your essay</h2>
+      <div class="legend"><span><i style="background:#c8f0c8"></i>In a correct spot</span><span><i style="background:#f7c8c8"></i>Out of place</span></div>
+      <div class="well" id="result"><div id="essayOutput"></div></div>
+      <div class="meta-box">
+        <div id="timeStartLine"></div>
+        <div id="timeEndLine"></div>
+        <div id="scoreLine"></div>
+      </div>
+      <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
+    </section>
+  </main>
 </div>
 
-<!-- PRACTICE INTRO -->
-<div class="section active" id="section-practice">
-  <p class="instructions">Before the real activity, let's practice. Drag blocks using the handle (right side) to put each short paragraph in logical order.</p>
-  <div class="trial-label" id="trialLabel">Practice Trial 1 of 3</div>
-  <div class="pool" id="practicePool"></div>
-  <div class="feedback" id="practiceFeedback"></div>
-  <div class="btn-row">
-    <button id="checkBtn">Check</button>
-    <button id="retryBtn" disabled>Retry</button>
-    <button id="nextTrialBtn" disabled>Next</button>
+<!-- INTRO -->
+<div class="overlay" id="introCard">
+  <div class="card">
+    <h1>Put the <em>ideas</em> in order</h1>
+    <p>Each block is one sentence, shuffled. Drag a block by its black handle (⋮⋮) to move it, until the paragraph reads in a logical order.</p>
+    <ol>
+      <li><b>Practice:</b> 3 short paragraphs. Check and retry as often as you like.</li>
+      <li><b>Essay:</b> 5 paragraphs about IT and ICT, 5 sentences each, <b>30 minutes</b>.</li>
+      <li>Press <b>Finish</b> when you are done. Your arrangement is final.</li>
+    </ol>
+    <p><b>Activity 1 score:</b> each sentence earns points for how close it is to its right place. The first and last sentence of a paragraph have fixed spots; the middle sentences can swap with each other.</p>
+    <div class="btnrow"><button class="go" type="button" id="introGo">Start practice</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <button class="dl" type="button" id="selfDownloadBtn">Save offline copy</button>
   </div>
 </div>
 
-<!-- MAIN INTRO -->
-<div class="section" id="section-main-intro">
-  <p class="instructions" style="margin-top:20px;">
-    Practice is done. Now the real activity: 5 paragraphs, 5 sentences each.<br>
-    You will have <strong>30 minutes</strong>. Once you press Finish (or time runs out), your arrangement is <strong>final</strong> — no redo.
-  </p>
-  <div class="btn-row">
-    <button id="startMainBtn">Start Activity</button>
-  </div>
-</div>
-
-<!-- MAIN ACTIVITY -->
-<div class="section" id="section-main">
-  <div class="timer-bar" id="timerBar">Time Remaining: 30:00</div>
-  <p class="instructions">Drag each paragraph's sentences into the order that makes sense.</p>
-  <div id="mainPools"></div>
-  <div class="btn-row">
-    <button id="finishBtn">Finish</button>
-  </div>
-</div>
-
-<!-- RESULT -->
-<div class="section" id="section-result">
-  <h2>Your Essay</h2>
-  <div id="essayOutput"></div>
-  <div class="meta-box">
-    <div id="timeStartLine"></div>
-    <div id="timeEndLine"></div>
-    <div id="scoreLine"></div>
+<!-- BROWSER GATE -->
+<div class="overlay" id="blockOverlay" hidden>
+  <div class="card">
+    <h1>Open this in <em>Chrome</em></h1>
+    <p id="blockMsg"><b>This activity requires Google Chrome on Android.</b><br>Please open this page in Google Chrome and try again.</p>
+    <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
 </div>
 
@@ -461,8 +404,15 @@ const checkBtn = document.getElementById('checkBtn');
 const retryBtn = document.getElementById('retryBtn');
 const nextTrialBtn = document.getElementById('nextTrialBtn');
 
+const hudStage = document.getElementById('hudStage');
+const hudScore = document.getElementById('hudScore');
+const introCard = document.getElementById('introCard');
+document.getElementById('introGo').addEventListener('click', () => { introCard.hidden = true; });
+
 function loadTrial(idx) {
   trialLabel.textContent = `Practice Trial ${idx + 1} of 3`;
+  hudStage.textContent = `Try ${idx + 1}/3`;
+  hudScore.textContent = '—';
   buildPool(practicePool, practiceTrials[idx]);
   practiceFeedback.textContent = '';
   retryBtn.disabled = true;
@@ -475,6 +425,7 @@ checkBtn.addEventListener('click', () => {
   const { score, max } = computeScore(practicePool, practiceTrials[trialIndex]);
   const pct = Math.round((score / max) * 100);
   practiceFeedback.textContent = `Score: ${score}/${max} — ${feedbackComment(pct)}`;
+  hudScore.textContent = pct + '%';
   retryBtn.disabled = false;
   nextTrialBtn.disabled = false;
 });
@@ -486,6 +437,8 @@ retryBtn.addEventListener('click', () => {
 nextTrialBtn.addEventListener('click', () => {
   trialIndex++;
   if (trialIndex >= practiceTrials.length) {
+    hudStage.textContent = 'Ready';
+    hudScore.textContent = '—';
     showSection('section-main-intro');
   } else {
     loadTrial(trialIndex);
@@ -509,10 +462,11 @@ function isInAppBrowser() {
 const browserBlocked = isInAppBrowser() || (isAndroid() && !isChrome());
 
 if (browserBlocked) {
-  document.getElementById('blockOverlay').style.display = 'block';
+  introCard.hidden = true;
+  document.getElementById('blockOverlay').hidden = false;
   if (isInAppBrowser()) {
-    document.getElementById('blockOverlay').innerHTML =
-      '<strong>Please open this in your regular browser.</strong>' +
+    document.getElementById('blockMsg').innerHTML =
+      '<strong>Please open this in your regular browser.</strong><br>' +
       'This page will not save your progress inside Messenger, Facebook, or Instagram\'s built-in browser.<br><br>' +
       'Tap the <strong>•••</strong> or <strong>⋮</strong> menu at the top or bottom of this screen, then choose <strong>"Open in Browser"</strong> (Chrome or Safari).';
   }
@@ -535,6 +489,7 @@ function buildMainActivity() {
   mainPoolEls = [];
   essayParagraphs.forEach((sentences, idx) => {
     const h = document.createElement('h2');
+    h.className = 'para-head';
     h.textContent = `Paragraph ${idx + 1}`;
     mainPools.appendChild(h);
     const pool = document.createElement('div');
@@ -554,7 +509,7 @@ function formatTime(sec) {
 function startTimer() {
   timerInterval = setInterval(() => {
     timeLeft--;
-    timerBar.textContent = `Time Remaining: ${formatTime(timeLeft)}`;
+    timerBar.textContent = formatTime(timeLeft);
     if (timeLeft <= 300) timerBar.classList.add('warn');
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
@@ -567,8 +522,11 @@ document.getElementById('startMainBtn').addEventListener('click', () => {
   buildMainActivity();
   startTime = new Date();
   timeLeft = 30 * 60;
-  timerBar.textContent = `Time Remaining: ${formatTime(timeLeft)}`;
+  timerBar.textContent = formatTime(timeLeft);
+  hudStage.textContent = 'Essay';
+  hudScore.textContent = '—';
   showSection('section-main');
+  window.scrollTo(0, 0);
   startTimer();
 });
 
@@ -739,8 +697,14 @@ function renderResult(record) {
   document.getElementById('timeStartLine').textContent = `Time Start: ${startDate.toLocaleTimeString()}`;
   document.getElementById('timeEndLine').textContent = `Time End: ${endDate.toLocaleTimeString()}`;
   document.getElementById('scoreLine').textContent = `Score (Arrangement): ${record.totalScore}/${record.totalMax} (${pct}%)`;
+  hudStage.textContent = 'Done';
+  hudScore.textContent = pct + '%';
+  timerBar.textContent = '—';
+  timerBar.classList.remove('warn');
+  introCard.hidden = true;
 
   showSection('section-result');
+  window.scrollTo(0, 0);
 }
 
 /* On load: if a result already exists in any of the 3 storages, skip straight to it */

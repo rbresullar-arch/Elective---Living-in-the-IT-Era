@@ -4,7 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Pascaline — Addition by Gear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
+  :root{
+    color-scheme: dark;
+    /* Activity 3 identity: dark walnut + brass (shell shared with Activities 7–9) */
+    --bg:#1a1714; --panel:#241f1a; --deep:#15110d; --line:#4a3f33; --line2:#6b5c48;
+    --brass:#c9b48c; --brass-hi:#e6d3a8; --cream:#f6f0e4; --muted:#8c7d69;
+    --good:#8fce8f; --bad:#e2632c;
+    --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+    --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --pixel:"Silkscreen","Courier New",monospace;
+    --serif:Georgia,"Times New Roman",serif;
+  }
   *{
     box-sizing:border-box; margin:0; padding:0;
     -webkit-tap-highlight-color:transparent;
@@ -12,11 +26,14 @@
     -webkit-touch-callout:none;
     -webkit-user-drag:none;
   }
+  [hidden]{display:none!important}
   html,body{
     height:100%;
-    background:#1a1714;
+    background:var(--bg);
+    background-image:radial-gradient(#2c261f 1px,transparent 1px);
+    background-size:14px 14px;
     color:#f2ece2;
-    font-family:Georgia,'Times New Roman',serif;
+    font-family:var(--body);
     overscroll-behavior:none;
   }
   body{
@@ -31,14 +48,15 @@
     position:relative;
     width:min(100vw, calc(100vh * 16 / 9));
     height:min(100vh, calc(100vw * 9 / 16));
-    background:#241f1a;
+    background:var(--panel);
     overflow:hidden;
+    border-radius:clamp(0px,2vh,24px);
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:space-between;
     padding:2.6vh 3vw;
-    box-shadow:inset 0 0 0 1px #3d352c;
+    box-shadow:inset 0 0 0 3px var(--line);
   }
 
   /* ---------- header ---------- */
@@ -170,45 +188,58 @@
     gap:12px;
   }
   .hint{
-    font-family:Arial,sans-serif;
-    font-size:clamp(9px,1.25vh,12px);
-    color:#7a6d5c;
+    font-family:var(--body);
+    font-size:clamp(9px,1.35vh,13px);
+    color:var(--muted);
     line-height:1.6;
   }
-  .hint b{ color:#c9b48c; font-weight:normal; }
-  button{
-    font-family:Arial,sans-serif;
-    font-size:clamp(9px,1.2vh,12px);
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    background:transparent;
-    color:#c9b48c;
-    border:1px solid #6b5c48;
-    padding:1.1vh 2vw;
-    cursor:pointer;
+  .hint b{ color:var(--brass); font-weight:500; }
+
+  /* ---------- shared pill buttons (Home / Game / Clear) ---------- */
+  button{ font:inherit; color:inherit; cursor:pointer; background:none; border:none; }
+  button:focus-visible,a:focus-visible{ outline:3px solid var(--brass); outline-offset:2px; }
+  .pill, .foot button{
+    background:var(--deep);
+    color:var(--brass);
+    border:3px solid var(--brass);
+    border-radius:10px;
+    padding:5px 10px;
+    font-family:var(--pixel);
+    font-size:clamp(9px,1.25vh,11px);
+    letter-spacing:.5px;
+    line-height:1.3;
+    text-decoration:none;
+    white-space:nowrap;
   }
-  button:active{ background:#332b22; }
-  button:focus-visible{ outline:2px solid #c9b48c; outline-offset:2px; }
+  .pill:active, .foot button:active{ transform:translateY(1px); background:#332b22; }
 
   @media (prefers-reduced-motion: reduce){
     .strip,.dial{ transition:none; }
+    *{ animation:none!important; }
   }
 
   #homeLink{
     position:absolute;
     top:14px;
     left:14px;
-    font-family:Arial,sans-serif;
-    font-size:clamp(9px,1.3vh,13px);
-    letter-spacing:.08em;
-    color:#c9b48c;
-    text-decoration:none;
-    border:1px solid #6b5c48;
-    padding:.8vh 1.6vw;
     z-index:25;
-    background:#241f1a;
   }
-  #homeLink:active{ background:#332b22; }
+  .topnav{
+    position:absolute;
+    top:14px;
+    right:14px;
+    z-index:16;
+  }
+  .eyebrow{
+    font-family:var(--pixel);
+    font-size:clamp(8px,1.2vh,11px);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:var(--brass);
+  }
+  .head{ padding-inline:clamp(64px,9vw,120px); }
+  .target-eyebrow{ font-family:var(--pixel)!important; letter-spacing:1px!important; color:var(--brass)!important; }
+  .place{ font-family:var(--pixel)!important; letter-spacing:1px!important; color:var(--muted)!important; }
 
   /* ---------- game mode ---------- */
   /* target marker sits to the LEFT of the readout row, inline */
@@ -264,64 +295,93 @@
     60%{ transform:translateX(6px); }
   }
 
-  /* ---------- mode select ---------- */
-  #modeSelect{
-    position:absolute;
+  /* ---------- overlays: intro, mode select, game over (card shell) ---------- */
+  .overlay{
+    position:fixed;
     inset:0;
-    background:rgba(20,16,11,.96);
-    display:none;
-    flex-direction:column;
+    background:rgba(10,8,6,.82);
+    display:flex;
     align-items:center;
     justify-content:center;
-    gap:2.2vh;
-    z-index:22;
-    text-align:center;
-    padding:5vw;
+    padding:16px;
+    z-index:40;
   }
-  #modeSelect.show{ display:flex; }
-  #modeSelect h2{
-    font-family:Georgia,serif;
-    font-weight:normal;
-    font-size:clamp(22px,4.5vh,40px);
-    color:#f6f0e4;
-  }
-  .mode-list{
+  #modeSelect, #gameOver{ display:none; }
+  #modeSelect.show, #gameOver.show{ display:flex; }
+  .card{
+    background:var(--panel);
+    border:4px solid var(--brass);
+    border-radius:26px;
+    max-width:560px;
+    width:100%;
+    max-height:100%;
+    overflow-y:auto;
+    padding:20px 22px;
     display:flex;
     flex-direction:column;
-    gap:1.4vh;
-    width:min(88%, 360px);
+    gap:12px;
+    box-shadow:0 0 0 3px var(--deep), 0 8px 0 3px var(--deep);
+    color:#efe6d6;
+    -webkit-user-select:text; user-select:text;
   }
+  .card h1, .card h2{
+    font-family:var(--display);
+    font-weight:400;
+    font-size:34px;
+    line-height:1;
+    color:var(--cream);
+    margin:0;
+    text-wrap:balance;
+  }
+  .card h1 em{ font-style:normal; color:var(--brass); }
+  .card p{ line-height:1.5; }
+  .card ol{ padding-left:20px; line-height:1.55; }
+  .card ol b, .card p b{ color:var(--brass-hi); font-weight:500; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:10px; }
+  .go{
+    background:linear-gradient(180deg,var(--brass-hi),var(--brass));
+    border:4px solid var(--deep);
+    box-shadow:0 0 0 2px var(--brass);
+    border-radius:16px;
+    padding:10px 22px;
+    font-family:var(--display);
+    font-size:24px;
+    letter-spacing:.5px;
+    line-height:1.2;
+    color:var(--deep);
+    text-decoration:none;
+    display:inline-block;
+  }
+  .go.home{ background:var(--deep); color:var(--brass); }
+  .go:active{ transform:translateY(2px); }
+  .scoreline{
+    background:var(--deep);
+    border:3px solid var(--line2);
+    border-radius:12px;
+    padding:8px 12px;
+    font-family:var(--body);
+    color:var(--brass-hi);
+    line-height:1.5;
+  }
+
+  .mode-list{ display:flex; flex-direction:column; gap:10px; }
   .mode-choice{
     display:flex;
     flex-direction:column;
     align-items:flex-start;
-    gap:.4vh;
-    text-transform:none;
-    letter-spacing:normal;
+    gap:2px;
     text-align:left;
-    padding:1.6vh 1.6vw;
-    background:#2a241c;
-    border:1px solid #6b5c48;
+    padding:10px 14px;
+    background:var(--deep);
+    border:3px solid var(--line2);
+    border-radius:16px;
   }
-  .mode-choice:active{ background:#3a3126; }
-  .mode-choice.done{
-    opacity:.5;
-  }
-  .mode-choice.done .mode-name::after{
-    content:' ✓';
-    color:#8fce8f;
-  }
-  .mode-name{
-    font-family:Georgia,serif;
-    font-size:clamp(16px,2.6vh,24px);
-    color:#f6f0e4;
-  }
-  .mode-desc{
-    font-family:Arial,sans-serif;
-    font-size:clamp(9px,1.4vh,12px);
-    color:#8c7d69;
-    letter-spacing:.02em;
-  }
+  .mode-choice:active{ background:#3a3126; transform:translateY(2px); }
+  .mode-choice.done{ opacity:.55; }
+  .mode-choice.done .mode-name::after{ content:' ✓'; color:var(--good); }
+  .mode-name{ font-family:var(--display); font-size:24px; color:var(--cream); line-height:1.1; }
+  .mode-desc{ font-family:var(--body); font-size:12.5px; color:var(--muted); }
+  #gameOver .go-actions{ display:flex; flex-wrap:wrap; gap:10px; }
 
   /* per-mode HUD element visibility */
   .streak, .entry-live, .score, .lives, .prog { display:none; }
@@ -342,20 +402,21 @@
     display:none;
     width:100%;
     align-items:center;
-    justify-content:space-between;
-    font-family:Arial,sans-serif;
-    font-size:clamp(8px,1.25vh,12px);
-    color:#c9b48c;
-    letter-spacing:.06em;
+    justify-content:center;
+    font-family:var(--pixel);
+    font-size:clamp(8px,1.3vh,12px);
+    color:var(--brass);
+    letter-spacing:.5px;
     text-transform:uppercase;
     margin-top:.8vh;
-    gap:6px;
+    gap:clamp(6px,1.4vw,14px);
     position:relative;
     z-index:6;
   }
+  .hud > div{ background:var(--deep); border:2px solid var(--line); border-radius:8px; padding:.4vh 1vw; }
   body.game .hud{ display:flex; }
-  .hud .lives span{ color:#e2632c; letter-spacing:.05em; }
-  .hud .lives span.gone{ color:#4a3f33; }
+  .hud .lives span{ color:var(--bad); letter-spacing:.05em; }
+  .hud .lives span.gone{ color:var(--line); }
 
   /* the free-form hint hides in game; a game hint takes its place */
   body.game .hint.calc-hint{ display:none; }
@@ -367,48 +428,12 @@
   #clearEntryBtn{ display:none; }
   body.game #clearEntryBtn{ display:inline-block; }
 
-  /* game-over overlay */
-  #gameOver{
-    position:absolute;
-    inset:0;
-    background:rgba(20,16,11,.92);
-    display:none;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:2vh;
-    z-index:20;
-    text-align:center;
-    padding:5vw;
-  }
-  #gameOver.show{ display:flex; }
-  #gameOver h2{
-    font-family:Georgia,serif;
-    font-weight:normal;
-    font-size:clamp(24px,5vh,44px);
-    color:#f6f0e4;
-  }
-  #gameOver .final{
-    font-family:Arial,sans-serif;
-    font-size:clamp(12px,2vh,17px);
-    color:#c9b48c;
-    letter-spacing:.08em;
-  }
-  #gameOver .go-actions{ display:flex; gap:12px; }
-
-  /* top nav (Game / Back) */
-  .topnav{
-    position:absolute;
-    top:14px;
-    right:14px;
-    z-index:16;
-  }
   #entryFlash{
     position:absolute;
     top:calc(50% - 2vh);
     left:50%;
     transform:translate(-50%,-50%);
-    font-family:Arial,sans-serif;
+    font-family:var(--pixel);
     font-size:clamp(12px,2vh,16px);
     letter-spacing:.1em;
     text-transform:uppercase;
@@ -429,10 +454,10 @@
 
 <div id="stage">
 
-  <a href="index.html" id="homeLink">Home</a>
+  <a href="index.html" id="homeLink" class="pill">Home</a>
 
   <div class="topnav">
-    <button id="modeBtn">Game</button>
+    <button id="modeBtn" class="pill" type="button">Game</button>
   </div>
 
   <div class="head">
@@ -470,8 +495,10 @@
     <button id="clearEntryBtn">Clear entry</button>
   </div>
 
-  <div id="modeSelect">
-    <h2>Choose a Mode</h2>
+  <div id="modeSelect" class="overlay">
+   <div class="card">
+    <h2>Choose a <span style="color:var(--brass)">mode</span></h2>
+    <p>Series and Addition are practice: play them as often as you like. <b>Fast Play</b> is your Activity 3 score, and it counts once.</p>
     <div class="mode-list">
       <button class="mode-choice" data-mode="series">
         <span class="mode-name">Series</span>
@@ -486,21 +513,40 @@
         <span class="mode-desc">10 numbers, 3s each &mdash; match the hidden sum</span>
       </button>
     </div>
-    <button id="modeSelectBack">Back to calculator</button>
+    <div class="btnrow"><button class="go home" id="modeSelectBack" type="button">Back to calculator</button></div>
+   </div>
   </div>
 
-  <div id="gameOver">
+  <div id="gameOver" class="overlay">
+   <div class="card">
     <h2>Game Over</h2>
-    <div class="final" id="finalScore"></div>
+    <div class="final scoreline" id="finalScore"></div>
     <div class="go-actions">
-      <button id="playAgainBtn">Play again</button>
-      <button id="backToCalcBtn">Calculator</button>
+      <button class="go" id="playAgainBtn" type="button">Play again</button>
+      <button class="go home" id="backToCalcBtn" type="button">Calculator</button>
     </div>
+   </div>
   </div>
 
 </div>
 
+<!-- INTRO -->
+<div class="overlay" id="introCard">
+  <div class="card">
+    <h1>Turn the <em>Pascaline</em></h1>
+    <p>Blaise Pascal built this adding machine in 1642. Each wheel is one place value: thousands, hundreds, tens, ones.</p>
+    <ol>
+      <li><b>Turn a wheel clockwise</b> until the lens shows the number you want, then let go. That number is added.</li>
+      <li>Passing 9 <b>carries</b> one to the wheel on the left, just like the real machine.</li>
+      <li>Tap <b>Game</b> (top right) to pick a mode. Turn your phone sideways for bigger wheels.</li>
+    </ol>
+    <p><b>Activity 3 score:</b> Fast Play. 10 numbers flash for 3 seconds each with the readout hidden; dial each one in. Your score is how close your total is to the true sum, out of 100. Fast Play counts once.</p>
+    <div class="btnrow"><button class="go" id="introGo" type="button">Open the machine</button><a class="go home" href="index.html">‹ Activities</a></div>
+  </div>
+</div>
+
 <script>
+document.getElementById('introGo').addEventListener('click', () => { document.getElementById('introCard').hidden = true; });
 /* ---------- ratchet sound ---------- */
 let audioCtx = null;
 function ac(){
