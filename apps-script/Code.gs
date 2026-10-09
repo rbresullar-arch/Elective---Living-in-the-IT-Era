@@ -194,8 +194,8 @@ function ensureSheets_(ss) {
       sh.setFrozenRows(1);
     }
   });
-  var first = ss.getSheets()[0];
-  if (first.getName() === 'Sheet1' && first.getLastRow() === 0) ss.deleteSheet(first);
+  var first = ss.getSheetByName('Sheet1');
+  if (first && first.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(first);
 }
 function findRow_(sh, id) {
   var last = sh.getLastRow();
@@ -251,6 +251,8 @@ function json_(o) {
 
 /* Run once from the editor (▶ setup) to create the tabs and approve permissions. */
 function setup() {
-  ensureSheets_(SpreadsheetApp.openById(SHEET_ID));
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  ss.rename('IT Era — Student Records');
+  ensureSheets_(ss);
   serverHash_('init');
 }
