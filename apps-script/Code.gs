@@ -93,6 +93,7 @@ function doPost(e) {
 function merge_(s, inc) {
   var out = JSON.parse(JSON.stringify(s));
   if (inc.name) out.name = inc.name;
+  if (inc.sched && /^\d{5}$/.test(String(inc.sched))) out.sched = String(inc.sched);   // latest choice wins
   if (inc.createdDate && (!out.createdDate || inc.createdDate < out.createdDate)) out.createdDate = inc.createdDate;
 
   out.resets = out.resets || {};      // written only by applyResets_
@@ -188,7 +189,7 @@ function serverHash_(clientHash) {
 /* ---------------- storage ---------------- */
 function ensureSheets_(ss) {
   var heads = {};
-  heads[SHEET.scores] = ['Key', 'Name'];
+  heads[SHEET.scores] = ['Key', 'Name', 'Schedule'];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) heads[SHEET.scores].push('A' + n + ' %');
   EXAMS.forEach(function (x) { heads[SHEET.scores].push(x.label); });
   heads[SHEET.scores].push('Last sync', 'Flags (review)');
@@ -196,13 +197,18 @@ function ensureSheets_(ss) {
   heads[SHEET.auth] = ['Key (name)', 'PIN hash (delete row to reset PIN)', 'Registered', 'Wrong tries', 'Locked until (clear to unlock)'];
   heads[SHEET.reset] = ['Name (as in Scores)', 'Activity: A1–A9 or ALL', 'Applied (filled by script)'];
   heads[SHEET.log] = ['Time', 'Key', 'Action', 'Result'];
+  var rebuild = false;
   Object.keys(heads).forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (!sh) { sh = ss.insertSheet(name); sh.setFrozenRows(1); }
     var h = sh.getRange(1, 1, 1, heads[name].length);
     var cur = h.getValues()[0].join('|');
-    if (cur !== heads[name].join('|')) h.setValues([heads[name]]).setFontWeight('bold');
+    if (cur !== heads[name].join('|')) {
+      h.setValues([heads[name]]).setFontWeight('bold');
+      if (name === SHEET.scores && sh.getLastRow() > 1) rebuild = true;   // columns moved
+    }
   });
+  if (rebuild) rebuildScores_(ss);
   var first = ss.getSheetByName('Sheet1');
   if (first && first.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(first);
 }
@@ -237,7 +243,7 @@ function writeScores_(ss, id, doc) {
   var sh = ss.getSheetByName(SHEET.scores);
   var row = findRow_(sh, id) || sh.getLastRow() + 1;
   var skipped = (doc.unlock && doc.unlock.skipped) || [];
-  var vals = [id, doc.name || ''];
+  var vals = [id, doc.name || '', doc.sched || ''];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) {
     var r = doc['activity' + n];
     vals.push(r ? pct_(r) : (skipped.indexOf(n) >= 0 ? 'Skipped' : ''));
@@ -248,9 +254,25 @@ function writeScores_(ss, id, doc) {
     vals.push(res && res.total ? res.score + '/' + res.total : (e && e.session && e.session.submitted ? 'Submitted' : (e && e.session ? 'In progress' : '')));
   });
   vals.push(new Date(), flags_(doc));
-  sh.getRange(row, 1, 1, 2).setNumberFormat('@');
+  sh.getRange(row, 1, 1, 3).setNumberFormat('@');
   sh.getRange(row, 1, 1, vals.length).setValues([vals]);
 }
+/* Rewrite every Scores row from Data (used when the column layout changes). */
+function rebuildScores_(ss) {
+  var sc = ss.getSheetByName(SHEET.scores), data = ss.getSheetByName(SHEET.data);
+  var last = sc.getLastRow(), width = Math.max(sc.getLastColumn(), 1);
+  if (last > 1) sc.getRange(2, 1, last - 1, width).setValues(
+    Array.apply(null, Array(last - 1)).map(function () { return Array.apply(null, Array(width)).map(function () { return ''; }); }));
+  var dl = data.getLastRow();
+  if (dl < 2) return;
+  data.getRange(2, 1, dl - 1, 1).getValues().forEach(function (r) {
+    var id = String(r[0] || '');
+    if (!id) return;
+    var doc = readDoc_(ss, id);
+    if (doc) writeScores_(ss, id, doc);
+  });
+}
+
 function log_(ss, id, action, result) {
   try {
     var sh = ss.getSheetByName(SHEET.log);
