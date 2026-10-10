@@ -117,26 +117,8 @@
     font-weight: 800;
     cursor: pointer;
   }
-  #saveBtn   { background: var(--green); }
-  #updateBtn { background: var(--cyan); font-size: 17px; }
   .small-btn:active { transform: translateY(2px); }
 
-  #syncStatus {
-    color: var(--white);
-    font-size: 13px;
-    text-align: center;
-    margin-top: 10px;
-    min-height: 16px;
-  }
-  #syncStatus.error { color: #ffd2c7; }
-
-  .tools {
-    margin-top: 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
   .link-btn {
     background: none;
     border: none;
@@ -145,11 +127,6 @@
     text-decoration: underline;
     cursor: pointer;
     padding: 2px;
-  }
-  #folderLabel {
-    color: #d6e3ef;
-    font-size: 12px;
-    text-align: center;
   }
 
   /* Activity rows */
@@ -211,6 +188,46 @@
     margin: 4px 0 12px 70px;
     min-height: 15px;
   }
+  /* Exam row: [Status] [Exam bar + QR] [Download] */
+  .dl-sq {
+    flex: 0 0 58px;
+    min-height: 58px;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .dl-sq svg { width: 26px; height: 26px; stroke: var(--ink); fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .dl-sq:active { transform: translateY(2px); }
+  .caption-row { display: flex; gap: 12px; }
+  .caption-row .caption:nth-child(1) { flex: 0 0 58px; }
+  .caption-row .caption:nth-child(2) { flex: 1; text-align: right; padding-right: 18px; }
+  .caption-row .caption:nth-child(3) { flex: 0 0 58px; text-align: center; margin-left: 0; }
+
+  /* Terms & Privacy */
+  .legal-link { display: block; margin: 8px auto 0; background: none; border: none; font-size: 12.5px; font-weight: 700; text-decoration: underline; color: rgba(0,0,0,.7); cursor: pointer; padding: 4px; }
+  #privacyPanel { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+  #privacyPanel.show { display: flex; }
+  .pv-card { background: var(--white); width: 100%; max-width: 420px; max-height: 92vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+  .pv-head { padding: 16px 16px 10px; border-bottom: 3px solid var(--ink); }
+  .pv-head strong { display: block; font-size: 20px; text-align: center; }
+  .pv-head small { display: block; text-align: center; font-size: 12px; font-weight: 500; margin-top: 2px; }
+  .pv-body { padding: 4px 16px 12px; overflow-y: auto; font-size: 14.5px; font-weight: 500; line-height: 1.42; }
+  .pv-body h3 { font-size: 15.5px; margin: 14px 0 4px; }
+  .pv-body ul { margin: 0; padding-left: 20px; }
+  .pv-body li { margin: 2px 0; }
+  .pv-body p { margin: 4px 0; }
+  .pv-body .warn { margin-top: 12px; padding: 9px 11px 7px; border: 3px solid var(--ink); border-radius: 12px; background: var(--cream); }
+  .pv-foot { padding: 12px 16px 14px; border-top: 3px solid var(--ink); }
+  .pv-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+  .pv-check input { width: 22px; height: 22px; flex: 0 0 22px; margin: 0; accent-color: #000; }
+  .pv-foot .small-btn { width: 100%; background: var(--yellow); }
+  .pv-foot .small-btn:disabled { opacity: .45; cursor: default; }
+  .pv-foot[hidden], .pv-check[hidden] { display: none; }
+
   .reads .pill { justify-content: center; padding: 18px 12px 14px; margin-top: 16px; }
 
   /* Name form + block */
@@ -323,8 +340,8 @@
 <main class="panel blue" id="panel">
 
   <div class="box" id="blockOverlay">
-    <strong>This activity requires Google Chrome on Android.</strong>
-    Open this page in Google Chrome and try again.
+    <strong>Open this page in your browser.</strong>
+    This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X), where scores cannot be saved. Tap the <b>⋮</b> or <b>•••</b> menu, choose <b>"Open in Browser"</b>, then open this page again.
   </div>
 
   <!-- NAME -->
@@ -359,18 +376,6 @@
     <button type="button" class="box menu-btn coral" data-go="exam">Examination</button>
     <button type="button" class="box menu-btn cream" data-go="reads">Reads</button>
 
-    <div class="small-row">
-      <button type="button" class="box small-btn" id="saveBtn">Save</button>
-      <button type="button" class="box small-btn" id="updateBtn">Update</button>
-    </div>
-    <input type="file" id="updateFileInput" accept="application/json" style="display:none;">
-    <div id="syncStatus"></div>
-
-    <div class="tools">
-      <button type="button" class="link-btn" id="chooseFolderBtn">Choose sync folder</button>
-      <span id="folderLabel">No folder set — Save/Update will use file dialogs.</span>
-      <button type="button" class="link-btn" id="saveOfflineBtn">Save offline copy</button>
-    </div>
   </section>
 
   <!-- ACTIVITIES (rows built from ACTIVITIES config) -->
@@ -398,7 +403,7 @@
   <!-- EXAMINATION (rows built from EXAMS config) -->
   <section class="screen" id="screen-exam">
     <button type="button" class="box title" data-go="home"><span class="chev" aria-hidden="true">‹</span>Examination</button>
-    <div class="caption">Status</div>
+    <div class="caption-row"><div class="caption">Status</div><div class="caption">QR</div><div class="caption">Download</div></div>
     <div id="examList"></div>
 
     <details class="help" id="examHelp">
@@ -407,7 +412,7 @@
         <p>You can take an examination in one of two ways:</p>
         <ol>
           <li><b>Online</b> — tap the examination's name. It opens on this page and needs internet.</li>
-          <li><b>Offline</b> — tap <b>Download … (offline)</b>. The file saves to your device and works without internet.</li>
+          <li><b>Offline</b> — tap the <b>Download</b> square at the right of the examination. The file saves to your device and works without internet.</li>
         </ol>
         <div class="warn">Choose only one. Each examination accepts one attempt, and your QR code is your record.</div>
         <h3>Opening a downloaded examination</h3>
@@ -442,7 +447,68 @@
   </section>
 
   <div class="app-version" id="appVersion"></div>
+  <button type="button" class="legal-link" id="privacyLink">Terms &amp; Privacy</button>
 </main>
+
+<!-- Terms of Use & Privacy Notice -->
+<div id="privacyPanel" role="dialog" aria-modal="true" aria-labelledby="pvTitle">
+  <div class="box pv-card">
+    <div class="pv-head">
+      <strong id="pvTitle">Terms of Use &amp; Privacy Notice</strong>
+      <small>GEEL 1 · Living in the IT Era · Surigao Education Center · Effective October 2026</small>
+    </div>
+    <div class="pv-body">
+      <h3>What this site is</h3>
+      <p>The activities, reads and examinations for GEEL 1 – Living in the IT Era. It is for class use by enrolled students only.</p>
+
+      <h3>What is kept online</h3>
+      <ul>
+        <li>Your <b>full name</b> as you typed it.</li>
+        <li>Your <b>class schedule</b>.</li>
+        <li>Your <b>activity and examination results</b>: scores, answers, and start and finish times.</li>
+        <li>A <b>scrambled code made from your PIN</b>. Your 4-digit PIN itself never leaves your device.</li>
+        <li>A <b>backup log</b>: the time and result of each backup.</li>
+      </ul>
+
+      <h3>What is not collected</h3>
+      <p>No student ID, email, phone number, address, location, photos, contacts or device details.</p>
+
+      <h3>Where it is kept and who sees it</h3>
+      <p>In a Google Sheet in your instructor's Google account, protected by Google's security. Only your instructor can view it.</p>
+
+      <h3>Why it is kept</h3>
+      <ul>
+        <li>To record your GEEL 1 grades.</li>
+        <li>To bring your scores back if your phone or browser erases them.</li>
+      </ul>
+      <p>Your records are not shared, not sold and not used for anything else.</p>
+
+      <h3>Who can change or delete records</h3>
+      <p>Only your instructor. You and your device cannot reset or delete scores.</p>
+
+      <h3>How long it is kept</h3>
+      <div class="warn"><b>All online records are deleted when the semester ends.</b></div>
+
+      <h3>On your device</h3>
+      <p>Your results are also saved in this browser. Clearing your browser data removes this copy; your name and PIN bring it back.</p>
+
+      <h3>Your rights</h3>
+      <p>Under the Data Privacy Act of 2012 (Republic Act No. 10173), you may ask your instructor to show, correct or delete your records at any time.</p>
+
+      <h3>Terms of use</h3>
+      <ul>
+        <li>Use your own real full name.</li>
+        <li>Keep your PIN private. Do not use another student's name or PIN.</li>
+        <li>Do your own work. Each examination accepts one attempt.</li>
+        <li>Do not alter scores or tamper with this site.</li>
+      </ul>
+    </div>
+    <div class="pv-foot">
+      <label class="pv-check" id="pvCheckWrap"><input type="checkbox" id="pvCheck"> I have read and agree to the Terms of Use and Privacy Notice.</label>
+      <button type="button" class="box small-btn" id="pvOk" disabled>Continue</button>
+    </div>
+  </div>
+</div>
 
 <!-- Score QR panel -->
 <div id="qrPanel" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
@@ -552,7 +618,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
    EXAMS: minimum { label, href, prefix }
      prefix must match the exam page's CFG.prefix (reads prefix_session /
      prefix_result from IndexedDB 'itict_exam' / 'kv').
-     Optional: offline: true    adds a "Download (offline)" row under the exam,
+     Optional: offline: true    adds a Download square at the right of the exam row,
                so students can take it online (main row) or offline (file).
                Offline attempts are not shown here; a downloaded file keeps
                its own storage on the device.
@@ -613,7 +679,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.10.4';
+const APP_VERSION = '2026.10.11.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -626,10 +692,7 @@ const IDB_STORE = 'results';
 const EXAM_IDB_NAME = 'itict_exam';
 const EXAM_IDB_STORE = 'kv';
 
-const SYNC_KEY = 'ITEra2026';
 const SYNC_TIMESTAMP_KEY = 'itict_last_update_ts';
-const SYNC_FILENAME = 'itict_sync.json';
-const SYNC_DIR_HANDLE_KEY = 'sync_dir_handle';
 
 /* ===== Normalize config ===== */
 ACTIVITIES.forEach((a, i) => {
@@ -680,17 +743,18 @@ function buildRow(item, scoreText) {
   return wrap;
 }
 
-function buildDownloadRow(e) {
-  const wrap = el('div');
-  const row = el('div', 'row');
-  row.append(el('div', 'box score', '⤓'));
-  const btn = el('a', 'box pill');
-  btn.id = e.id + 'DlBtn';
-  btn.href = e.href;
-  btn.setAttribute('download', e.href.split('/').pop());
-  btn.append(el('span', 'pill-label', `Download ${e.label} (offline)`), el('span', 'pill-end', '›'));
-  row.append(btn);
-  wrap.append(row, el('div', 'note', 'Offline copy — see Downloadable Examinations below'));
+const DL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 19.5h14"/></svg>';
+function buildExamRow(e) {
+  const wrap = buildRow(e);
+  if (e.offline) {
+    const dl = el('a', 'box dl-sq');
+    dl.id = e.id + 'DlBtn';
+    dl.href = e.href;
+    dl.setAttribute('download', e.href.split('/').pop());
+    dl.setAttribute('aria-label', `Download ${e.label} examination (offline)`);
+    dl.innerHTML = DL_ICON;
+    wrap.querySelector('.row').append(dl);
+  }
   return wrap;
 }
 
@@ -724,10 +788,7 @@ function buildLists() {
 
   const examList = document.getElementById('examList');
   examList.innerHTML = '';
-  EXAMS.forEach(e => {
-    examList.append(buildRow(e));
-    if (e.offline) examList.append(buildDownloadRow(e));
-  });
+  EXAMS.forEach(e => examList.append(buildExamRow(e)));
   document.getElementById('examHelp').hidden = !EXAMS.some(e => e.offline);
 
   const readList = document.getElementById('readList');
@@ -1022,25 +1083,13 @@ function startLocal(name) {
 function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
-function isChrome() {
-  const ua = navigator.userAgent;
-  return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
+function isInAppBrowser() {
+  return /(FBAN|FBAV|FB_IAB|FBIOS|Messenger|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Bytedance|Twitter|GSA\/)/i.test(navigator.userAgent || '');
 }
-const browserBlocked = isAndroid() && !isChrome();
+/* Any real browser is allowed (scores back up online); in-app browsers are blocked. */
+const browserBlocked = isInAppBrowser();
 
-/* ===== Encrypted sync (Save / Update) ===== */
-async function getSyncCryptoKey() {
-  const enc = new TextEncoder();
-  const digest = await crypto.subtle.digest('SHA-256', enc.encode(SYNC_KEY));
-  return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-}
-function bufToB64(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
-}
-function b64ToBuf(b64) {
-  return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-}
-
+/* ===== Sync payload (used by the online backup) ===== */
 const FIRST_REDO = ACTIVITIES.find(a => a.redo);
 
 async function collectSyncData_base() {
@@ -1095,155 +1144,6 @@ async function applySyncData_base(data) {
   if (data.updatedAt) localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
 }
 
-function setSyncStatus(msg, isError) {
-  const x = document.getElementById('syncStatus');
-  x.textContent = msg;
-  x.classList.toggle('error', !!isError);
-}
-
-/* ===== Sync folder (File System Access API) ===== */
-async function verifyFolderPermission(handle, mode) {
-  const opts = { mode };
-  try {
-    if ((await handle.queryPermission(opts)) === 'granted') return true;
-    if ((await handle.requestPermission(opts)) === 'granted') return true;
-  } catch (e) {}
-  return false;
-}
-async function getSyncFolderHandle() {
-  return await idbGet(SYNC_DIR_HANDLE_KEY);
-}
-function updateFolderLabel(handle) {
-  document.getElementById('folderLabel').textContent = (handle && handle.name)
-    ? `Sync folder: ${handle.name}`
-    : 'No folder set — Save/Update will use file dialogs.';
-}
-async function chooseSyncFolder() {
-  if (!('showDirectoryPicker' in window)) {
-    setSyncStatus('Folder access not supported in this browser.', true);
-    return;
-  }
-  try {
-    const handle = await window.showDirectoryPicker();
-    const ok = await verifyFolderPermission(handle, 'readwrite');
-    if (!ok) { setSyncStatus('Folder permission denied.', true); return; }
-    await idbSet(SYNC_DIR_HANDLE_KEY, handle);
-    updateFolderLabel(handle);
-    setSyncStatus('Sync folder set.');
-  } catch (e) { /* cancelled */ }
-}
-async function restoreFolderLabel() {
-  const handle = await getSyncFolderHandle();
-  if (handle) updateFolderLabel(handle);
-}
-
-function saveSyncFileAsDownload(payload) {
-  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = SYNC_FILENAME;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-async function saveSyncFile() {
-  try {
-    const data = await collectSyncData();
-    const key = await getSyncCryptoKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const plaintext = new TextEncoder().encode(JSON.stringify(data));
-    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
-    const payload = { v: 1, iv: bufToB64(iv), data: bufToB64(ciphertext) };
-
-    const dirHandle = await getSyncFolderHandle();
-    if (dirHandle && (await verifyFolderPermission(dirHandle, 'readwrite'))) {
-      try {
-        const fileHandle = await dirHandle.getFileHandle(SYNC_FILENAME, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(payload));
-        await writable.close();
-        localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
-        setSyncStatus('Saved to sync folder.');
-        return;
-      } catch (e) { /* fall through to download */ }
-    }
-
-    saveSyncFileAsDownload(payload);
-    localStorage.setItem(SYNC_TIMESTAMP_KEY, data.updatedAt);
-    setSyncStatus('Saved: ' + SYNC_FILENAME);
-  } catch (e) {
-    setSyncStatus('Save failed.', true);
-  }
-}
-
-async function updateFromFolder() {
-  const dirHandle = await getSyncFolderHandle();
-  if (dirHandle && (await verifyFolderPermission(dirHandle, 'read'))) {
-    try {
-      const fileHandle = await dirHandle.getFileHandle(SYNC_FILENAME);
-      const file = await fileHandle.getFile();
-      await updateFromFile(file);
-      return;
-    } catch (e) {
-      setSyncStatus('No sync file found in the folder yet.', true);
-      return;
-    }
-  }
-  document.getElementById('updateFileInput').click();
-}
-
-async function updateFromFile(file) {
-  try {
-    const text = await file.text();
-    const payload = JSON.parse(text);
-    if (!payload || !payload.iv || !payload.data) throw new Error('bad-format');
-
-    const key = await getSyncCryptoKey();
-    const iv = b64ToBuf(payload.iv);
-    const ciphertext = b64ToBuf(payload.data);
-    const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
-    const data = JSON.parse(new TextDecoder().decode(plainBuf));
-
-    const localTs = localStorage.getItem(SYNC_TIMESTAMP_KEY);
-    if (localTs && data.updatedAt && data.updatedAt <= localTs) {
-      setSyncStatus('Already up to date.');
-      return;
-    }
-
-    await applySyncData(data);
-    setSyncStatus('Updated from file.');
-    if (data.name) enterActivities(data.name);
-    else refreshAll();
-  } catch (e) {
-    setSyncStatus('Update failed — file is invalid or was tampered with.', true);
-  }
-}
-
-async function saveOffline() {
-  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'IT_and_ICT_Activities.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-document.getElementById('saveBtn').addEventListener('click', saveSyncFile);
-document.getElementById('updateBtn').addEventListener('click', updateFromFolder);
-document.getElementById('updateFileInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) updateFromFile(file);
-  e.target.value = '';
-});
-document.getElementById('chooseFolderBtn').addEventListener('click', chooseSyncFolder);
-document.getElementById('saveOfflineBtn').addEventListener('click', saveOffline);
 
 /* ===== Instructor unlock =====
    Two codes, entered in order. Stored only as SHA-256 hashes.
@@ -1873,7 +1773,6 @@ document.getElementById('nameFix').addEventListener('click', () => {
 });
 
 buildLists();
-restoreFolderLabel();
 document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION;
 
 /* Refresh statuses when returning via Back (bfcache restore) */
@@ -1883,13 +1782,70 @@ window.addEventListener('pageshow', (e) => {
   if (savedName) enterActivities(savedName);
 });
 
+/* ===== Terms & Privacy acknowledgement =====
+   Stored under PRIVACY_KEY in localStorage, cookie, IndexedDB and sessionStorage.
+   Bump PRIVACY_VERSION when the notice changes so every student agrees again. */
+const PRIVACY_KEY = 'itict_privacy_ack';
+const PRIVACY_VERSION = 1;
+const pv = {
+  panel: document.getElementById('privacyPanel'),
+  check: document.getElementById('pvCheck'),
+  checkWrap: document.getElementById('pvCheckWrap'),
+  ok: document.getElementById('pvOk')
+};
+function privacyRead() {
+  const ok = v => { try { const x = JSON.parse(v); return x && x.v >= PRIVACY_VERSION ? x : null; } catch (e) { return null; } };
+  let x = null;
+  try { x = ok(localStorage.getItem(PRIVACY_KEY)); } catch (e) {}
+  if (!x) x = ok(getCookie(PRIVACY_KEY));
+  if (!x) { try { x = ok(sessionStorage.getItem(PRIVACY_KEY)); } catch (e) {} }
+  return x;
+}
+async function privacyWrite(rec) {
+  const v = JSON.stringify(rec);
+  try { localStorage.setItem(PRIVACY_KEY, v); } catch (e) {}
+  try { sessionStorage.setItem(PRIVACY_KEY, v); } catch (e) {}
+  document.cookie = PRIVACY_KEY + '=' + encodeURIComponent(v) + '; max-age=' + (365 * 86400) + '; path=/; SameSite=Lax';
+  try { await idbSet(PRIVACY_KEY, rec); } catch (e) {}
+}
+async function privacyAccepted() {
+  let x = privacyRead();
+  if (!x) {
+    try { const i = await idbGet(PRIVACY_KEY); if (i && i.v >= PRIVACY_VERSION) x = i; } catch (e) {}
+  }
+  if (x) await privacyWrite(x);   // backfill every layer
+  return !!x;
+}
+/* required: first visit (must agree) · otherwise opened from the footer link (read only) */
+function privacyOpen(required) {
+  return new Promise(resolve => {
+    pv.check.checked = false;
+    pv.ok.disabled = required;
+    pv.ok.textContent = required ? 'Continue' : 'Close';
+    pv.checkWrap.hidden = !required;
+    pv.panel.querySelector('.pv-body').scrollTop = 0;
+    pv.panel.classList.add('show');
+    pv.ok.onclick = async () => {
+      if (required) {
+        if (!pv.check.checked) return;
+        await privacyWrite({ v: PRIVACY_VERSION, at: new Date().toISOString() });
+      }
+      pv.panel.classList.remove('show');
+      resolve();
+    };
+  });
+}
+pv.check.addEventListener('change', () => { pv.ok.disabled = !pv.check.checked; });
+document.getElementById('privacyLink').addEventListener('click', () => privacyOpen(false));
+
 /* On load */
-(function init() {
+(async function init() {
   if (browserBlocked) {
     document.getElementById('blockOverlay').style.display = 'block';
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     return;
   }
+  if (!(await privacyAccepted())) await privacyOpen(true);
   const savedName = localStorage.getItem(NAME_KEY);
   if (savedName) enterActivities(savedName);
 })();

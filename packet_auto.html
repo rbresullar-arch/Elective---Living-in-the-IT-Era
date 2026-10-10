@@ -255,7 +255,7 @@ function itictGateBypass(n){
   <h2 id="log-title">Log</h2>
   <p class="sub" id="hint"></p>
   <div class="log" id="log" aria-live="polite"><p>The file globe.png is split into 1500 packets. Each ACK earns credits. Receive every packet to win.</p></div>
-  <div class="panel-links"><a href="index.html" id="home-btn">‹ Home</a><button type="button" id="downloadBtn">Download this activity</button></div>
+  <div class="panel-links"><a href="index.html" id="home-btn">‹ Home</a></div>
 </div>
 <div class="panel" id="inv-panel" role="dialog" aria-modal="true" aria-labelledby="inv-title" hidden>
   <h2 id="inv-title">Discoveries</h2>
@@ -1528,17 +1528,6 @@ window.PR6 = (() => {
       if (q && q.kind === 'inv') tryBuy(q.id);
       else refresh(E.buyQuick(st, rng));
     }
-  });
-
-  /* ===== self-download ===== */
-  $('downloadBtn').addEventListener('click', () => {
-    try {
-      const html = '<!doctype html>\n' + document.documentElement.outerHTML;
-      const url = URL.createObjectURL(new Blob([html], { type:'text/html' }));
-      const a = document.createElement('a'); a.href = url; a.download = 'packet_auto.html';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    } catch (e) { alert("Download unavailable here. Use your browser's Save Page option."); }
   });
 
   /* ===== init: gate behind Activity 5 ===== */

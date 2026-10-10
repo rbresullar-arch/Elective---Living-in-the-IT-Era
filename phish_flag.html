@@ -282,7 +282,6 @@ body.hit .app{animation:glitch .45s steps(3)}
     <p><b>Activity 8 score:</b> your points out of the maximum (20 × 100), as a percentage. Your best run is kept. Play as many times as you like.</p>
     <div class="btnrow"><button class="go" id="startBtn" type="button">Unlock phone</button><a class="go home" href="index.html">‹ Activities</a></div>
     <p class="hint" id="bestLine" style="text-align:left">Your best: 66% (1325 pts, 80% accurate) · Runs: 1</p>
-    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
   </div>
 </div>
 
@@ -864,13 +863,6 @@ $('homeBtn').addEventListener('click', e=>{
 });
 $('endHomeBtn').addEventListener('click', goHub);
 $('muteBtn').addEventListener('click', e=>{ const m=Snd.toggle(); e.currentTarget.textContent = 'Sound: '+(m?'Off':'On'); });
-$('dlBtn').addEventListener('click', async ()=>{
-  let html;
-  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
-  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'phish_flag.html';
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-});
 
 S = newState();
 requestAnimationFrame(tick);
