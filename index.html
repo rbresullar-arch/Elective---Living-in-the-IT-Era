@@ -300,7 +300,9 @@
   .name-msg { min-height: 18px; font-size: 14px; font-weight: 700; color: #b3261e; margin-top: 10px; line-height: 1.35; }
   .name-msg.ok { color: var(--ink); }
   .name-choice { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-  .name-choice[hidden], #pinWrap[hidden], .cp-pin[hidden] { display: none; }
+  .name-choice[hidden], #pinWrap[hidden], .cp-pin[hidden], .sched-select[hidden] { display: none; }
+  .sched-select { width: 100%; font-size: 15px; padding: 9px 10px 6px; border: var(--bw) solid var(--ink); border-radius: 14px; background: var(--white); font-family: inherit; color: var(--ink); }
+  #cpSched { margin-bottom: 10px; }
   #pinInput::placeholder, .cp-pin::placeholder { letter-spacing: normal; font-size: 16px; }
   .cp-pin + .cp-pin { margin-top: 10px; }
   .name-choice .small-btn { font-size: 16px; background: var(--white); }
@@ -335,6 +337,8 @@
         <label for="pinInput" class="field-label">Your 4-digit PIN</label>
         <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
         <div class="name-hint">First time? Make up 4 digits and remember them. Your name and PIN bring your scores back if this phone loses them.</div>
+        <label for="schedInput" class="field-label">Your class schedule</label>
+        <select id="schedInput" class="sched-select"></select>
       </div>
       <div class="name-msg" id="nameMsg" role="status"></div>
       <div class="name-choice" id="nameChoice" hidden>
@@ -476,8 +480,9 @@
 <div id="cloudPanel" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
   <div class="box ul-card">
     <strong id="cpTitle">Create your PIN</strong>
-    <div class="ul-note">Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor's records so they can come back.</div>
+    <div class="ul-note" id="cpNote">Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor's records so they can come back.</div>
     <div class="cp-name" id="cpName"></div>
+    <select id="cpSched" class="sched-select"></select>
     <input type="password" class="cp-pin" id="cpPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="4 digits">
     <input type="password" class="cp-pin" id="cpPin2" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="Repeat PIN">
     <div class="ul-msg" id="cpMsg"></div>
@@ -608,7 +613,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.10.3';
+const APP_VERSION = '2026.10.10.4';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1041,6 +1046,7 @@ const FIRST_REDO = ACTIVITIES.find(a => a.redo);
 async function collectSyncData_base() {
   const data = {
     name: localStorage.getItem(NAME_KEY),
+    sched: localStorage.getItem('itict_sched') || '',
     createdDate: localStorage.getItem(DATE_KEY),
     redoUsed: FIRST_REDO ? localStorage.getItem(FIRST_REDO.redo.flagKey) === '1' : false,
     redoFlags: {},
@@ -1063,6 +1069,7 @@ async function collectSyncData_base() {
 
 async function applySyncData_base(data) {
   if (data.name) localStorage.setItem(NAME_KEY, data.name);
+  if (data.sched && /^\d{5}$/.test(data.sched)) { try { localStorage.setItem('itict_sched', data.sched); } catch (e) {} }
   if (data.createdDate) localStorage.setItem(DATE_KEY, data.createdDate);
   if (data.redoFlags) {
     ACTIVITIES.forEach(a => {
@@ -1721,9 +1728,13 @@ function cloudSync(opts) {
 /* After entering the hub: ask existing students for a PIN once, otherwise sync. */
 function cloudAfterEnter() {
   if (!CLOUD_URL || browserBlocked) return;
-  if (cloudAcct()) { if (Date.now() - cloudLastOk > 15000) cloudSync(); return; }
   let later = null;
   try { later = sessionStorage.getItem(CLOUD_LATER_KEY); } catch (e) {}
+  if (cloudAcct()) {
+    if (!cloudSched() && !later) { cloudOpenPanel('sched'); return; }
+    if (Date.now() - cloudLastOk > 15000) cloudSync();
+    return;
+  }
   if (later) { setCloudStatus('Scores are not backed up yet · create a PIN', true); return; }
   cloudOpenPanel();
 }
@@ -1735,24 +1746,49 @@ const cp = {
   pin: document.getElementById('cpPin'),
   pin2: document.getElementById('cpPin2'),
   msg: document.getElementById('cpMsg'),
-  ok: document.getElementById('cpOk')
+  ok: document.getElementById('cpOk'),
+  sched: document.getElementById('cpSched')
 };
-function cloudOpenPanel() {
+function cloudSched() { try { const v = localStorage.getItem('itict_sched'); return QR_SCHEDULES.includes(v) ? v : ''; } catch (e) { return ''; } }
+function cloudSetSched(v) { try { localStorage.setItem('itict_sched', v); } catch (e) {} }
+/* one schedule list: copied from the QR panel's options */
+function cloudFillSched(sel) {
+  sel.innerHTML = '';
+  document.querySelectorAll('#qrSched option').forEach(o => sel.append(o.cloneNode(true)));
+}
+/* mode 'pin': create PIN + schedule (no PIN yet); mode 'sched': schedule only */
+let cpMode = 'pin';
+async function cloudOpenPanel(mode) {
+  cpMode = mode === 'sched' ? 'sched' : 'pin';
   cp.name.textContent = localStorage.getItem(NAME_KEY) || '';
   cp.pin.value = ''; cp.pin2.value = ''; cp.msg.textContent = '';
-  cp.pin2.hidden = false;
+  cp.pin.hidden = cp.pin2.hidden = cpMode === 'sched';
+  document.getElementById('cpTitle').textContent = cpMode === 'sched' ? 'Choose your class schedule' : 'Create your PIN';
+  cp.ok.textContent = cpMode === 'sched' ? 'Save' : 'Save PIN';
+  document.getElementById('cpNote').textContent = cpMode === 'sched'
+    ? 'Your instructor records your scores by class. Choose the schedule you attend.'
+    : 'Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor\'s records so they can come back.';
+  cp.sched.value = await qrDefaultSched();
   cp.panel.classList.add('show');
-  setTimeout(() => cp.pin.focus(), 50);
+  setTimeout(() => (cpMode === 'sched' ? cp.sched : cp.pin).focus(), 50);
 }
 function cloudClosePanel() { cp.panel.classList.remove('show'); }
 document.getElementById('cpLater').addEventListener('click', () => {
   try { sessionStorage.setItem(CLOUD_LATER_KEY, '1'); } catch (e) {}
   cloudClosePanel();
+  if (cpMode === 'sched') { cloudSync(); return; }   // backed up, schedule still blank
   setCloudStatus('Scores are not backed up yet · create a PIN', true);
 });
-document.getElementById('cloudStatus').addEventListener('click', () => { if (!cloudAcct() && CLOUD_URL) cloudOpenPanel(); });
+document.getElementById('cloudStatus').addEventListener('click', () => {
+  if (!CLOUD_URL) return;
+  if (!cloudAcct()) cloudOpenPanel();
+  else if (!cloudSched()) cloudOpenPanel('sched');
+});
 cp.ok.addEventListener('click', async () => {
   const name = localStorage.getItem(NAME_KEY) || '';
+  if (!cp.sched.value) { cp.msg.textContent = 'Choose your class schedule.'; cp.sched.focus(); return; }
+  cloudSetSched(cp.sched.value);
+  if (cpMode === 'sched') { cloudClosePanel(); cloudLastOk = 0; cloudSync(); return; }
   const pin = cp.pin.value.trim();
   if (!/^\d{4}$/.test(pin)) { cp.msg.textContent = 'Use exactly 4 digits.'; return; }
   if (!cp.pin2.hidden && cp.pin2.value.trim() !== pin) { cp.msg.textContent = 'The two PINs are different.'; return; }
@@ -1783,6 +1819,11 @@ const nf = {
   go: document.getElementById('nameGo')
 };
 if (!CLOUD_URL) document.getElementById('pinWrap').hidden = true;
+cloudFillSched(document.getElementById('schedInput'));
+cloudFillSched(cp.sched);
+qrDefaultSched().then(v => { if (v) document.getElementById('schedInput').value = v; });
+/* changing the schedule in My Score QR updates the instructor's records too */
+document.getElementById('qrSched').addEventListener('change', () => { if (cloudAcct()) { cloudLastOk = 0; cloudSync(); } });
 /* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
 if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
 function nameMsg(text, ok) { nf.msg.textContent = text; nf.msg.classList.toggle('ok', !!ok); }
@@ -1794,6 +1835,9 @@ async function nameSubmit(create) {
   const pin = nf.pin.value.trim();
   if (!cloudNameOk(name)) { nameMsg('Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
   if (!/^\d{4}$/.test(pin)) { nameMsg('Enter a 4-digit PIN.'); nf.pin.focus(); return; }
+  const sched = document.getElementById('schedInput').value;
+  if (!sched) { nameMsg('Choose your class schedule.'); document.getElementById('schedInput').focus(); return; }
+  cloudSetSched(sched);
   nf.go.disabled = true; nf.choice.hidden = true;
   nameMsg(create ? 'Creating your record…' : 'Looking for your saved scores…', true);
   cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
