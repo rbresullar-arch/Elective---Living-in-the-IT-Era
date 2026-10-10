@@ -289,8 +289,8 @@ function itictGateBypass(n){
 <!-- BROWSER GATE -->
 <div class="overlay" id="blockOverlay">
   <div class="card">
-    <h1>Open this in <em>Chrome</em></h1>
-    <p><b>This activity requires Google Chrome on Android.</b><br>Please open this page in Google Chrome and try again.</p>
+    <h1>Open this in your <em>browser</em></h1>
+    <p><b>This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X).</b><br>Tap the <b>⋮</b> or <b>•••</b> menu, choose <b>"Open in Browser"</b>, then open this activity again.</p>
     <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
 </div>
@@ -329,7 +329,6 @@ function itictGateBypass(n){
     </ol>
     <p><b>Activity 2 score:</b> 5 points per round, minus 1 for each wrong total you check. Maximum 25.</p>
     <div class="btnrow"><button class="go" type="button" id="startBtn">Start counting</button><a class="go home" href="index.html">‹ Activities</a></div>
-    <button class="dl" type="button" id="selfDownloadBtn">Save offline copy</button>
   </div>
 </div>
 
@@ -816,11 +815,7 @@ function itictGateBypass(n){
     const ua = navigator.userAgent || '';
     return /(FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Twitter)/i.test(ua);
   }
-  function isChrome(){
-    const ua = navigator.userAgent;
-    return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
-  }
-  const browserBlocked = isInAppBrowser() || (isAndroid() && !isChrome());
+  const browserBlocked = isInAppBrowser();
 
   (async function init(){
     if(browserBlocked){
@@ -848,41 +843,6 @@ function itictGateBypass(n){
 </script>
 
 
-<script id="dlBtnScript">
-(function(){
-  var FILE_NAME = "abacus_addition_activity.html";
-  var btn = document.getElementById('selfDownloadBtn');
-  if(!btn) return;
-
-  function saveBlob(text){
-    var blob = new Blob([text], {type:'text/html;charset=utf-8'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = FILE_NAME;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
-  }
-
-  btn.addEventListener('click', function(){
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    var done = function(msg){
-      btn.textContent = msg;
-      setTimeout(function(){ btn.textContent = 'Save offline copy'; btn.disabled = false; }, 1800);
-    };
-    fetch(location.href, {cache:'no-store'})
-      .then(function(r){ if(!r.ok) throw 0; return r.text(); })
-      .then(function(t){
-        if(!t || t.indexOf('<html') === -1) throw 0;
-        saveBlob(t); done('Saved');
-      })
-      .catch(function(){
-        try { saveBlob('<!DOCTYPE html>\n' + document.documentElement.outerHTML); done('Saved'); }
-        catch(e){ done('Failed'); }
-      });
-  });
-})();
-</script>
 
 </body>
 </html>

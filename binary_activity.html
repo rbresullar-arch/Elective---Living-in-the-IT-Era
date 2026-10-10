@@ -266,8 +266,8 @@ function itictGateBypass(n){
 <!-- BROWSER GATE -->
 <div class="overlay" id="blockOverlay">
   <div class="card">
-    <h1>Open this in <em>Chrome</em></h1>
-    <p><b>This activity requires Google Chrome on Android.</b><br>Please open this page in Google Chrome and try again.</p>
+    <h1>Open this in your <em>browser</em></h1>
+    <p><b>This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X).</b><br>Tap the <b>⋮</b> or <b>•••</b> menu, choose <b>"Open in Browser"</b>, then open this activity again.</p>
     <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
 </div>
@@ -287,7 +287,7 @@ function itictGateBypass(n){
     <h1>Activity 4 <em>done</em></h1>
     <p>Activity already completed on this device.</p>
     <div class="scoreline score" id="doneScoreText"></div>
-    <div class="btnrow"><button class="go" type="button" id="doneDownloadBtn">Download my copy</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
 </div>
 
@@ -321,7 +321,6 @@ function itictGateBypass(n){
     <div class="result" style="color:var(--accent-ink)">Time!</div>
     <div class="scoreline score" id="resultScoreText"></div>
     <div class="btnrow">
-      <button class="go" type="button" id="resultDownloadBtn">Download my copy</button>
       <a class="go home" href="index.html">‹ Activities</a>
     </div>
     <p class="note">Your score is saved on this device.</p>
@@ -430,11 +429,7 @@ function isAndroid(){ return /Android/i.test(navigator.userAgent); }
 function isInAppBrowser(){
   return /(FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Twitter)/i.test(navigator.userAgent || '');
 }
-function isChrome(){
-  const ua = navigator.userAgent;
-  return /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser)/i.test(ua);
-}
-const browserBlocked = isInAppBrowser() || (isAndroid() && !isChrome());
+const browserBlocked = isInAppBrowser();
 
 function show(el){ el.classList.add('show'); }
 function hide(el){ el.classList.remove('show'); }
@@ -870,24 +865,6 @@ function showResult(record){
   document.getElementById('resultScoreText').innerHTML = scoreLines(record);
   show(document.getElementById('resultOverlay'));
 }
-
-/* ============================================================
-   SELF-DOWNLOAD — saves this activity's HTML as a file
-   ============================================================ */
-function downloadSelf(){
-  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const blob = new Blob([html], { type:'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'binary_activity.html';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-document.getElementById('resultDownloadBtn').addEventListener('click', downloadSelf);
-document.getElementById('doneDownloadBtn').addEventListener('click', downloadSelf);
 
 /* ============================================================
    WIRING

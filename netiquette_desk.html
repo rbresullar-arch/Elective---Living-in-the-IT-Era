@@ -257,7 +257,6 @@ button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
     <p><b>Activity 9 score:</b> points out of 60 (20 drafts × 3), as a percentage. <b>Your first completed run is recorded and locked.</b> Later runs are practice only.</p>
     <p class="lockline" id="lockLine" hidden></p>
     <div class="btnrow"><button class="go" id="startBtn" type="button">Open the desk</button><a class="go home" href="index.html">‹ Activities</a></div>
-    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
   </div>
 </div>
 
@@ -1034,11 +1033,8 @@ function showLock(r){
 function gateCheck(){
   const ua = navigator.userAgent || '';
   const inApp = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua);
-  const android = /Android/i.test(ua);
-  const chrome = /Chrome\//.test(ua) && !/(SamsungBrowser|OPR\/|Edg\/|EdgA\/|Firefox|FxiOS|UCBrowser|MiuiBrowser|HeyTapBrowser|VivoBrowser|; wv\))/i.test(ua);
   let msg = '';
-  if(inApp) msg = 'This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X). Tap ⋮ or ⋯, choose "Open in browser" (Chrome on Android, any browser on iPhone), then open this activity again.';
-  else if(android && !chrome) msg = 'On Android, this activity requires Google Chrome. Open this page in Chrome and try again.';
+  if(inApp) msg = 'This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X). Tap ⋮ or ⋯, choose "Open in browser" (Chrome, Safari, Edge or Firefox), then open this activity again.';
   if(msg){ $('gateMsg').textContent = msg; $('gate').hidden = false; $('startScreen').hidden = true; return false; }
   return true;
 }
@@ -1057,13 +1053,6 @@ $('homeBtn').addEventListener('click', e=>{
 });
 $('endHomeBtn').addEventListener('click', goHub);
 $('muteBtn').addEventListener('click', e=>{ const m=Snd.toggle(); e.currentTarget.textContent = 'Sound: '+(m?'Off':'On'); });
-$('dlBtn').addEventListener('click', async ()=>{
-  let html;
-  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
-  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'netiquette_desk.html';
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-});
 
 S = newState(); hud();
 if(gateCheck()) loadResult().then(showLock);
