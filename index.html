@@ -238,7 +238,7 @@
     text-align: center;
   }
   .name-box label { display: block; font-size: 17px; font-weight: 700; margin-bottom: 12px; }
-  #nameInput {
+  .name-box input[type=text] {
     width: 100%;
     font-size: 17px;
     padding: 10px 12px 7px;
@@ -246,6 +246,22 @@
     border-radius: 14px;
   }
   .name-box .small-btn { margin-top: 16px; background: var(--yellow); }
+  .name-box .field-label { display: block; font-size: 15px; font-weight: 700; margin: 14px 0 6px; text-align: left; }
+  .name-box .field-label:first-child { margin-top: 0; }
+  .auth-tabs { display: flex; gap: 10px; margin-top: 20px; }
+  .auth-tab { flex: 1; background: var(--white); padding: 11px 6px 8px; font-size: 18px; font-weight: 800; cursor: pointer; }
+  .auth-tab.on { background: var(--yellow); }
+  .auth-tabs + .name-box { margin-top: 14px; }
+  .auth-alt { display: block; margin: 12px auto 0; background: none; border: none; font-size: 14px; font-weight: 700; text-decoration: underline; cursor: pointer; color: var(--ink); }
+  .known { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .known[hidden] { display: none; }
+  .known-chip { display: inline-flex; align-items: stretch; border: 3px solid var(--ink); border-radius: 12px; background: var(--cream); overflow: hidden; }
+  .known-chip button { background: none; border: none; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--ink); cursor: pointer; padding: 6px 10px 4px; }
+  .known-chip .kx { border-left: 3px solid var(--ink); padding: 6px 9px 4px; font-weight: 800; }
+  .remember { display: flex; gap: 8px; align-items: center; justify-content: flex-start; font-size: 14px; font-weight: 700; margin-top: 12px; cursor: pointer; text-align: left; }
+  .remember input { width: 20px; height: 20px; margin: 0; accent-color: #000; flex: 0 0 20px; }
+  .logout-row { display: flex; justify-content: center; margin-top: 26px; }
+  .logout-row .small-btn { background: var(--white); font-size: 17px; }
 
   #blockOverlay {
     display: none;
@@ -312,15 +328,15 @@
 
   /* Cloud backup (name + PIN) */
   .name-box .field-label { margin-top: 14px; }
-  #pinInput, .cp-pin { width: 100%; font-size: 22px; letter-spacing: 8px; text-align: center; padding: 8px 12px 5px; border: var(--bw) solid var(--ink); border-radius: 14px; }
+  .pin-in, .cp-pin { width: 100%; font-size: 22px; letter-spacing: 8px; text-align: center; padding: 8px 12px 5px; border: var(--bw) solid var(--ink); border-radius: 14px; }
   .name-hint { font-size: 13px; font-weight: 500; margin-top: 8px; line-height: 1.35; }
   .name-msg { min-height: 18px; font-size: 14px; font-weight: 700; color: #b3261e; margin-top: 10px; line-height: 1.35; }
   .name-msg.ok { color: var(--ink); }
   .name-choice { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-  .name-choice[hidden], #pinWrap[hidden], .cp-pin[hidden], .sched-select[hidden] { display: none; }
+  .name-choice[hidden], .cp-pin[hidden], .sched-select[hidden], .auth-form[hidden] { display: none; }
   .sched-select { width: 100%; font-size: 15px; padding: 9px 10px 6px; border: var(--bw) solid var(--ink); border-radius: 14px; background: var(--white); font-family: inherit; color: var(--ink); }
   #cpSched { margin-bottom: 10px; }
-  #pinInput::placeholder, .cp-pin::placeholder { letter-spacing: normal; font-size: 16px; }
+  .pin-in::placeholder, .cp-pin::placeholder { letter-spacing: normal; font-size: 16px; }
   .cp-pin + .cp-pin { margin-top: 10px; }
   .name-choice .small-btn { font-size: 16px; background: var(--white); }
   .name-choice .small-btn.primary { background: var(--yellow); }
@@ -328,6 +344,8 @@
   #cloudStatus.error { color: #ffd2c7; }
   #cloudPanel { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
   #cloudPanel.show { display: flex; }
+  #logoutPanel { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 55; }
+  #logoutPanel.show { display: flex; }
   .cp-name { text-align: center; font-size: 17px; font-weight: 800; margin: 2px 0 12px; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -347,22 +365,42 @@
   <!-- NAME -->
   <section class="screen active" id="screen-name">
     <div class="box title">Living in the IT Era</div>
-    <form class="box name-box" id="nameForm">
-      <label for="nameInput">Enter your full name to begin</label>
-      <input type="text" id="nameInput" required autocomplete="name">
-      <div id="pinWrap">
-        <label for="pinInput" class="field-label">Your 4-digit PIN</label>
-        <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
-        <div class="name-hint">First time? Make up 4 digits and remember them. Your name and PIN bring your scores back if this phone loses them.</div>
-        <label for="schedInput" class="field-label">Your class schedule</label>
-        <select id="schedInput" class="sched-select"></select>
-      </div>
-      <div class="name-msg" id="nameMsg" role="status"></div>
-      <div class="name-choice" id="nameChoice" hidden>
-        <button type="button" class="box small-btn" id="nameFix">Fix my name</button>
-        <button type="button" class="box small-btn primary" id="nameNew">Yes, start new</button>
-      </div>
-      <button type="submit" class="box small-btn" id="nameGo">Continue</button>
+    <div class="auth-tabs" role="tablist">
+      <button type="button" class="box auth-tab on" id="tabLogin" role="tab" aria-selected="true">Log in</button>
+      <button type="button" class="box auth-tab" id="tabCreate" role="tab" aria-selected="false">Create account</button>
+    </div>
+
+    <!-- LOG IN -->
+    <form class="box name-box auth-form" id="loginForm" novalidate>
+      <label for="liName" class="field-label">Full name</label>
+      <input type="text" id="liName" list="knownNames" autocomplete="off" autocapitalize="words">
+      <div class="known" id="liKnown" hidden></div>
+      <label for="liPin" class="field-label">4-digit PIN</label>
+      <input type="password" class="pin-in" id="liPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+      <label class="remember"><input type="checkbox" id="liRemember" checked> Remember my name on this device</label>
+      <div class="name-hint">Use the same name and PIN on any phone or computer to open your account.</div>
+      <div class="name-msg" id="liMsg" role="status"></div>
+      <button type="submit" class="box small-btn" id="liGo">Log in</button>
+      <button type="button" class="auth-alt" id="liToCreate">First time here? Create an account</button>
+    </form>
+
+    <datalist id="knownNames"></datalist>
+
+    <!-- CREATE ACCOUNT -->
+    <form class="box name-box auth-form" id="createForm" novalidate hidden>
+      <label for="caName" class="field-label">Full name</label>
+      <input type="text" id="caName" list="knownNames" autocomplete="off" autocapitalize="words">
+      <label for="caPin" class="field-label">Make a 4-digit PIN</label>
+      <input type="password" class="pin-in" id="caPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+      <label for="caPin2" class="field-label">Repeat your PIN</label>
+      <input type="password" class="pin-in" id="caPin2" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+      <label for="schedInput" class="field-label">Your class schedule</label>
+      <select id="schedInput" class="sched-select"></select>
+      <label class="remember"><input type="checkbox" id="caRemember" checked> Remember my name on this device</label>
+      <div class="name-hint">Use your real full name. Remember your PIN; your instructor cannot see it.</div>
+      <div class="name-msg" id="caMsg" role="status"></div>
+      <button type="submit" class="box small-btn" id="caGo">Create account</button>
+      <button type="button" class="auth-alt" id="caToLogin">Already have an account? Log in</button>
     </form>
   </section>
 
@@ -376,6 +414,9 @@
     <button type="button" class="box menu-btn coral" data-go="exam">Examination</button>
     <button type="button" class="box menu-btn cream" data-go="reads">Reads</button>
 
+    <div class="logout-row">
+      <button type="button" class="box small-btn" id="logoutBtn">Log out</button>
+    </div>
   </section>
 
   <!-- ACTIVITIES (rows built from ACTIVITIES config) -->
@@ -490,7 +531,8 @@
       <div class="warn"><b>All online records are deleted when the semester ends.</b></div>
 
       <h3>On your device</h3>
-      <p>Your results are also saved in this browser. Clearing your browser data removes this copy; your name and PIN bring it back.</p>
+      <p>Your results are also saved in this browser. Clearing your browser data removes this copy; your name and PIN bring it back. On a shared or borrowed device, tap <b>Log out</b> when you finish.</p>
+      <p>If you tick <b>Remember my name on this device</b>, only your name is kept on this device to fill the name box next time. It is never sent anywhere. Untick it, tap <b>×</b> beside the name, or choose <b>Forget my name</b> when logging out to remove it.</p>
 
       <h3>Your rights</h3>
       <p>Under the Data Privacy Act of 2012 (Republic Act No. 10173), you may ask your instructor to show, correct or delete your records at any time.</p>
@@ -499,6 +541,7 @@
       <ul>
         <li>Use your own real full name.</li>
         <li>Keep your PIN private. Do not use another student's name or PIN.</li>
+        <li>Log out of shared or borrowed devices.</li>
         <li>Do your own work. Each examination accepts one attempt.</li>
         <li>Do not alter scores or tamper with this site.</li>
       </ul>
@@ -557,6 +600,20 @@
       <button type="button" class="box small-btn primary" id="cpOk">Save PIN</button>
     </div>
     <div class="ul-note" style="margin:12px 0 0">Wrong name above? Tell your instructor before saving.</div>
+  </div>
+</div>
+
+<!-- Log out -->
+<div id="logoutPanel" role="dialog" aria-modal="true" aria-labelledby="loTitle">
+  <div class="box ul-card">
+    <strong id="loTitle">Log out of this device?</strong>
+    <div class="ul-note" id="loNote">Your scores are backed up first, then removed from this device. Log in again with your name and PIN on any device.</div>
+    <label class="remember" style="justify-content:center"><input type="checkbox" id="loForget"> Forget my name on this device</label>
+    <div class="ul-status" id="loMsg" role="status"></div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn" id="loCancel">Cancel</button>
+      <button type="button" class="box small-btn primary" id="loOk">Log out</button>
+    </div>
   </div>
 </div>
 
@@ -679,7 +736,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.1';
+const APP_VERSION = '2026.10.11.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1630,7 +1687,9 @@ function cloudAfterEnter() {
   if (!CLOUD_URL || browserBlocked) return;
   let later = null;
   try { later = sessionStorage.getItem(CLOUD_LATER_KEY); } catch (e) {}
-  if (cloudAcct()) {
+  const acct = cloudAcct();
+  if (acct) {
+    ownerSet(acct.id);
     if (!cloudSched() && !later) { cloudOpenPanel('sched'); return; }
     if (Date.now() - cloudLastOk > 15000) cloudSync();
     return;
@@ -1697,7 +1756,7 @@ cp.ok.addEventListener('click', async () => {
   cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
   const res = await cloudSync({ create: true });
   cp.ok.disabled = false;
-  if (res.ok) { cloudClosePanel(); return; }
+  if (res.ok) { ownerSet(cloudNorm(name)); cloudClosePanel(); return; }
   if (res.error === 'pin') {
     cloudForget();
     cp.pin2.hidden = true; cp.pin.value = '';
@@ -1710,67 +1769,310 @@ cp.ok.addEventListener('click', async () => {
   cp.msg.textContent = 'Could not save right now. Try again later.';
 });
 
-/* ---- Name screen: name + PIN, restore from the Sheet when it has a record ---- */
-const nf = {
-  name: document.getElementById('nameInput'),
-  pin: document.getElementById('pinInput'),
-  msg: document.getElementById('nameMsg'),
-  choice: document.getElementById('nameChoice'),
-  go: document.getElementById('nameGo')
+/* ===== Log in / Create account =====
+   Log in   : name + PIN -> 'restore' from the Sheet (never uploads this device's data first).
+   Create   : name + PIN x2 + schedule -> 'save' with create:true on a clean device.
+   Device owner: the account id is kept in localStorage / cookie / IndexedDB / sessionStorage
+   under OWNER_KEY. Leftover data on a device that belongs to someone else is wiped
+   before another account is opened, so records never mix. */
+const OWNER_KEY = 'itict_owner';
+const KNOWN_KEY = 'itict_known_names';
+const KEEP_ON_LOGOUT = ['itict_privacy_ack', 'itict_lite', 'itict_a6_mute', KNOWN_KEY];
+
+/* ---- Names remembered on this device (name only; never sent; never the PIN) ---- */
+function knownGet() {
+  let a = null;
+  try { a = JSON.parse(localStorage.getItem(KNOWN_KEY) || 'null'); } catch (e) {}
+  if (!Array.isArray(a)) { try { a = JSON.parse(getCookie(KNOWN_KEY) || 'null'); } catch (e) {} }
+  return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()).slice(0, 8) : [];
+}
+function knownPut(list) {
+  const v = JSON.stringify(list.slice(0, 8));
+  try { if (list.length) localStorage.setItem(KNOWN_KEY, v); else localStorage.removeItem(KNOWN_KEY); } catch (e) {}
+  if (list.length) document.cookie = KNOWN_KEY + '=' + encodeURIComponent(v) + '; max-age=' + (365 * 86400) + '; path=/; SameSite=Lax';
+  else deleteCookie(KNOWN_KEY);
+  knownRender();
+}
+function knownAdd(name) {
+  const id = cloudNorm(name);
+  knownPut([name].concat(knownGet().filter(x => cloudNorm(x) !== id)));
+}
+function knownRemove(name) {
+  const id = cloudNorm(name);
+  knownPut(knownGet().filter(x => cloudNorm(x) !== id));
+}
+function knownRender() {
+  const list = knownGet();
+  const dl = document.getElementById('knownNames');
+  const box = document.getElementById('liKnown');
+  if (!dl || !box) return;
+  dl.innerHTML = '';
+  list.forEach(n => { const o = document.createElement('option'); o.value = n; dl.append(o); });
+  box.innerHTML = '';
+  box.hidden = !list.length;
+  list.forEach(n => {
+    const chip = el('span', 'known-chip');
+    const pick = el('button', null, n);
+    pick.type = 'button';
+    pick.setAttribute('aria-label', 'Use the name ' + n);
+    pick.addEventListener('click', () => {
+      auth.liName.value = n;
+      auth.liRemember.checked = true;
+      auth.liPin.focus();
+    });
+    const x = el('button', 'kx', '×');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Forget ' + n + ' on this device');
+    x.addEventListener('click', () => {
+      knownRemove(n);
+      if (cloudNorm(auth.liName.value) === cloudNorm(n)) auth.liName.value = '';
+    });
+    chip.append(pick, x);
+    box.append(chip);
+  });
+}
+/* remember or forget, as ticked */
+function knownApply(name, remember) { if (remember) knownAdd(name); else knownRemove(name); }
+
+async function ownerGet() {
+  let v = null;
+  try { v = localStorage.getItem(OWNER_KEY); } catch (e) {}
+  if (!v) v = getCookie(OWNER_KEY);
+  if (!v) { try { v = sessionStorage.getItem(OWNER_KEY); } catch (e) {} }
+  if (!v) v = await idbGet(OWNER_KEY);
+  return v || null;
+}
+async function ownerSet(id) {
+  try { localStorage.setItem(OWNER_KEY, id); } catch (e) {}
+  try { sessionStorage.setItem(OWNER_KEY, id); } catch (e) {}
+  document.cookie = OWNER_KEY + '=' + encodeURIComponent(id) + '; max-age=' + (365 * 86400) + '; path=/; SameSite=Lax';
+  await idbSet(OWNER_KEY, id);
+}
+
+function idbClearAll(dbName) {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open(dbName);
+      req.onsuccess = () => {
+        const db = req.result;
+        const names = Array.from(db.objectStoreNames);
+        if (!names.length) { db.close(); resolve(); return; }
+        try {
+          const tx = db.transaction(names, 'readwrite');
+          names.forEach(n => tx.objectStore(n).clear());
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = tx.onabort = () => { db.close(); resolve(); };
+        } catch (e) { db.close(); resolve(); }
+      };
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    } catch (e) { resolve(); }
+  });
+}
+/* Remove every student record from this device (all four storage layers).
+   Keeps only the Terms & Privacy acknowledgement and sound/display settings. */
+async function wipeDevice() {
+  const keep = k => KEEP_ON_LOGOUT.includes(k);
+  [localStorage, sessionStorage].forEach(st => {
+    try {
+      const ks = [];
+      for (let i = 0; i < st.length; i++) ks.push(st.key(i));
+      ks.forEach(k => { if (k && k.startsWith('itict_') && !keep(k)) st.removeItem(k); });
+    } catch (e) {}
+  });
+  document.cookie.split(';').map(c => c.split('=')[0].trim())
+    .filter(k => k.startsWith('itict_') && !keep(k)).forEach(deleteCookie);
+  const ack = privacyRead();
+  await idbClearAll(IDB_NAME);
+  await idbClearAll(EXAM_IDB_NAME);
+  if (ack) await privacyWrite(ack);
+}
+/* Before opening an account: clear leftovers that are not this account's. */
+async function prepareDeviceFor(id) {
+  const owner = await ownerGet();
+  if (owner !== id) await wipeDevice();
+}
+
+const auth = {
+  tabLogin: document.getElementById('tabLogin'),
+  tabCreate: document.getElementById('tabCreate'),
+  login: document.getElementById('loginForm'),
+  create: document.getElementById('createForm'),
+  liName: document.getElementById('liName'),
+  liPin: document.getElementById('liPin'),
+  liMsg: document.getElementById('liMsg'),
+  liGo: document.getElementById('liGo'),
+  caName: document.getElementById('caName'),
+  caPin: document.getElementById('caPin'),
+  caPin2: document.getElementById('caPin2'),
+  caSched: document.getElementById('schedInput'),
+  caMsg: document.getElementById('caMsg'),
+  caGo: document.getElementById('caGo'),
+  liRemember: document.getElementById('liRemember'),
+  caRemember: document.getElementById('caRemember')
 };
-if (!CLOUD_URL) document.getElementById('pinWrap').hidden = true;
-cloudFillSched(document.getElementById('schedInput'));
+function authMsg(box, text, ok) { box.textContent = text; box.classList.toggle('ok', !!ok); }
+function authTab(which) {
+  const isLogin = which === 'login';
+  auth.login.hidden = !isLogin;
+  auth.create.hidden = isLogin;
+  auth.tabLogin.classList.toggle('on', isLogin);
+  auth.tabCreate.classList.toggle('on', !isLogin);
+  auth.tabLogin.setAttribute('aria-selected', String(isLogin));
+  auth.tabCreate.setAttribute('aria-selected', String(!isLogin));
+  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, '');
+  /* carry the typed name across */
+  if (isLogin && !auth.liName.value) auth.liName.value = auth.caName.value;
+  if (!isLogin && !auth.caName.value) auth.caName.value = auth.liName.value;
+}
+auth.tabLogin.addEventListener('click', () => authTab('login'));
+auth.tabCreate.addEventListener('click', () => authTab('create'));
+document.getElementById('liToCreate').addEventListener('click', () => authTab('create'));
+document.getElementById('caToLogin').addEventListener('click', () => authTab('login'));
+
+cloudFillSched(auth.caSched);
 cloudFillSched(cp.sched);
-qrDefaultSched().then(v => { if (v) document.getElementById('schedInput').value = v; });
+knownRender();
+qrDefaultSched().then(v => { if (v) auth.caSched.value = v; });
 /* changing the schedule in My Score QR updates the instructor's records too */
 document.getElementById('qrSched').addEventListener('change', () => { if (cloudAcct()) { cloudLastOk = 0; cloudSync(); } });
 /* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
 if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
-function nameMsg(text, ok) { nf.msg.textContent = text; nf.msg.classList.toggle('ok', !!ok); }
 
-async function nameSubmit(create) {
-  const name = nf.name.value.replace(/\s+/g, ' ').trim();
-  if (!name) return;
-  if (!CLOUD_URL) { startLocal(name); return; }
-  const pin = nf.pin.value.trim();
-  if (!cloudNameOk(name)) { nameMsg('Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
-  if (!/^\d{4}$/.test(pin)) { nameMsg('Enter a 4-digit PIN.'); nf.pin.focus(); return; }
-  const sched = document.getElementById('schedInput').value;
-  if (!sched) { nameMsg('Choose your class schedule.'); document.getElementById('schedInput').focus(); return; }
-  cloudSetSched(sched);
-  nf.go.disabled = true; nf.choice.hidden = true;
-  nameMsg(create ? 'Creating your record…' : 'Looking for your saved scores…', true);
-  cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
-  localStorage.setItem(NAME_KEY, name);
-  const res = await cloudSync({ create: !!create, noRetry: true });
-  nf.go.disabled = false;
-  if (res.ok) { nameMsg(''); startLocal(localStorage.getItem(NAME_KEY) || name); return; }
+function authClean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
+function authFail() { cloudForget(); try { localStorage.removeItem(NAME_KEY); } catch (e) {} }
+function authOpen(name) {
+  try { sessionStorage.setItem(SCREEN_KEY, 'home'); } catch (e) {}
+  auth.liPin.value = auth.caPin.value = auth.caPin2.value = '';
+  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, '');
+  startLocal(name);
+}
+
+async function loginSubmit() {
+  const name = authClean(auth.liName.value);
+  const pin = auth.liPin.value.trim();
+  if (!name) { authMsg(auth.liMsg, 'Enter your full name.'); auth.liName.focus(); return; }
+  if (!CLOUD_URL) { authOpen(name); return; }
+  if (!cloudNameOk(name)) { authMsg(auth.liMsg, 'Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
+  if (!/^\d{4}$/.test(pin)) { authMsg(auth.liMsg, 'Enter your 4-digit PIN.'); auth.liPin.focus(); return; }
+  const id = cloudNorm(name);
+  const hash = await cloudPinHash(name, pin);
+  auth.liGo.disabled = true;
+  authMsg(auth.liMsg, 'Logging in…', true);
+  const res = await cloudCall({ action: 'restore', id, pin: hash });
+  auth.liGo.disabled = false;
+  if (res.ok) {
+    await prepareDeviceFor(id);
+    const data = res.data || {};
+    const shown = authClean(data.name) || name;
+    cloudSetAcct({ id, pin: hash, name: shown });
+    await ownerSet(id);
+    await applyCloud(data);
+    localStorage.setItem(NAME_KEY, shown);
+    cloudLastOk = 0;
+    knownApply(shown, auth.liRemember.checked);
+    authOpen(shown);
+    return;
+  }
   if (res.error === 'nouser') {
-    cloudForget(); localStorage.removeItem(NAME_KEY);
-    nameMsg(`No saved scores for "${name}". First time here? If you played before, check the spelling of your name.`);
-    nf.choice.hidden = false;
+    authMsg(auth.liMsg, `No account found for "${name}". Check the spelling, or tap Create an account.`);
     return;
   }
   if (res.error === 'pin') {
-    cloudForget(); localStorage.removeItem(NAME_KEY);
-    nameMsg(cloudPinText(res.left) + ' Same name as a classmate? Add your middle initial.');
-    nf.pin.value = ''; nf.pin.focus();
+    authMsg(auth.liMsg, cloudPinText(res.left) + ' Forgot your PIN? Ask your instructor.');
+    auth.liPin.value = ''; auth.liPin.focus();
     return;
   }
-  if (res.error === 'locked') {
-    cloudForget(); localStorage.removeItem(NAME_KEY);
-    nameMsg('Locked: ' + cloudLockText(res.until));
-    return;
-  }
-  /* offline or server trouble: continue on this device, back up later */
-  startLocal(name);
-  setCloudStatus('Offline · scores will back up next time.', true);
+  if (res.error === 'locked') { authMsg(auth.liMsg, 'Locked: ' + cloudLockText(res.until)); return; }
+  authMsg(auth.liMsg, res.error === 'offline'
+    ? 'Logging in needs internet. Connect and try again.'
+    : 'Your instructor\'s records are busy. Wait a moment and try again.');
 }
-document.getElementById('nameForm').addEventListener('submit', (e) => { e.preventDefault(); nameSubmit(false); });
-document.getElementById('nameNew').addEventListener('click', () => nameSubmit(true));
-document.getElementById('nameFix').addEventListener('click', () => {
-  nf.choice.hidden = true; nameMsg(''); nf.name.focus(); nf.name.select();
-});
+
+async function createSubmit() {
+  const name = authClean(auth.caName.value);
+  const pin = auth.caPin.value.trim();
+  const sched = auth.caSched.value;
+  if (!name) { authMsg(auth.caMsg, 'Enter your full name.'); auth.caName.focus(); return; }
+  if (!CLOUD_URL) { authOpen(name); return; }
+  if (!cloudNameOk(name)) { authMsg(auth.caMsg, 'Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
+  if (!/^\d{4}$/.test(pin)) { authMsg(auth.caMsg, 'Make a PIN of exactly 4 digits.'); auth.caPin.focus(); return; }
+  if (auth.caPin2.value.trim() !== pin) { authMsg(auth.caMsg, 'The two PINs are different.'); auth.caPin2.value = ''; auth.caPin2.focus(); return; }
+  if (!sched) { authMsg(auth.caMsg, 'Choose your class schedule.'); auth.caSched.focus(); return; }
+  const id = cloudNorm(name);
+  const hash = await cloudPinHash(name, pin);
+  auth.caGo.disabled = true;
+  authMsg(auth.caMsg, 'Creating your account…', true);
+  await prepareDeviceFor(id);
+  cloudSetAcct({ id, pin: hash, name });
+  cloudSetSched(sched);
+  localStorage.setItem(NAME_KEY, name);
+  const res = await cloudSync({ create: true, noRetry: true });
+  auth.caGo.disabled = false;
+  if (res.ok) {
+    await ownerSet(id);
+    knownApply(localStorage.getItem(NAME_KEY) || name, auth.caRemember.checked);
+    authOpen(localStorage.getItem(NAME_KEY) || name);
+    if (!res.isNew) setCloudStatus('You already had an account · logged in.');
+    return;
+  }
+  authFail();
+  if (res.error === 'pin') {
+    authMsg(auth.caMsg, 'This name already has an account. Use Log in. Same name as a classmate? Add your middle initial.');
+    return;
+  }
+  if (res.error === 'locked') { authMsg(auth.caMsg, 'Locked: ' + cloudLockText(res.until)); return; }
+  authMsg(auth.caMsg, res.error === 'offline'
+    ? 'Creating an account needs internet. Connect and try again.'
+    : 'Could not create the account right now. Try again.');
+}
+auth.login.addEventListener('submit', e => { e.preventDefault(); loginSubmit(); });
+auth.create.addEventListener('submit', e => { e.preventDefault(); createSubmit(); });
+
+/* ===== Log out =====
+   Backs up first; blocked when the backup does not succeed, so no score is lost. */
+const lo = {
+  panel: document.getElementById('logoutPanel'),
+  msg: document.getElementById('loMsg'),
+  ok: document.getElementById('loOk'),
+  cancel: document.getElementById('loCancel')
+};
+function logoutOpen() {
+  lo.msg.textContent = '';
+  document.getElementById('loForget').checked = false;
+  lo.ok.disabled = false;
+  lo.ok.textContent = 'Log out';
+  lo.panel.classList.add('show');
+}
+function logoutClose() { lo.panel.classList.remove('show'); }
+async function logoutRun() {
+  if (CLOUD_URL && !cloudAcct()) {
+    lo.msg.textContent = 'Create your PIN first so your scores are saved online. Tap the status line on Home.';
+    return;
+  }
+  lo.ok.disabled = true; lo.cancel.disabled = true;
+  lo.msg.textContent = 'Backing up your scores…';
+  const res = CLOUD_URL ? await cloudSync({ noRetry: true }) : { ok: true };
+  lo.cancel.disabled = false;
+  if (!res.ok) {
+    lo.ok.disabled = false;
+    lo.ok.textContent = 'Try again';
+    lo.msg.textContent = res.error === 'offline'
+      ? 'Not logged out: you are offline and your latest scores are not backed up. Connect to the internet and try again.'
+      : res.error === 'pin' || res.error === 'locked'
+        ? 'Not logged out: your scores could not be backed up (PIN problem). Ask your instructor.'
+        : 'Not logged out: your scores could not be backed up yet. Wait a moment and try again.';
+    return;
+  }
+  lo.msg.textContent = 'Logging out…';
+  if (document.getElementById('loForget').checked) knownRemove(localStorage.getItem(NAME_KEY) || '');
+  await wipeDevice();
+  try { sessionStorage.setItem('itict_logged_out', '1'); } catch (e) {}
+  location.replace(location.pathname);
+}
+document.getElementById('logoutBtn').addEventListener('click', logoutOpen);
+lo.cancel.addEventListener('click', logoutClose);
+lo.ok.addEventListener('click', logoutRun);
 
 buildLists();
 document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION;
@@ -1847,7 +2149,10 @@ document.getElementById('privacyLink').addEventListener('click', () => privacyOp
   }
   if (!(await privacyAccepted())) await privacyOpen(true);
   const savedName = localStorage.getItem(NAME_KEY);
-  if (savedName) enterActivities(savedName);
+  if (savedName) { enterActivities(savedName); return; }
+  let out = null;
+  try { out = sessionStorage.getItem('itict_logged_out'); sessionStorage.removeItem('itict_logged_out'); } catch (e) {}
+  if (out) authMsg(auth.liMsg, 'Logged out. Your scores are saved online.', true);
 })();
 </script>
 
