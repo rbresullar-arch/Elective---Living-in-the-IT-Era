@@ -1,71 +1,119 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Packet Route: IP and TCP</title>
+<title>Packet Route — Activity 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
 :root{
-  --bg:#ffffff; --ink:#000000; --muted:#555555; --label:#7a0000;
-  --dot:#222222; --ok:#15933a; --bad:#d4151b; --line:#9a9a9a; --panel:#f3f3f3;
-  color-scheme:light;
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme: light;
+  --ink:#111111; --paper:#ffffff; --ground:#f3f1ec; --dot:#dcd8cf;
+  --good:#1f9d55; --bad:#d62828; --gold:#f5b700;
+  --display:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --pixel:"Silkscreen","Courier New",monospace;
+  /* Activity 5 identity: network blue */
+  --hud:#111111; --tag:#4fd3e3;
+  --screen:#dcf4f8; --soft:#eefbfd;
+  --accent:#4fd3e3; --accent-ink:#0b6f80; --bolt:#00b4ff;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --bg:#ffffff; --ink:#000000; }
-}
-:root[data-theme="dark"]{ --bg:#ffffff; --ink:#000000; }
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-*,*::before,*::after{box-sizing:inherit}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.45}
-main{max-width:640px;margin:0 auto;padding:16px 16px 24px}
-header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-h1{font-size:1.4rem;margin:0}
-.stats{display:flex;gap:18px;font-size:1rem}
-.stats b{font-variant-numeric:tabular-nums}
-.task{font-size:1.15rem;margin:12px 0 4px;min-height:1.6em}
-.hint{color:var(--muted);font-size:.9rem;margin:0 0 8px}
-svg{width:100%;height:auto;max-height:66vh;display:block;touch-action:manipulation}
+/* ===== Activity shell — shared with Activities 1–4 and 7–9 (HUD, card, buttons) ===== */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{overscroll-behavior:none}
+body{margin:0;background:var(--ground);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:14px 14px;color:var(--ink);font-family:var(--body);font-size:14px;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:12px 24px;display:flex;flex-direction:column;gap:10px}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto;gap:8px;background:var(--hud);color:#fff;border-radius:18px;padding:10px 12px}
+.brand{font-family:var(--display);font-size:22px;letter-spacing:.5px;line-height:1}
+.brand small{display:block;font-family:var(--pixel);font-size:10px;letter-spacing:1px;color:var(--tag);margin-top:3px}
+.hudbtns{display:flex;gap:6px;align-self:center}
+.pill{background:#fff;color:var(--ink);border:3px solid #fff;border-radius:10px;padding:4px 8px;font-family:var(--pixel);font-size:10px;line-height:1.3;text-decoration:none;white-space:nowrap}
+.pill:active{transform:translateY(1px)}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:#262626;border-radius:10px;padding:5px 8px;min-width:0}
+.stat b{display:block;font-family:var(--pixel);font-size:17px;font-weight:400;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat span{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#bdbdbd}
+.stat b span{font:inherit;color:inherit;letter-spacing:inherit;text-transform:none}
+
+/* Screen + well */
+.screen{border:4px solid var(--ink);border-radius:28px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--screen)}
+.eyebrow{font-family:var(--pixel);font-size:10px;letter-spacing:1px;margin:0}
+.well{background:var(--paper);border:4px solid var(--ink);border-radius:22px;padding:8px}
+
+/* Overlay card */
+.overlay{position:fixed;inset:0;background:rgba(17,17,17,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}
+.overlay.show{display:flex}
+.card{background:var(--paper);border:4px solid var(--ink);border-radius:26px;max-width:560px;width:100%;padding:20px 22px;display:flex;flex-direction:column;gap:12px;max-height:100%;overflow-y:auto;text-align:left}
+.card h1{font-family:var(--display);font-weight:400;font-size:34px;margin:0;line-height:1;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--accent-ink)}
+.card p{margin:0;line-height:1.5}
+.card ol{margin:0;padding-left:20px;line-height:1.55}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.go{background:var(--accent);border:4px solid var(--ink);border-radius:16px;padding:10px 22px;font-family:var(--display);font-size:24px;letter-spacing:.5px;color:var(--ink);text-decoration:none;display:inline-block;line-height:1.2}
+.go.home{background:#fff}
+.go:active{transform:translateY(2px)}
+.go:disabled{opacity:.45;cursor:default;transform:none}
+.bigscore{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bigscore b{font-family:var(--display);font-size:56px;line-height:1;font-weight:400}
+.bigscore span{font-family:var(--pixel);font-size:12px}
+.scoreline{background:var(--soft);border:3px solid var(--ink);border-radius:12px;padding:8px 12px}
+.note{font-size:12px;color:#555}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.card h1{font-size:30px}.bigscore b{font-size:46px}}
+
+/* ===== Activity 5: packet route ===== */
+.task{font-family:var(--display);font-weight:400;font-size:21px;line-height:1.15;margin:0;letter-spacing:.3px}
+.hint{font-size:12.5px;color:#33545b;margin:0}
+svg{width:100%;height:auto;max-height:62vh;display:block;touch-action:manipulation}
 .node{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .node text{pointer-events:none;user-select:none;-webkit-user-select:none}
 .node .hit{fill:transparent}
-.node:active .hit{fill:rgba(0,0,0,.06)}
-.node text.lbl{font-size:30px;font-weight:700;fill:var(--label);text-anchor:middle;font-family:"Segoe UI",system-ui,sans-serif}
-.node text.tag{font-size:13px;fill:var(--muted);text-anchor:middle}
-.node .ring{fill:none;stroke:var(--ink);stroke-width:2.5;opacity:0}
+.node:active .hit{fill:rgba(79,211,227,.18)}
+.node text.lbl{font-family:var(--display);font-size:30px;fill:var(--ink);text-anchor:middle}
+.node text.tag{font-family:var(--pixel);font-size:14px;fill:var(--accent-ink);text-anchor:middle;letter-spacing:1px}
+.node .ring{fill:none;stroke:var(--bolt);stroke-width:4;opacity:0}
 .node.sel .ring{opacity:1}
 .node:focus{outline:none}
 .node:focus-visible .ring{opacity:1;stroke-dasharray:4 3}
-.msg{min-height:1.4em;margin:6px 0 0;font-size:.95rem}
-.msg.err{color:var(--bad)}
-.log{background:var(--panel);border-radius:4px;padding:10px 12px;margin-top:10px;max-height:150px;overflow:auto;font-size:.92rem}
+.msg{font-family:var(--pixel);font-size:12px;letter-spacing:.5px;margin:0;min-height:1.3em;background:var(--ink);color:var(--tag);border-radius:10px;padding:7px 10px}
+.msg.err{color:#ff8a80}
+.log{background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:8px 12px;max-height:132px;overflow:auto;font-size:13px;line-height:1.45}
 .log p{margin:0 0 4px}
-.log p:first-child{font-weight:600}
-.results{display:none;margin-top:14px}
-.results table{border-collapse:collapse;width:100%;font-size:1.05rem}
-.results td,.results th{padding:6px 8px;border-bottom:1px solid #ccc;text-align:left}
+.log p:first-child{font-weight:700}
+.bar{position:sticky;bottom:0;padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+#main-btn{width:100%;font-size:26px}
+.results table{border-collapse:collapse;width:100%;font-size:14px}
+.results td,.results th{padding:5px 6px;border-bottom:2px solid #e3e3e3;text-align:left}
+.results th{font-family:var(--pixel);font-size:9.5px;font-weight:400;letter-spacing:1px}
 .results td:last-child,.results th:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.results tr.total td{font-weight:700;border-bottom:none;border-top:2px solid var(--ink)}
-.bar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(8px + env(safe-area-inset-bottom,0px));margin-top:12px}
-#main-btn{width:100%;font:inherit;font-size:1.25rem;font-weight:700;padding:14px;border:none;border-radius:4px;background:var(--ink);color:#fff;cursor:pointer}
-#main-btn:disabled{background:#888;cursor:default}
-#main-btn:focus-visible{outline:3px solid #7aa7ff;outline-offset:3px}
-@media (max-width:600px){
-  main{padding:10px 8px 16px}
-  h1{font-size:1.2rem}
-  .task{font-size:1.05rem}
-  svg{max-height:none}
-  #main-btn{padding:16px;font-size:1.2rem}
-}
-.summary{margin:12px 0 0;padding:12px;background:var(--panel);border-radius:4px;font-size:1rem}
+.results tr.total td{font-weight:700;border-bottom:none;border-top:3px solid var(--ink)}
 .summary p{margin:0 0 4px}
-.summary .big{font-size:1.5rem;font-weight:700}
-.back{display:inline-block;margin-top:12px;color:var(--ink);font-weight:600}
-body.done .play{display:none}
-body.done .results{display:block}
+body.done #resultOverlay{display:flex}
 </style>
+<script>
+/* Instructor unlock (set from the hub crest). Opens this page's gate when the
+   instructor unlocked exactly this activity, or skipped the activity before it.
+   Never opens an activity that was itself marked Skipped. */
+function itictGateBypass(n){
+  try{
+    var s=null;
+    try{ s=localStorage.getItem('itict_unlock'); }catch(e){}
+    if(!s){ var m=document.cookie.match(/(?:^|; )itict_unlock=([^;]*)/); if(m) s=decodeURIComponent(m[1]); }
+    if(!s){ try{ s=sessionStorage.getItem('itict_unlock'); }catch(e){} }
+    if(!s) return false;
+    var u=JSON.parse(s), sk=Array.isArray(u.skipped)?u.skipped:[];
+    if(sk.indexOf(n)>=0) return false;
+    return u.through===n || sk.indexOf(n-1)>=0;
+  }catch(e){ return false; }
+}
+</script>
 <script id="itictCloudPush">
 /* Cloud backup: sends a result to the instructor's Google Sheet the moment this
    page saves it. Works only after the student created a PIN on the hub
@@ -119,30 +167,79 @@ body.done .results{display:block}
 </script>
 </head>
 <body>
-<main>
-  <header>
-    <h1>Packet Route</h1>
-    <div class="stats"><span>Puzzle <b id="puzzle-no">0</b>/5</span><span>Time <b id="timer">0:00.0</b></span></div>
+
+<div class="app">
+  <header class="hud">
+    <div class="brand">Packet Route<small>ACTIVITY 5 · IP AND TCP</small></div>
+    <div class="hudbtns"><a class="pill" href="index.html" id="homeLink">Home</a><button class="pill" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat"><b><span id="puzzle-no">0</span>/5</b><span>Puzzle</span></div>
+      <div class="stat"><b id="timer">0:00.0</b><span>Time</span></div>
+      <div class="stat"><b id="resends">0</b><span>Resends</span></div>
+    </div>
   </header>
 
-  <p class="task" id="task">Press Start to open a connection.</p>
-
-  <div class="play">
-    <p class="hint" id="hint"></p>
-    <svg id="board" viewBox="0 0 540 440" role="group" aria-label="Network grid"></svg>
+  <main class="screen" id="stage">
+    <p class="eyebrow">Router board · bottom to top</p>
+    <p class="task" id="task">Press Start to open a connection.</p>
+    <div class="play">
+      <p class="hint" id="hint"></p>
+      <div class="well"><svg id="board" viewBox="0 0 540 440" role="group" aria-label="Network grid"></svg></div>
+    </div>
     <p class="msg" id="msg" aria-live="polite"></p>
     <div class="log" id="log" aria-live="polite"><p>IP moves the packet hop by hop. TCP waits for an ACK and resends until the packet arrives.</p></div>
+  </main>
+
+  <div class="bar" id="playBar"><button id="main-btn" class="go" type="button">Start</button></div>
+</div>
+
+<!-- START -->
+<div class="overlay show" id="startOverlay">
+  <div class="card">
+    <h1>Route the <em>packet</em></h1>
+    <p>Data crosses a network in small packets. <b>IP</b> moves each packet from router to router. <b>TCP</b> waits for an <b>ACK</b> (acknowledgement) and resends the packet if it does not arrive.</p>
+    <ol>
+      <li>Read the task: send the packet <b>from</b> one node <b>to</b> another.</li>
+      <li>Tap one node in every row, bottom to top, to build the path. Then press <b>Send</b>.</li>
+      <li>Green hops are right; red hops are wrong. A wrong path gets no ACK: fix it and press <b>Resend</b>.</li>
+      <li>5 puzzles. Each solved puzzle adds a router row.</li>
+    </ol>
+    <p><b>Activity 5 score:</b> finish all 5 in 2:00 or faster for 100%. Each full 3 seconds over 2:00 costs 1%. Your first run is recorded; each later run that beats it adds +1%.</p>
+    <p class="scoreline" id="prevLine" hidden></p>
+    <div class="btnrow"><button class="go" type="button" id="startBtn">Start</button><a class="go home" href="index.html">‹ Activities</a></div>
   </div>
+</div>
 
-  <section class="results" aria-live="polite">
-    <h2>Results</h2>
-    <table><thead><tr><th>Puzzle</th><th>Time</th></tr></thead><tbody id="results-body"></tbody></table>
-    <div class="summary" id="summary"></div>
-    <a class="back" href="index.html">‹ Back to activities</a>
-  </section>
+<!-- RESULT -->
+<div class="overlay" id="resultOverlay">
+  <div class="card results" aria-live="polite">
+    <h1>All packets <em>delivered</em></h1>
+    <div class="bigscore"><b id="resScore">0%</b><span>RECORDED SCORE</span></div>
+    <p class="scoreline">This run: <b id="resRun">0:00.0</b></p>
+    <table><thead><tr><th>PUZZLE</th><th>TIME</th></tr></thead><tbody id="results-body"></tbody></table>
+    <div class="summary note" id="summary"></div>
+    <div class="btnrow"><button class="go" type="button" id="retryBtn">Retry</button><a class="go home" href="index.html">‹ Activities</a></div>
+    <p class="note">Your score is saved on this device and backed up to your instructor's records.</p>
+  </div>
+</div>
 
-  <div class="bar"><button id="main-btn" type="button">Start</button></div>
-</main>
+<!-- BROWSER GATE -->
+<div class="overlay" id="blockOverlay">
+  <div class="card">
+    <h1>Open this in your <em>browser</em></h1>
+    <p><b>This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X).</b><br>Tap the <b>⋮</b> or <b>•••</b> menu, choose <b>"Open in Browser"</b>, then open this activity again.</p>
+    <div class="btnrow"><a class="go home" href="index.html">‹ Activities</a></div>
+  </div>
+</div>
+
+<!-- LOCKED -->
+<div class="overlay" id="lockedOverlay">
+  <div class="card">
+    <h1>Finish <em>Activity 4</em> first</h1>
+    <p>Activity 5 opens once your Activity 4 (Binary Decoder) result is saved on this device.</p>
+    <div class="btnrow"><a class="go" href="binary_activity.html">Go to Activity 4</a><a class="go home" href="index.html">‹ Activities</a></div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -151,7 +248,7 @@ body.done .results{display:block}
   const MIDDLE = [['E','F','G','H'],['1','2','3','4'],['I','J','K','L'],['5','6','7','8'],['M','N','O','P'],['Q','R','S','T']];
   const XS = [70, 200, 330, 460];
   const GAP = 92, TOP = 70, BOTTOM = 52;
-  const COLORS = { dot:'#222222', ok:'#15933a', bad:'#d4151b', bolt:'#00b4ff', wire:'#9a9a9a' };
+  const COLORS = { dot:'#111111', ok:'#1f9d55', bad:'#d62828', bolt:'#00b4ff', wire:'#9fb4ba' };
   const FADE_MS = 1500;
   const TOTAL = 5;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -220,6 +317,56 @@ body.done .results{display:block}
   const timerEl = document.getElementById('timer');
   const puzzleNoEl = document.getElementById('puzzle-no');
   const resultsBody = document.getElementById('results-body');
+  const resendsEl = document.getElementById('resends');
+  const bar = document.getElementById('playBar');
+
+  /* ===== Send chirp (Web Audio; no files). Sound On/Off is remembered on this device. ===== */
+  const MUTE_KEY = 'itict_a5_mute';
+  const Snd = (() => {
+    let ctx = null, muted = false;
+    try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+    function init() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try { ctx = new AC(); } catch (e) { ctx = null; return; }
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+    }
+    function tone(f, f2, t, dur, vol, type) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t + dur + 0.03);
+    }
+    /* rising two-step chirp: the packet leaves */
+    function chirp() {
+      init();
+      if (!ctx || muted) return;
+      const t = ctx.currentTime + 0.01;
+      tone(880, 1760, t, 0.09, 0.22, 'square');
+      tone(1320, 2640, t + 0.07, 0.11, 0.18, 'square');
+      tone(1760, 3520, t + 0.07, 0.11, 0.06, 'sine');
+    }
+    function toggle() {
+      muted = !muted;
+      try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (e) {}
+      return muted;
+    }
+    document.addEventListener('visibilitychange', () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); });
+    return { init, chirp, toggle, isMuted: () => muted };
+  })();
+  const muteBtn = document.getElementById('muteBtn');
+  muteBtn.textContent = 'Sound: ' + (Snd.isMuted() ? 'Off' : 'On');
+  muteBtn.addEventListener('click', () => {
+    const m = Snd.toggle();
+    muteBtn.textContent = 'Sound: ' + (m ? 'Off' : 'On');
+    if (!m) Snd.chirp();
+  });
 
   const el = (tag, attrs = {}, parent) => {
     const e = document.createElementNS(NS, tag);
@@ -306,6 +453,8 @@ body.done .results{display:block}
 
   function newGame() {
     document.body.classList.remove('done');
+    document.body.classList.add('playing');
+    resendsEl.textContent = '0';
     puzzles = Array.from({ length: TOTAL }, (_, n) => layersFor(n).map(rand));
     idx = 0; times = []; runResends = 0;
     gameStart = performance.now();
@@ -361,6 +510,7 @@ body.done .results{display:block}
       return;
     }
     const val = choice.join('');
+    Snd.chirp();
     phase = 'anim'; setButton('Sending…', false);
     attempts++;
     resetBoard();
@@ -392,6 +542,7 @@ body.done .results{display:block}
     } else {
       addLog('Attempt ' + attempts + ': ' + val + '. ' + wrong + (wrong === 1 ? ' hop' : ' hops') + ' wrong. No ACK. Retransmit.');
       runResends++;
+      resendsEl.textContent = runResends;
       phase = 'ready';
       setButton('Resend', true);
     }
@@ -434,11 +585,11 @@ body.done .results{display:block}
       await saveRecord(rec);
     }
 
+    document.getElementById('resScore').textContent = rec.score + '%';
+    document.getElementById('resRun').textContent = fmt(total) + ' = ' + runScore + '%';
     const sum = document.getElementById('summary');
     sum.innerHTML = '';
     const line = (t, cls) => { const p = document.createElement('p'); p.textContent = t; if (cls) p.className = cls; sum.appendChild(p); };
-    line('Recorded score: ' + rec.score + '%', 'big');
-    line('This run: ' + fmt(total) + ' = ' + runScore + '%');
     if (locked) line('Already at 100%. Practice run — not recorded.');
     else if (!prev) line('First score saved. Beat ' + runScore + '% on a retry to add +1%.');
     else if (bonusEarned) line('Beat your first score (' + rec.firstScore + '%). +1% added.');
@@ -449,6 +600,7 @@ body.done .results{display:block}
     resultsBody.innerHTML = times.map((t, i) => '<tr><td>Puzzle ' + (i + 1) + ' (' + layersFor(i).length + ' layers)</td><td>' + fmt(t) + '</td></tr>').join('')
       + '<tr class="total"><td>Total</td><td>' + fmt(total) + '</td></tr>';
     taskEl.textContent = 'All 5 packets delivered.';
+    document.body.classList.remove('playing');
     document.body.classList.add('done');
     setButton('Retry', true);
   }
@@ -458,9 +610,37 @@ body.done .results{display:block}
   hintEl.textContent = 'Press Start. Each solved puzzle adds a router row.';
 
   btn.addEventListener('click', () => {
+    Snd.init();
     if (phase === 'idle' || phase === 'done') newGame();
     else if (phase === 'ready') send();
   });
+
+  const show = id => document.getElementById(id).classList.add('show');
+  const hide = id => document.getElementById(id).classList.remove('show');
+  function start() { Snd.init(); hide('startOverlay'); newGame(); }
+  document.getElementById('startBtn').addEventListener('click', start);
+  document.getElementById('retryBtn').addEventListener('click', () => { Snd.init(); newGame(); });
+
+  /* ===== Gates: in-app browsers blocked; opens after Activity 4 (or instructor unlock) ===== */
+  const inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Messenger|Instagram|Line\/|MicroMessenger|TikTok|musical_ly|Bytedance|Twitter|GSA\/)/i.test(navigator.userAgent || '');
+  async function activity4Done() {
+    try { if (localStorage.getItem('itict_binary_result')) return true; } catch (e) {}
+    if (getCookie('itict_binary_result')) return true;
+    return !!(await idbGet('binary_result'));
+  }
+  (async () => {
+    if (inApp) { hide('startOverlay'); show('blockOverlay'); bar.hidden = true; return; }
+    if (!(await activity4Done()) && !itictGateBypass(5)) { hide('startOverlay'); show('lockedOverlay'); bar.hidden = true; return; }
+    const prev = await loadRecord();
+    if (prev && prev.score != null) {
+      const p = document.getElementById('prevLine');
+      p.textContent = prev.score >= 100
+        ? 'Your recorded score: 100%. Further runs are practice only.'
+        : 'Your recorded score: ' + prev.score + '%. Beat your first score (' + prev.firstScore + '%) on a retry to add +1%.';
+      p.hidden = false;
+      document.getElementById('startBtn').textContent = 'Play again';
+    }
+  })();
 
 })();
 </script>

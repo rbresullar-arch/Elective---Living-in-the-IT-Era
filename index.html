@@ -736,7 +736,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.4';
+const APP_VERSION = '2026.10.11.5';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1777,7 +1777,7 @@ cp.ok.addEventListener('click', async () => {
    before another account is opened, so records never mix. */
 const OWNER_KEY = 'itict_owner';
 const KNOWN_KEY = 'itict_known_names';
-const KEEP_ON_LOGOUT = ['itict_privacy_ack', 'itict_lite', 'itict_a6_mute', KNOWN_KEY];
+const KEEP_ON_LOGOUT = ['itict_privacy_ack', 'itict_lite', 'itict_a5_mute', 'itict_a6_mute', KNOWN_KEY];
 
 /* ---- Names remembered on this device (name only; never sent; never the PIN) ---- */
 function knownGet() {
