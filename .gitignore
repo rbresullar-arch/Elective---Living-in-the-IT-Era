@@ -1,0 +1,3 @@
+tools/*.db
+tools/*.csv
+__pycache__/

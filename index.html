@@ -326,7 +326,7 @@
   .qr-msg { font-size: 14px; font-weight: 700; color: #b3261e; min-height: 18px; margin-bottom: 6px; }
   .app-version { max-width: 420px; margin: 26px auto 0; text-align: center; font-size: 12px; font-weight: 500; color: rgba(0,0,0,.6); letter-spacing: .3px; }
 
-  /* Cloud backup (name + PIN) */
+  /* Cloud backup (class code + PIN) */
   .name-box .field-label { margin-top: 14px; }
   .pin-in, .cp-pin { width: 100%; font-size: 22px; letter-spacing: 8px; text-align: center; padding: 8px 12px 5px; border: var(--bw) solid var(--ink); border-radius: 14px; }
   .name-hint { font-size: 13px; font-weight: 500; margin-top: 8px; line-height: 1.35; }
@@ -346,7 +346,14 @@
   #cloudPanel.show { display: flex; }
   #logoutPanel { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 55; }
   #logoutPanel.show { display: flex; }
-  .cp-name { text-align: center; font-size: 17px; font-weight: 800; margin: 2px 0 12px; }
+  #codePanel { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 60; }
+  #codePanel.show { display: flex; }
+  .code-big { text-align: center; font-size: 36px; font-weight: 800; letter-spacing: 2px; margin: 2px 0 12px; }
+  .qr-card input[type=text] { width: 100%; font-size: 16px; padding: 9px 10px 6px; border: var(--bw) solid var(--ink); border-radius: 14px; margin-bottom: 6px; font-family: inherit; }
+  .qr-card select:disabled { opacity: .75; }
+  .qr-note { font-size: 12px; font-weight: 500; text-align: left; margin-bottom: 10px; line-height: 1.35; }
+  .qr-code-line { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  #qrMake { width: 100%; margin-bottom: 10px; background: var(--yellow); }
 
   @media (prefers-reduced-motion: reduce) {
     .panel { transition: none; }
@@ -372,35 +379,52 @@
 
     <!-- LOG IN -->
     <form class="box name-box auth-form" id="loginForm" novalidate>
-      <label for="liName" class="field-label">Full name</label>
-      <input type="text" id="liName" list="knownNames" autocomplete="off" autocapitalize="words">
+      <label for="liCode" class="field-label">Class code</label>
+      <input type="text" id="liCode" list="knownCodes" inputmode="numeric" autocomplete="off" placeholder="e.g. 12030-07">
       <div class="known" id="liKnown" hidden></div>
-      <label for="liPin" class="field-label">4-digit PIN</label>
-      <input type="password" class="pin-in" id="liPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
-      <label class="remember"><input type="checkbox" id="liRemember"> Remember my name on this device</label>
-      <div class="name-hint">Use the same name and PIN on any phone or computer to open your account.</div>
+      <label for="liPin" class="field-label">6-digit PIN</label>
+      <input type="password" class="pin-in" id="liPin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+      <label class="remember"><input type="checkbox" id="liRemember"> Remember my code on this device</label>
+      <div class="name-hint">Use the same class code and PIN on any phone or computer to open your account.</div>
       <div class="name-msg" id="liMsg" role="status"></div>
       <button type="submit" class="box small-btn" id="liGo">Log in</button>
       <button type="button" class="auth-alt" id="liToCreate">First time here? Create an account</button>
+      <button type="button" class="auth-alt" id="liToConvert">Had a name account before? Convert it</button>
     </form>
 
-    <datalist id="knownNames"></datalist>
+    <datalist id="knownCodes"></datalist>
 
     <!-- CREATE ACCOUNT -->
     <form class="box name-box auth-form" id="createForm" novalidate hidden>
-      <label for="caName" class="field-label">Full name</label>
-      <input type="text" id="caName" list="knownNames" autocomplete="off" autocapitalize="words">
-      <label for="caPin" class="field-label">Make a 4-digit PIN</label>
-      <input type="password" class="pin-in" id="caPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
-      <label for="caPin2" class="field-label">Repeat your PIN</label>
-      <input type="password" class="pin-in" id="caPin2" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
       <label for="schedInput" class="field-label">Your class schedule</label>
       <select id="schedInput" class="sched-select"></select>
-      <label class="remember"><input type="checkbox" id="caRemember"> Remember my name on this device</label>
-      <div class="name-hint">Use your real full name. Remember your PIN; your instructor cannot see it.</div>
+      <label for="caPin" class="field-label">Make a 6-digit PIN</label>
+      <input type="password" class="pin-in" id="caPin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+      <label for="caPin2" class="field-label">Repeat your PIN</label>
+      <input type="password" class="pin-in" id="caPin2" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+      <label class="remember"><input type="checkbox" id="caRemember"> Remember my code on this device</label>
+      <div class="name-hint">You get a class code after this step. Write the code down and remember your PIN; your instructor cannot see your PIN. Your name is not asked here.</div>
       <div class="name-msg" id="caMsg" role="status"></div>
       <button type="submit" class="box small-btn" id="caGo">Create account</button>
-      <button type="button" class="auth-alt" id="caToLogin">Already have an account? Log in</button>
+      <button type="button" class="auth-alt" id="caToLogin">Already have a class code? Log in</button>
+    </form>
+
+    <!-- CONVERT AN OLD NAME ACCOUNT -->
+    <form class="box name-box auth-form" id="convertForm" novalidate hidden>
+      <div class="name-hint" style="margin-top:0">Accounts now use a class code instead of your name. Confirm your old account once. Your name is then deleted from the online records; your scores stay.</div>
+      <label for="cvName" class="field-label">Full name (as in your old account)</label>
+      <input type="text" id="cvName" autocomplete="off" autocapitalize="words">
+      <label for="cvOld" class="field-label">Old 4-digit PIN</label>
+      <input type="password" class="pin-in" id="cvOld" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off">
+      <label for="cvPin" class="field-label">New 6-digit PIN</label>
+      <input type="password" class="pin-in" id="cvPin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+      <label for="cvPin2" class="field-label">Repeat new PIN</label>
+      <input type="password" class="pin-in" id="cvPin2" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+      <select id="cvSched" class="sched-select" style="margin-top:14px" hidden></select>
+      <label class="remember"><input type="checkbox" id="cvRemember"> Remember my code on this device</label>
+      <div class="name-msg" id="cvMsg" role="status"></div>
+      <button type="submit" class="box small-btn" id="cvGo">Convert account</button>
+      <button type="button" class="auth-alt" id="cvToLogin">Back to Log in</button>
     </form>
   </section>
 
@@ -504,15 +528,18 @@
 
       <h3>What is kept online</h3>
       <ul>
-        <li>Your <b>full name</b> as you typed it.</li>
+        <li>Your <b>class code</b> (for example 12030-07), given when you create your account.</li>
         <li>Your <b>class schedule</b>.</li>
         <li>Your <b>activity and examination results</b>: scores, answers, and start and finish times.</li>
-        <li>A <b>scrambled code made from your PIN</b>. Your 4-digit PIN itself never leaves your device.</li>
+        <li>A <b>scrambled code made from your PIN</b>. Your 6-digit PIN itself never leaves your device.</li>
         <li>A <b>backup log</b>: the time and result of each backup.</li>
       </ul>
 
       <h3>What is not collected</h3>
-      <p>No student ID, email, phone number, address, location, photos, contacts or device details.</p>
+      <p>No name, student ID, email, phone number, address, location, photos, contacts or device details. Any name typed in an activity or examination is removed before the online backup.</p>
+
+      <h3>Your name</h3>
+      <p>Your name is never stored online. You type it only when you make <b>My Score QR</b>. It goes into the QR image, which your instructor scans in class to match your class code to your name. That match is kept only on your instructor's own computer, offline.</p>
 
       <h3>Where it is kept and who sees it</h3>
       <p>In a Google Sheet in your instructor's Google account, protected by Google's security. Only your instructor can view it.</p>
@@ -531,16 +558,16 @@
       <div class="warn"><b>All online records are deleted when the semester ends.</b></div>
 
       <h3>On your device</h3>
-      <p>Your results are also saved in this browser. Clearing your browser data removes this copy; your name and PIN bring it back. On a shared or borrowed device, tap <b>Log out</b> when you finish.</p>
-      <p>If you tick <b>Remember my name on this device</b>, only your name is kept on this device to fill the name box next time. It is never sent anywhere. Untick it, tap <b>×</b> beside the name, or choose <b>Forget my name</b> when logging out to remove it.</p>
+      <p>Your results are also saved in this browser. Clearing your browser data removes this copy; your class code and PIN bring it back. On a shared or borrowed device, tap <b>Log out</b> when you finish.</p>
+      <p>If you tick <b>Remember my code on this device</b>, only your class code is kept on this device to fill the code box next time. Untick it, tap <b>×</b> beside the code, or choose <b>Forget my code</b> when logging out to remove it.</p>
 
       <h3>Your rights</h3>
       <p>Under the Data Privacy Act of 2012 (Republic Act No. 10173), you may ask your instructor to show, correct or delete your records at any time.</p>
 
       <h3>Terms of use</h3>
       <ul>
-        <li>Use your own real full name.</li>
-        <li>Keep your PIN private. Do not use another student's name or PIN.</li>
+        <li>Use your own real full name in your Score QR.</li>
+        <li>Keep your PIN private. Do not use another student's class code or PIN.</li>
         <li>Log out of shared or borrowed devices.</li>
         <li>Do your own work. Each examination accepts one attempt.</li>
         <li>Do not alter scores or tamper with this site.</li>
@@ -557,6 +584,10 @@
 <div id="qrPanel" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
   <div class="box qr-card">
     <strong id="qrTitle">My Score QR</strong>
+    <div class="qr-code-line" id="qrCodeLine"></div>
+    <label for="qrName">Your full name</label>
+    <input type="text" id="qrName" autocomplete="off" autocapitalize="words">
+    <div class="qr-note">Your name goes only into this QR for your instructor's scanner. It is not saved on this device or sent online.</div>
     <label for="qrSched">Class schedule</label>
     <select id="qrSched">
       <option value="">Choose your schedule</option>
@@ -574,6 +605,7 @@
       <option value="06119">06119 · Tue / Mon 10:30-12:30 PM / 05:00-06:30 PM</option>
       <option value="22012">22012 · MWF 01:00-02:00 PM</option>
     </select>
+    <button type="button" class="box small-btn" id="qrMake">Make QR</button>
     <div class="qr-msg" id="qrMsg"></div>
     <div class="qr-box" id="qrBox"></div>
     <div class="qr-cap" id="qrCap"></div>
@@ -588,18 +620,28 @@
 <!-- Instructor unlock panel -->
 <div id="cloudPanel" role="dialog" aria-modal="true" aria-labelledby="cpTitle">
   <div class="box ul-card">
-    <strong id="cpTitle">Create your PIN</strong>
-    <div class="ul-note" id="cpNote">Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor's records so they can come back.</div>
-    <div class="cp-name" id="cpName"></div>
+    <strong id="cpTitle">Get your class code</strong>
+    <div class="ul-note" id="cpNote"></div>
     <select id="cpSched" class="sched-select"></select>
-    <input type="password" class="cp-pin" id="cpPin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="4 digits">
-    <input type="password" class="cp-pin" id="cpPin2" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="off" placeholder="Repeat PIN">
+    <input type="password" class="cp-pin" id="cpPin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" placeholder="New 6-digit PIN">
+    <input type="password" class="cp-pin" id="cpPin2" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" placeholder="Repeat PIN">
     <div class="ul-msg" id="cpMsg"></div>
     <div class="ul-row">
       <button type="button" class="box small-btn" id="cpLater">Not now</button>
-      <button type="button" class="box small-btn primary" id="cpOk">Save PIN</button>
+      <button type="button" class="box small-btn primary" id="cpOk">Get my code</button>
     </div>
-    <div class="ul-note" style="margin:12px 0 0">Wrong name above? Tell your instructor before saving.</div>
+  </div>
+</div>
+
+<!-- Class code reveal -->
+<div id="codePanel" role="dialog" aria-modal="true" aria-labelledby="cdTitle">
+  <div class="box ul-card">
+    <strong id="cdTitle">Your class code</strong>
+    <div class="code-big" id="cdCode"></div>
+    <div class="ul-note">Write this code down. You need it with your 6-digit PIN to log in on another phone or computer.</div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn primary" id="cdOk">I wrote it down</button>
+    </div>
   </div>
 </div>
 
@@ -607,8 +649,8 @@
 <div id="logoutPanel" role="dialog" aria-modal="true" aria-labelledby="loTitle">
   <div class="box ul-card">
     <strong id="loTitle">Log out of this device?</strong>
-    <div class="ul-note" id="loNote">Your scores are backed up first, then removed from this device. Log in again with your name and PIN on any device.</div>
-    <label class="remember" style="justify-content:center"><input type="checkbox" id="loForget"> Forget my name on this device</label>
+    <div class="ul-note" id="loNote">Your scores are backed up first, then removed from this device. Log in again with your class code and PIN on any device.</div>
+    <label class="remember" style="justify-content:center"><input type="checkbox" id="loForget"> Forget my code on this device</label>
     <div class="ul-status" id="loMsg" role="status"></div>
     <div class="ul-row">
       <button type="button" class="box small-btn" id="loCancel">Cancel</button>
@@ -736,7 +778,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.5';
+const APP_VERSION = '2026.10.11.6';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1118,8 +1160,9 @@ function refreshAll() {
   EXAMS.forEach(refreshExam);
 }
 
+function greetText(id) { return isCode(id) ? `Class code ${id}` : `Hello, ${id}!`; }
 function enterActivities(name) {
-  document.getElementById('greeting').textContent = `Hello, ${name}!`;
+  document.getElementById('greeting').textContent = greetText(name);
   let last = 'home';
   try { last = sessionStorage.getItem(SCREEN_KEY) || 'home'; } catch (e) {}
   if (!SCREEN_COLORS[last] || last === 'name') last = 'home';
@@ -1461,8 +1504,9 @@ ul.panel.addEventListener('click', e => { if (e.target === ul.panel) ulCloseAll(
 
 /* ===== Score QR =====
    Same encoding as the exam QRs: JSON -> XOR (key "2026") -> Base64.
-   Payload: { v:1, t:"act", n:name, c:schedule, a:"1:80,2:90,5:S", at:unix seconds }
-   Read by activity_scanner.py. */
+   Payload: { v:1, t:"act", n:name, k:class code, c:schedule, a:"1:80,2:90,5:S", at:unix seconds }
+   The name is typed in the QR panel each time; it is never saved or sent. The instructor's
+   offline scanner (code_map_scanner.py) maps code -> name; activity_scanner.py ignores k. */
 const QR_XOR_KEY = '2026';
 const QR_SCHED_KEY = 'itict_sched';
 const QR_SCHEDULES = ["07008", "25007", "21508", "12021", "12030", "02018", "50021", "06095", "06131", "06143", "06107", "06119", "22012"];
@@ -1501,8 +1545,8 @@ async function qrDefaultSched() {
   }
   return '';
 }
-function qrPayload(name, sched, pairs) {
-  const o = { v: 1, t: 'act', n: name, c: sched,
+function qrPayload(name, sched, code, pairs) {
+  const o = { v: 1, t: 'act', n: name, k: code, c: sched,
     a: pairs.map(p => p[0] + ':' + p[1]).join(','), at: Math.floor(Date.now() / 1000) };
   return qrEncrypt(JSON.stringify(o));
 }
@@ -1518,43 +1562,65 @@ let qrLastPNG = null;
 async function qrRender() {
   const box = document.getElementById('qrBox'), msg = document.getElementById('qrMsg');
   const cap = document.getElementById('qrCap'), sum = document.getElementById('qrSum'), dl = document.getElementById('qrDl');
+  const nameEl = document.getElementById('qrName');
   box.innerHTML = ''; cap.textContent = ''; sum.textContent = ''; msg.textContent = ''; dl.disabled = true; qrLastPNG = null;
-  const name = (localStorage.getItem(NAME_KEY) || '').trim();
-  const sched = document.getElementById('qrSched').value;
-  if (!name) { msg.textContent = 'Enter your name on the first screen first.'; return; }
-  if (!sched) { msg.textContent = 'Choose your class schedule to make your QR.'; return; }
+  const code = cloudCode();
+  const name = String(nameEl.value || '').replace(/\s+/g, ' ').trim();
+  const sched = code ? code.slice(0, 5) : document.getElementById('qrSched').value;
+  if (!code) { msg.textContent = 'Get your class code first: tap the status line on Home.'; return; }
+  if (!cloudNameOk(name)) { msg.textContent = 'Type your full name (letters, at least 3). It goes only into this QR.'; nameEl.focus(); return; }
   const pairs = await qrCollect();
-  if (!pairs.length) { msg.textContent = 'No activity scores yet.'; return; }
-  const text = qrPayload(name, sched, pairs);
+  const text = qrPayload(name, sched, code, pairs);
   const cv = qrMakeCanvas(text);
   box.append(cv);
-  cap.textContent = name + ' · ' + sched;
-  sum.textContent = pairs.map(p => `A${p[0]} ${p[1] === 'S' ? 'Skipped' : p[1] + '%'}`).join(' · ');
+  cap.textContent = name + ' · ' + code;
+  sum.textContent = pairs.length ? pairs.map(p => `A${p[0]} ${p[1] === 'S' ? 'Skipped' : p[1] + '%'}`).join(' · ') : 'No activity scores yet.';
   try { qrLastPNG = cv.toDataURL('image/png'); dl.disabled = false; } catch (e) {}
+}
+function qrClear() {
+  ['qrBox', 'qrCap', 'qrSum', 'qrMsg'].forEach(id => { document.getElementById(id).textContent = ''; });
+  document.getElementById('qrDl').disabled = true; qrLastPNG = null;
 }
 async function qrOpen() {
   const sel = document.getElementById('qrSched');
-  sel.value = await qrDefaultSched();
+  const code = cloudCode();
+  sel.value = code ? code.slice(0, 5) : await qrDefaultSched();
+  sel.disabled = !!code;
+  document.getElementById('qrCodeLine').textContent = code ? 'Class code: ' + code : 'No class code yet';
+  document.getElementById('qrName').value = '';
+  qrClear();
   document.getElementById('qrPanel').classList.add('show');
-  await qrRender();
+  setTimeout(() => document.getElementById('qrName').focus(), 50);
+}
+function qrCloseAll() {
+  document.getElementById('qrPanel').classList.remove('show');
+  document.getElementById('qrName').value = '';   // the name is not kept
+  qrClear();
 }
 document.getElementById('qrOpenBtn').addEventListener('click', qrOpen);
-document.getElementById('qrClose').addEventListener('click', () => document.getElementById('qrPanel').classList.remove('show'));
-document.getElementById('qrPanel').addEventListener('click', e => { if (e.target.id === 'qrPanel') e.target.classList.remove('show'); });
+document.getElementById('qrClose').addEventListener('click', qrCloseAll);
+document.getElementById('qrPanel').addEventListener('click', e => { if (e.target.id === 'qrPanel') qrCloseAll(); });
+document.getElementById('qrMake').addEventListener('click', qrRender);
+document.getElementById('qrName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); qrRender(); } });
+document.getElementById('qrName').addEventListener('input', qrClear);
 document.getElementById('qrSched').addEventListener('change', e => {
   try { if (e.target.value) localStorage.setItem(QR_SCHED_KEY, e.target.value); } catch (x) {}
-  qrRender();
+  qrClear();
 });
 document.getElementById('qrDl').addEventListener('click', () => {
   if (!qrLastPNG) return;
-  const nm = ((localStorage.getItem(NAME_KEY) || 'student').replace(/[^\w-]+/g, '_')) || 'student';
+  const nm = (cloudCode() || 'student').replace(/[^\w-]+/g, '_');
   const a = document.createElement('a'); a.href = qrLastPNG; a.download = 'GEEL1_Activities_' + nm + '.png';
   document.body.appendChild(a); a.click(); a.remove();
 });
 
 /* ===== Cloud backup (instructor's Google Sheet via Apps Script) =====
-   Identity: the student's name (normalized) + a 4-digit PIN. Only a SHA-256 of
-   'itict|' + NAME + '|' + PIN is stored on the device or sent.
+   Identity (version 2): a class code assigned by the instructor's Sheet,
+   <schedule>-<number> (e.g. 12030-07), plus a 6-digit PIN.
+   Only SHA-256('itict|' + PIN) is stored on the device or sent. No name is sent;
+   the server also deletes any name field it receives.
+   Version-1 accounts (name + 4-digit PIN) are converted once with action 'migrate';
+   the server then deletes the name.
    Each visit uploads everything this device has; the server merges (higher score
    wins, resets/redo/relock are honored by time) and returns the merged record,
    which is written back here. That is also how a wiped phone gets its scores back. */
@@ -1563,14 +1629,28 @@ const CLOUD_ACCT_KEY = 'itict_cloud';
 const CLOUD_RESETS_KEY = 'itict_cloud_resets';
 const UNLOCK_CLEARED_KEY = 'itict_unlock_cleared_at';
 const CLOUD_LATER_KEY = 'itict_cloud_later';
+const CODE_RE = /^\d{5}-\d{2,3}$/;
 
 function cloudNorm(name) { return String(name || '').replace(/\s+/g, ' ').trim().toUpperCase(); }
 function cloudNameOk(name) { return /^[\p{L}0-9.,'\- ]{3,80}$/u.test(cloudNorm(name)); }
-async function cloudPinHash(name, pin) { return sha256hex('itict|' + cloudNorm(name) + '|' + pin); }
+function isCode(v) { return CODE_RE.test(String(v || '')); }
+/* "12030-7", "12030 07", "1203007" -> "12030-07"; '' when not a code */
+function codeNorm(v) {
+  const s = String(v || '').replace(/\s+/g, '').replace(/[‐-―_.\/]/g, '-');
+  const m = /^(\d{5})-?(\d{1,3})$/.exec(s);
+  if (!m) return '';
+  const n = Number(m[2]);
+  return n ? m[1] + '-' + (n < 10 ? '0' + n : String(n)) : '';
+}
+async function cloudPinHash(pin) { return sha256hex('itict|' + pin); }
+/* version-1 hash, used only to prove an old account during conversion */
+async function cloudLegacyHash(name, pin) { return sha256hex('itict|' + cloudNorm(name) + '|' + pin); }
 function cloudAcct() {
   try { const a = JSON.parse(localStorage.getItem(CLOUD_ACCT_KEY) || 'null'); return a && a.id && a.pin ? a : null; }
   catch (e) { return null; }
 }
+function cloudIsLegacy(a) { return !!(a && !isCode(a.id)); }
+function cloudCode() { const a = cloudAcct(); return a && isCode(a.id) ? a.id : ''; }
 function cloudSetAcct(a) { try { localStorage.setItem(CLOUD_ACCT_KEY, JSON.stringify(a)); } catch (e) {} }
 function cloudForget() { try { localStorage.removeItem(CLOUD_ACCT_KEY); } catch (e) {} }
 function cloudResets() { try { return JSON.parse(localStorage.getItem(CLOUD_RESETS_KEY) || '{}') || {}; } catch (e) { return {}; } }
@@ -1588,6 +1668,7 @@ function setCloudStatus(msg, isError) {
   x.textContent = msg;
   x.classList.toggle('error', !!isError);
 }
+function cloudTime() { return new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
 
 async function cloudCall(body) {
   const ctl = ('AbortController' in window) ? new AbortController() : null;
@@ -1603,6 +1684,20 @@ async function cloudCall(body) {
   } catch (e) {
     return { ok: false, error: 'offline' };
   } finally { clearTimeout(t); }
+}
+
+/* Everything this device holds, without any name (records here keep theirs). */
+async function cloudCollect() {
+  const data = JSON.parse(JSON.stringify(await collectSyncData()));   // score resets come only from the instructor's Sheet
+  delete data.name;
+  ACTIVITIES.forEach(a => { if (data[a.id] && typeof data[a.id] === 'object') delete data[a.id].name; });
+  Object.values(data.exams || {}).forEach(x => {
+    if (x && x.result && typeof x.result === 'object') delete x.result.name;
+    if (x && x.session && typeof x.session === 'object') delete x.session.name;
+  });
+  const uc = localStorage.getItem(UNLOCK_CLEARED_KEY);
+  if (uc) data.unlockClearedAt = uc;
+  return data;
 }
 
 /* Write the merged server record back to this device, including deletions
@@ -1630,51 +1725,57 @@ async function applyCloud(m) {
   }
 }
 
+/* This device now belongs to `code`: save the account, write the server copy back. */
+async function cloudAdopt(code, hash, data) {
+  cloudSetAcct({ id: code, pin: hash });
+  await ownerSet(code);
+  localStorage.setItem(NAME_KEY, code);
+  cloudSetSched(code.slice(0, 5));
+  if (data) await applyCloud(data);
+  cloudLastOk = Date.now();
+  try { sessionStorage.removeItem(CLOUD_LATER_KEY); } catch (e) {}
+}
+
 let cloudBusy = null;
 let cloudLastOk = 0;
 let cloudRetry = 0;
 const CLOUD_RETRY_MS = [8000, 20000, 45000, 90000];
 function cloudLockText(until) {
   const t = until ? new Date(until).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : 'tomorrow';
-  return 'too many wrong PINs. This name is locked until ' + t + '. Your instructor can unlock it sooner.';
+  return 'too many wrong PINs. This account is locked until ' + t + '. Your instructor can unlock it sooner.';
 }
 function cloudPinText(left) {
-  return 'Wrong PIN for this name.' + (left ? ` ${left} ${left === 1 ? 'try' : 'tries'} left before a 24-hour lock.` : '');
+  return 'Wrong PIN.' + (left ? ` ${left} ${left === 1 ? 'try' : 'tries'} left before a 24-hour lock.` : '');
 }
-/* opts.create: allow the server to register this name if it is new. */
 function cloudSync(opts) {
   opts = opts || {};
   const acct = cloudAcct();
   if (!acct || !CLOUD_URL) return Promise.resolve({ ok: false, error: 'noacct' });
+  if (cloudIsLegacy(acct)) return Promise.resolve({ ok: false, error: 'migrate' });
   if (cloudBusy) return cloudBusy;
   cloudBusy = (async () => {
     setCloudStatus('Backing up…');
-    const data = await collectSyncData();   // score resets come only from the instructor's Sheet
-    const uc = localStorage.getItem(UNLOCK_CLEARED_KEY);
-    if (uc) data.unlockClearedAt = uc;
-    const res = await cloudCall({
-      action: 'save', id: acct.id, pin: acct.pin,
-      name: localStorage.getItem(NAME_KEY) || acct.name || '',
-      create: opts.create !== false, data
-    });
+    const data = await cloudCollect();
+    const res = await cloudCall({ action: 'save', id: acct.id, pin: acct.pin, data });
     if (res.ok) {
       cloudLastOk = Date.now();
       await applyCloud(res.data);
       refreshAll();
-      const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-      setCloudStatus('Scores backed up · ' + t);
+      setCloudStatus('Scores backed up · ' + cloudTime());
       cloudRetry = 0;
     } else if (res.error === 'pin') {
-      setCloudStatus('Backup stopped: the PIN does not match this name. Ask your instructor.', true);
+      setCloudStatus('Backup stopped: the PIN does not match this code. Ask your instructor.', true);
     } else if (res.error === 'locked') {
       setCloudStatus('Backup paused: ' + cloudLockText(res.until), true);
+    } else if (res.error === 'nouser') {
+      setCloudStatus('Backup stopped: code ' + acct.id + ' is not in your instructor\'s records. Ask your instructor.', true);
     } else if (res.error === 'offline' || res.error === 'busy' || res.error === 'server') {
       /* queue: try again while this page stays open, then on the next visit */
       const wait = CLOUD_RETRY_MS[cloudRetry];
       if (wait && !opts.noRetry) { cloudRetry++; setTimeout(() => cloudSync(), wait); }
       setCloudStatus(res.error === 'offline' ? 'Offline · scores are saved here and will back up when online.'
         : 'Records busy · waiting in line to back up…', true);
-    } else if (res.error !== 'nouser') {
+    } else {
       setCloudStatus('Backup failed · will retry next time.', true);
     }
     return res;
@@ -1682,26 +1783,31 @@ function cloudSync(opts) {
   return cloudBusy.finally(() => { cloudBusy = null; });
 }
 
-/* After entering the hub: ask existing students for a PIN once, otherwise sync. */
+/* After entering the hub: get a code (or convert an old name account) once, otherwise sync. */
 function cloudAfterEnter() {
   if (!CLOUD_URL || browserBlocked) return;
   let later = null;
   try { later = sessionStorage.getItem(CLOUD_LATER_KEY); } catch (e) {}
   const acct = cloudAcct();
-  if (acct) {
+  if (acct && !cloudIsLegacy(acct)) {
     ownerSet(acct.id);
-    if (!cloudSched() && !later) { cloudOpenPanel('sched'); return; }
     if (Date.now() - cloudLastOk > 15000) cloudSync();
     return;
   }
-  if (later) { setCloudStatus('Scores are not backed up yet · create a PIN', true); return; }
-  cloudOpenPanel();
+  if (later) { cloudLaterStatus(); return; }
+  cloudOpenPanel(acct ? 'convert' : 'register');
+}
+function cloudLaterStatus() {
+  setCloudStatus(cloudIsLegacy(cloudAcct())
+    ? 'Scores are not backed up · tap to switch to a class code'
+    : 'Scores are not backed up yet · tap to get your class code', true);
 }
 
-/* ---- PIN panel for students who already have a name on this device ---- */
+/* ---- Code panel for students already inside the hub ----
+   mode 'register': no account yet (scores only on this device) -> schedule + new PIN
+   mode 'convert' : old name account on this device -> new PIN (schedule only if the Sheet has none) */
 const cp = {
   panel: document.getElementById('cloudPanel'),
-  name: document.getElementById('cpName'),
   pin: document.getElementById('cpPin'),
   pin2: document.getElementById('cpPin2'),
   msg: document.getElementById('cpMsg'),
@@ -1712,79 +1818,132 @@ function cloudSched() { try { const v = localStorage.getItem('itict_sched'); ret
 function cloudSetSched(v) { try { localStorage.setItem('itict_sched', v); } catch (e) {} }
 /* one schedule list: copied from the QR panel's options */
 function cloudFillSched(sel) {
+  const v = sel.value;
   sel.innerHTML = '';
   document.querySelectorAll('#qrSched option').forEach(o => sel.append(o.cloneNode(true)));
+  sel.value = v;
 }
-/* mode 'pin': create PIN + schedule (no PIN yet); mode 'sched': schedule only */
-let cpMode = 'pin';
+let cpMode = 'register';
 async function cloudOpenPanel(mode) {
-  cpMode = mode === 'sched' ? 'sched' : 'pin';
-  cp.name.textContent = localStorage.getItem(NAME_KEY) || '';
+  cpMode = mode === 'convert' ? 'convert' : 'register';
   cp.pin.value = ''; cp.pin2.value = ''; cp.msg.textContent = '';
-  cp.pin.hidden = cp.pin2.hidden = cpMode === 'sched';
-  document.getElementById('cpTitle').textContent = cpMode === 'sched' ? 'Choose your class schedule' : 'Create your PIN';
-  cp.ok.textContent = cpMode === 'sched' ? 'Save' : 'Save PIN';
-  document.getElementById('cpNote').textContent = cpMode === 'sched'
-    ? 'Your instructor records your scores by class. Choose the schedule you attend.'
-    : 'Phones, especially iPhones, can erase saved scores. A PIN keeps your scores in your instructor\'s records so they can come back.';
+  const conv = cpMode === 'convert';
+  document.getElementById('cpTitle').textContent = conv ? 'Switch to a class code' : 'Get your class code';
+  document.getElementById('cpNote').textContent = conv
+    ? 'Accounts now use a class code instead of your name. Make a new 6-digit PIN. Your name is then deleted from your instructor\'s online records; your scores stay.'
+    : 'Phones, especially iPhones, can erase saved scores. A class code and PIN keep your scores in your instructor\'s records so they can come back.';
+  cp.ok.textContent = conv ? 'Switch' : 'Get my code';
+  cp.sched.hidden = conv;
   cp.sched.value = await qrDefaultSched();
   cp.panel.classList.add('show');
-  setTimeout(() => (cpMode === 'sched' ? cp.sched : cp.pin).focus(), 50);
+  setTimeout(() => (conv ? cp.pin : cp.sched).focus(), 50);
 }
 function cloudClosePanel() { cp.panel.classList.remove('show'); }
 document.getElementById('cpLater').addEventListener('click', () => {
   try { sessionStorage.setItem(CLOUD_LATER_KEY, '1'); } catch (e) {}
   cloudClosePanel();
-  if (cpMode === 'sched') { cloudSync(); return; }   // backed up, schedule still blank
-  setCloudStatus('Scores are not backed up yet · create a PIN', true);
+  cloudLaterStatus();
 });
 document.getElementById('cloudStatus').addEventListener('click', () => {
   if (!CLOUD_URL) return;
-  if (!cloudAcct()) cloudOpenPanel();
-  else if (!cloudSched()) cloudOpenPanel('sched');
+  const a = cloudAcct();
+  if (!a) cloudOpenPanel('register');
+  else if (cloudIsLegacy(a)) cloudOpenPanel('convert');
 });
 cp.ok.addEventListener('click', async () => {
-  const name = localStorage.getItem(NAME_KEY) || '';
-  if (!cp.sched.value) { cp.msg.textContent = 'Choose your class schedule.'; cp.sched.focus(); return; }
-  cloudSetSched(cp.sched.value);
-  if (cpMode === 'sched') { cloudClosePanel(); cloudLastOk = 0; cloudSync(); return; }
   const pin = cp.pin.value.trim();
-  if (!/^\d{4}$/.test(pin)) { cp.msg.textContent = 'Use exactly 4 digits.'; return; }
-  if (!cp.pin2.hidden && cp.pin2.value.trim() !== pin) { cp.msg.textContent = 'The two PINs are different.'; return; }
-  if (!cloudNameOk(name)) { cp.msg.textContent = 'Your saved name has unusual characters. Ask your instructor.'; return; }
+  if (!cp.sched.hidden && !cp.sched.value) { cp.msg.textContent = 'Choose your class schedule.'; cp.sched.focus(); return; }
+  if (!/^\d{6}$/.test(pin)) { cp.msg.textContent = 'Use exactly 6 digits.'; cp.pin.focus(); return; }
+  if (cp.pin2.value.trim() !== pin) { cp.msg.textContent = 'The two PINs are different.'; cp.pin2.value = ''; cp.pin2.focus(); return; }
   cp.ok.disabled = true; cp.msg.textContent = 'Saving…';
-  cloudSetAcct({ id: cloudNorm(name), pin: await cloudPinHash(name, pin), name });
-  const res = await cloudSync({ create: true });
+  const hash = await cloudPinHash(pin);
+  const data = await cloudCollect();
+  const old = cloudAcct();
+  const res = cpMode === 'convert' && cloudIsLegacy(old)
+    ? await cloudCall({ action: 'migrate', oldId: old.id, oldPin: old.pin, pin: hash, sched: cp.sched.hidden ? '' : cp.sched.value, data })
+    : await cloudCall({ action: 'register', sched: cp.sched.value, pin: hash, data });
   cp.ok.disabled = false;
-  if (res.ok) { ownerSet(cloudNorm(name)); cloudClosePanel(); return; }
-  if (res.error === 'pin') {
-    cloudForget();
-    cp.pin2.hidden = true; cp.pin.value = '';
-    cp.msg.textContent = 'This name already has a PIN. Enter that PIN. ' + (res.left ? cloudPinText(res.left).replace('Wrong PIN for this name. ', '') : '') + ' If it is not yours, ask your instructor.';
+  if (res.ok) {
+    await cloudAdopt(res.code, hash, res.data);
+    knownAdd(res.code);
+    cloudClosePanel();
+    document.getElementById('greeting').textContent = greetText(res.code);
+    refreshAll();
+    setCloudStatus('Scores backed up · ' + cloudTime());
+    codeShow(res.code);
     return;
   }
-  if (res.error === 'locked') { cloudForget(); cp.msg.textContent = 'Locked: ' + cloudLockText(res.until); return; }
-  if (res.error === 'offline' || res.error === 'busy' || res.error === 'server') { cloudClosePanel(); return; }   // kept; queued
-  cloudForget();
-  cp.msg.textContent = 'Could not save right now. Try again later.';
+  if (res.error === 'sched') {
+    cp.sched.hidden = false;
+    cp.msg.textContent = cp.sched.value ? 'That schedule is not open. Choose your class schedule.' : 'Choose your class schedule, then tap again.';
+    cp.sched.focus();
+    return;
+  }
+  if (res.error === 'nouser' && cpMode === 'convert') {
+    cloudForget();
+    cloudOpenPanel('register');
+    cp.msg.textContent = 'Your old account is no longer in your instructor\'s records. Get a new class code here; the scores on this device are kept.';
+    return;
+  }
+  if (res.error === 'pin') { cp.msg.textContent = 'The old PIN saved on this device does not match. Ask your instructor.'; return; }
+  if (res.error === 'locked') { cp.msg.textContent = 'Locked: ' + cloudLockText(res.until); return; }
+  cp.msg.textContent = res.error === 'offline'
+    ? 'This needs internet. Connect and try again.'
+    : 'Your instructor\'s records are busy. Wait a moment and try again.';
 });
 
-/* ===== Log in / Create account =====
-   Log in   : name + PIN -> 'restore' from the Sheet (never uploads this device's data first).
-   Create   : name + PIN x2 + schedule -> 'save' with create:true on a clean device.
-   Device owner: the account id is kept in localStorage / cookie / IndexedDB / sessionStorage
+/* ---- "Your class code" panel ---- */
+function codeShow(code) {
+  document.getElementById('cdCode').textContent = code;
+  document.getElementById('codePanel').classList.add('show');
+}
+document.getElementById('cdOk').addEventListener('click', () => document.getElementById('codePanel').classList.remove('show'));
+
+/* ---- Schedules: read from the instructor's Sheet (Schedules tab); the built-in list is the fallback ---- */
+async function schedLoad() {
+  if (!CLOUD_URL) return;
+  try {
+    const r = await fetch(CLOUD_URL + '?action=schedules');
+    const d = await r.json();
+    if (!d || !d.ok || !Array.isArray(d.schedules)) return;
+    const list = d.schedules.filter(s => s && /^\d{5}$/.test(s.code));
+    if (!list.length) return;
+    const sel = document.getElementById('qrSched');
+    const cur = sel.value;
+    sel.innerHTML = '';
+    const first = document.createElement('option'); first.value = ''; first.textContent = 'Choose your schedule';
+    sel.append(first);
+    list.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.code; o.textContent = s.label ? s.code + ' · ' + s.label : s.code;
+      sel.append(o);
+    });
+    QR_SCHEDULES.length = 0;
+    list.forEach(s => QR_SCHEDULES.push(s.code));
+    sel.value = cur;
+    [auth.caSched, cp.sched, auth.cvSched].forEach(cloudFillSched);
+  } catch (e) {}
+}
+
+/* ===== Log in / Create account / Convert =====
+   Log in   : code + PIN -> 'restore' from the Sheet (never uploads this device's data first).
+   Create   : schedule + PIN x2 -> 'register' on a clean device; the Sheet assigns the code.
+   Convert  : old name + old 4-digit PIN + new 6-digit PIN -> 'migrate'; the Sheet assigns the
+              code and deletes the name.
+   Device owner: the account code is kept in localStorage / cookie / IndexedDB / sessionStorage
    under OWNER_KEY. Leftover data on a device that belongs to someone else is wiped
    before another account is opened, so records never mix. */
 const OWNER_KEY = 'itict_owner';
-const KNOWN_KEY = 'itict_known_names';
+const KNOWN_KEY = 'itict_known_codes';
+const KNOWN_OLD_KEY = 'itict_known_names';   // version 1 (names); removed on load
 const KEEP_ON_LOGOUT = ['itict_privacy_ack', 'itict_lite', 'itict_a5_mute', 'itict_a6_mute', KNOWN_KEY];
 
-/* ---- Names remembered on this device (name only; never sent; never the PIN) ---- */
+/* ---- Codes remembered on this device (code only; never the PIN) ---- */
 function knownGet() {
   let a = null;
   try { a = JSON.parse(localStorage.getItem(KNOWN_KEY) || 'null'); } catch (e) {}
   if (!Array.isArray(a)) { try { a = JSON.parse(getCookie(KNOWN_KEY) || 'null'); } catch (e) {} }
-  return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x.trim()).slice(0, 8) : [];
+  return Array.isArray(a) ? a.filter(isCode).slice(0, 8) : [];
 }
 function knownPut(list) {
   const v = JSON.stringify(list.slice(0, 8));
@@ -1793,17 +1952,11 @@ function knownPut(list) {
   else deleteCookie(KNOWN_KEY);
   knownRender();
 }
-function knownAdd(name) {
-  const id = cloudNorm(name);
-  knownPut([name].concat(knownGet().filter(x => cloudNorm(x) !== id)));
-}
-function knownRemove(name) {
-  const id = cloudNorm(name);
-  knownPut(knownGet().filter(x => cloudNorm(x) !== id));
-}
+function knownAdd(code) { if (isCode(code)) knownPut([code].concat(knownGet().filter(x => x !== code))); }
+function knownRemove(code) { knownPut(knownGet().filter(x => x !== code)); }
 function knownRender() {
   const list = knownGet();
-  const dl = document.getElementById('knownNames');
+  const dl = document.getElementById('knownCodes');
   const box = document.getElementById('liKnown');
   if (!dl || !box) return;
   dl.innerHTML = '';
@@ -1814,9 +1967,9 @@ function knownRender() {
     const chip = el('span', 'known-chip');
     const pick = el('button', null, n);
     pick.type = 'button';
-    pick.setAttribute('aria-label', 'Use the name ' + n);
+    pick.setAttribute('aria-label', 'Use the code ' + n);
     pick.addEventListener('click', () => {
-      auth.liName.value = n;
+      auth.liCode.value = n;
       auth.liRemember.checked = true;
       auth.liPin.focus();
     });
@@ -1825,14 +1978,19 @@ function knownRender() {
     x.setAttribute('aria-label', 'Forget ' + n + ' on this device');
     x.addEventListener('click', () => {
       knownRemove(n);
-      if (cloudNorm(auth.liName.value) === cloudNorm(n)) auth.liName.value = '';
+      if (codeNorm(auth.liCode.value) === n) auth.liCode.value = '';
     });
     chip.append(pick, x);
     box.append(chip);
   });
 }
 /* remember or forget, as ticked */
-function knownApply(name, remember) { if (remember) knownAdd(name); else knownRemove(name); }
+function knownApply(code, remember) { if (remember) knownAdd(code); else knownRemove(code); }
+/* names were remembered by version 1: remove them from this device */
+(function knownDropOld() {
+  try { localStorage.removeItem(KNOWN_OLD_KEY); } catch (e) {}
+  if (getCookie(KNOWN_OLD_KEY)) deleteCookie(KNOWN_OLD_KEY);
+})();
 
 async function ownerGet() {
   let v = null;
@@ -1898,84 +2056,90 @@ const auth = {
   tabCreate: document.getElementById('tabCreate'),
   login: document.getElementById('loginForm'),
   create: document.getElementById('createForm'),
-  liName: document.getElementById('liName'),
+  convert: document.getElementById('convertForm'),
+  liCode: document.getElementById('liCode'),
   liPin: document.getElementById('liPin'),
   liMsg: document.getElementById('liMsg'),
   liGo: document.getElementById('liGo'),
-  caName: document.getElementById('caName'),
   caPin: document.getElementById('caPin'),
   caPin2: document.getElementById('caPin2'),
   caSched: document.getElementById('schedInput'),
   caMsg: document.getElementById('caMsg'),
   caGo: document.getElementById('caGo'),
+  cvName: document.getElementById('cvName'),
+  cvOld: document.getElementById('cvOld'),
+  cvPin: document.getElementById('cvPin'),
+  cvPin2: document.getElementById('cvPin2'),
+  cvSched: document.getElementById('cvSched'),
+  cvMsg: document.getElementById('cvMsg'),
+  cvGo: document.getElementById('cvGo'),
   liRemember: document.getElementById('liRemember'),
-  caRemember: document.getElementById('caRemember')
+  caRemember: document.getElementById('caRemember'),
+  cvRemember: document.getElementById('cvRemember')
 };
 function authMsg(box, text, ok) { box.textContent = text; box.classList.toggle('ok', !!ok); }
 function authTab(which) {
-  const isLogin = which === 'login';
-  auth.login.hidden = !isLogin;
-  auth.create.hidden = isLogin;
-  auth.tabLogin.classList.toggle('on', isLogin);
-  auth.tabCreate.classList.toggle('on', !isLogin);
-  auth.tabLogin.setAttribute('aria-selected', String(isLogin));
-  auth.tabCreate.setAttribute('aria-selected', String(!isLogin));
-  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, '');
-  /* carry the typed name across */
-  if (isLogin && !auth.liName.value) auth.liName.value = auth.caName.value;
-  if (!isLogin && !auth.caName.value) auth.caName.value = auth.liName.value;
+  auth.login.hidden = which !== 'login';
+  auth.create.hidden = which !== 'create';
+  auth.convert.hidden = which !== 'convert';
+  auth.tabLogin.classList.toggle('on', which === 'login');
+  auth.tabCreate.classList.toggle('on', which === 'create');
+  auth.tabLogin.setAttribute('aria-selected', String(which === 'login'));
+  auth.tabCreate.setAttribute('aria-selected', String(which === 'create'));
+  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, ''); authMsg(auth.cvMsg, '');
 }
 auth.tabLogin.addEventListener('click', () => authTab('login'));
 auth.tabCreate.addEventListener('click', () => authTab('create'));
 document.getElementById('liToCreate').addEventListener('click', () => authTab('create'));
+document.getElementById('liToConvert').addEventListener('click', () => authTab('convert'));
 document.getElementById('caToLogin').addEventListener('click', () => authTab('login'));
+document.getElementById('cvToLogin').addEventListener('click', () => authTab('login'));
 
 cloudFillSched(auth.caSched);
 cloudFillSched(cp.sched);
+cloudFillSched(auth.cvSched);
 knownRender();
 qrDefaultSched().then(v => { if (v) auth.caSched.value = v; });
-/* changing the schedule in My Score QR updates the instructor's records too */
-document.getElementById('qrSched').addEventListener('change', () => { if (cloudAcct()) { cloudLastOk = 0; cloudSync(); } });
+schedLoad();
 /* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
 if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
 
 function authClean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
-function authFail() { cloudForget(); try { localStorage.removeItem(NAME_KEY); } catch (e) {} }
-function authOpen(name) {
+function authOpen(code) {
   try { sessionStorage.setItem(SCREEN_KEY, 'home'); } catch (e) {}
   auth.liPin.value = auth.caPin.value = auth.caPin2.value = '';
-  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, '');
-  startLocal(name);
+  auth.cvName.value = auth.cvOld.value = auth.cvPin.value = auth.cvPin2.value = '';
+  authMsg(auth.liMsg, ''); authMsg(auth.caMsg, ''); authMsg(auth.cvMsg, '');
+  startLocal(code);
+}
+function authNetText(res, what) {
+  return res.error === 'offline'
+    ? what + ' needs internet. Connect and try again.'
+    : 'Your instructor\'s records are busy. Wait a moment and try again.';
 }
 
 async function loginSubmit() {
-  const name = authClean(auth.liName.value);
+  const code = codeNorm(auth.liCode.value);
   const pin = auth.liPin.value.trim();
-  if (!name) { authMsg(auth.liMsg, 'Enter your full name.'); auth.liName.focus(); return; }
-  if (!CLOUD_URL) { authOpen(name); return; }
-  if (!cloudNameOk(name)) { authMsg(auth.liMsg, 'Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
-  if (!/^\d{4}$/.test(pin)) { authMsg(auth.liMsg, 'Enter your 4-digit PIN.'); auth.liPin.focus(); return; }
-  const id = cloudNorm(name);
-  const hash = await cloudPinHash(name, pin);
+  if (!code) { authMsg(auth.liMsg, 'Enter your class code, for example 12030-07.'); auth.liCode.focus(); return; }
+  auth.liCode.value = code;
+  if (!/^\d{6}$/.test(pin)) { authMsg(auth.liMsg, 'Enter your 6-digit PIN.'); auth.liPin.focus(); return; }
+  const hash = await cloudPinHash(pin);
   auth.liGo.disabled = true;
   authMsg(auth.liMsg, 'Logging in…', true);
-  const res = await cloudCall({ action: 'restore', id, pin: hash });
+  const res = await cloudCall({ action: 'restore', id: code, pin: hash });
   auth.liGo.disabled = false;
   if (res.ok) {
-    await prepareDeviceFor(id);
-    const data = res.data || {};
-    const shown = authClean(data.name) || name;
-    cloudSetAcct({ id, pin: hash, name: shown });
-    await ownerSet(id);
-    await applyCloud(data);
-    localStorage.setItem(NAME_KEY, shown);
+    await prepareDeviceFor(code);
+    await cloudAdopt(code, hash, res.data || {});
     cloudLastOk = 0;
-    knownApply(shown, auth.liRemember.checked);
-    authOpen(shown);
+    knownApply(code, auth.liRemember.checked);
+    authOpen(code);
+    if (res.pinSet) setCloudStatus('New PIN saved · logged in.');
     return;
   }
   if (res.error === 'nouser') {
-    authMsg(auth.liMsg, `No account found for "${name}". Check the spelling, or tap Create an account.`);
+    authMsg(auth.liMsg, `No account with code ${code}. Check the code, or tap Create an account.`);
     return;
   }
   if (res.error === 'pin') {
@@ -1984,50 +2148,79 @@ async function loginSubmit() {
     return;
   }
   if (res.error === 'locked') { authMsg(auth.liMsg, 'Locked: ' + cloudLockText(res.until)); return; }
-  authMsg(auth.liMsg, res.error === 'offline'
-    ? 'Logging in needs internet. Connect and try again.'
-    : 'Your instructor\'s records are busy. Wait a moment and try again.');
+  authMsg(auth.liMsg, authNetText(res, 'Logging in'));
 }
 
 async function createSubmit() {
-  const name = authClean(auth.caName.value);
   const pin = auth.caPin.value.trim();
   const sched = auth.caSched.value;
-  if (!name) { authMsg(auth.caMsg, 'Enter your full name.'); auth.caName.focus(); return; }
-  if (!CLOUD_URL) { authOpen(name); return; }
-  if (!cloudNameOk(name)) { authMsg(auth.caMsg, 'Use letters, spaces, dots, commas, apostrophes or dashes only (at least 3).'); return; }
-  if (!/^\d{4}$/.test(pin)) { authMsg(auth.caMsg, 'Make a PIN of exactly 4 digits.'); auth.caPin.focus(); return; }
-  if (auth.caPin2.value.trim() !== pin) { authMsg(auth.caMsg, 'The two PINs are different.'); auth.caPin2.value = ''; auth.caPin2.focus(); return; }
   if (!sched) { authMsg(auth.caMsg, 'Choose your class schedule.'); auth.caSched.focus(); return; }
-  const id = cloudNorm(name);
-  const hash = await cloudPinHash(name, pin);
+  if (!/^\d{6}$/.test(pin)) { authMsg(auth.caMsg, 'Make a PIN of exactly 6 digits.'); auth.caPin.focus(); return; }
+  if (auth.caPin2.value.trim() !== pin) { authMsg(auth.caMsg, 'The two PINs are different.'); auth.caPin2.value = ''; auth.caPin2.focus(); return; }
+  const hash = await cloudPinHash(pin);
   auth.caGo.disabled = true;
   authMsg(auth.caMsg, 'Creating your account…', true);
-  await prepareDeviceFor(id);
-  cloudSetAcct({ id, pin: hash, name });
-  cloudSetSched(sched);
-  localStorage.setItem(NAME_KEY, name);
-  const res = await cloudSync({ create: true, noRetry: true });
+  const created = new Date().toISOString();
+  const res = await cloudCall({ action: 'register', sched, pin: hash, data: { createdDate: created } });
   auth.caGo.disabled = false;
   if (res.ok) {
-    await ownerSet(id);
-    knownApply(localStorage.getItem(NAME_KEY) || name, auth.caRemember.checked);
-    authOpen(localStorage.getItem(NAME_KEY) || name);
-    if (!res.isNew) setCloudStatus('You already had an account · logged in.');
+    await prepareDeviceFor(res.code);
+    localStorage.setItem(DATE_KEY, created);
+    await cloudAdopt(res.code, hash, res.data);
+    knownApply(res.code, auth.caRemember.checked);
+    authOpen(res.code);
+    setCloudStatus('Account created · scores backed up · ' + cloudTime());
+    codeShow(res.code);
     return;
   }
-  authFail();
+  if (res.error === 'sched') { authMsg(auth.caMsg, 'That schedule is not open for sign-up. Ask your instructor.'); return; }
+  authMsg(auth.caMsg, authNetText(res, 'Creating an account'));
+}
+
+async function convertSubmit() {
+  const name = authClean(auth.cvName.value);
+  const old = auth.cvOld.value.trim();
+  const pin = auth.cvPin.value.trim();
+  if (!cloudNameOk(name)) { authMsg(auth.cvMsg, 'Enter the full name of your old account.'); auth.cvName.focus(); return; }
+  if (!/^\d{4}$/.test(old)) { authMsg(auth.cvMsg, 'Enter your old 4-digit PIN.'); auth.cvOld.focus(); return; }
+  if (!/^\d{6}$/.test(pin)) { authMsg(auth.cvMsg, 'Make a new PIN of exactly 6 digits.'); auth.cvPin.focus(); return; }
+  if (auth.cvPin2.value.trim() !== pin) { authMsg(auth.cvMsg, 'The two new PINs are different.'); auth.cvPin2.value = ''; auth.cvPin2.focus(); return; }
+  if (!auth.cvSched.hidden && !auth.cvSched.value) { authMsg(auth.cvMsg, 'Choose your class schedule.'); auth.cvSched.focus(); return; }
+  const hash = await cloudPinHash(pin);
+  auth.cvGo.disabled = true;
+  authMsg(auth.cvMsg, 'Converting your account…', true);
+  const res = await cloudCall({
+    action: 'migrate', oldId: cloudNorm(name), oldPin: await cloudLegacyHash(name, old), pin: hash,
+    sched: auth.cvSched.hidden ? '' : auth.cvSched.value, data: {}
+  });
+  auth.cvGo.disabled = false;
+  if (res.ok) {
+    await prepareDeviceFor(res.code);
+    await cloudAdopt(res.code, hash, res.data || {});
+    cloudLastOk = 0;
+    knownApply(res.code, auth.cvRemember.checked);
+    authOpen(res.code);
+    codeShow(res.code);
+    return;
+  }
+  if (res.error === 'sched') {
+    auth.cvSched.hidden = false;
+    authMsg(auth.cvMsg, 'Choose your class schedule, then tap Convert again.');
+    auth.cvSched.focus();
+    return;
+  }
+  if (res.error === 'nouser') { authMsg(auth.cvMsg, 'No old account with that name. Check the spelling, or use Create an account.'); return; }
   if (res.error === 'pin') {
-    authMsg(auth.caMsg, 'This name already has an account. Use Log in. Same name as a classmate? Add your middle initial.');
+    authMsg(auth.cvMsg, 'Wrong old PIN.' + (res.left ? ` ${res.left} ${res.left === 1 ? 'try' : 'tries'} left before a 24-hour lock.` : '') + ' Forgot it? Ask your instructor.');
+    auth.cvOld.value = ''; auth.cvOld.focus();
     return;
   }
-  if (res.error === 'locked') { authMsg(auth.caMsg, 'Locked: ' + cloudLockText(res.until)); return; }
-  authMsg(auth.caMsg, res.error === 'offline'
-    ? 'Creating an account needs internet. Connect and try again.'
-    : 'Could not create the account right now. Try again.');
+  if (res.error === 'locked') { authMsg(auth.cvMsg, 'Locked: ' + cloudLockText(res.until)); return; }
+  authMsg(auth.cvMsg, authNetText(res, 'Converting'));
 }
 auth.login.addEventListener('submit', e => { e.preventDefault(); loginSubmit(); });
 auth.create.addEventListener('submit', e => { e.preventDefault(); createSubmit(); });
+auth.convert.addEventListener('submit', e => { e.preventDefault(); convertSubmit(); });
 
 /* ===== Log out =====
    Backs up first; blocked when the backup does not succeed, so no score is lost. */
@@ -2046,8 +2239,8 @@ function logoutOpen() {
 }
 function logoutClose() { lo.panel.classList.remove('show'); }
 async function logoutRun() {
-  if (CLOUD_URL && !cloudAcct()) {
-    lo.msg.textContent = 'Create your PIN first so your scores are saved online. Tap the status line on Home.';
+  if (CLOUD_URL && !cloudCode()) {
+    lo.msg.textContent = 'Get your class code first so your scores are saved online. Tap the status line on Home.';
     return;
   }
   lo.ok.disabled = true; lo.cancel.disabled = true;
@@ -2065,7 +2258,7 @@ async function logoutRun() {
     return;
   }
   lo.msg.textContent = 'Logging out…';
-  if (document.getElementById('loForget').checked) knownRemove(localStorage.getItem(NAME_KEY) || '');
+  if (document.getElementById('loForget').checked) knownRemove(cloudCode());
   await wipeDevice();
   try { sessionStorage.setItem('itict_logged_out', '1'); } catch (e) {}
   location.replace(location.pathname);
@@ -2088,7 +2281,7 @@ window.addEventListener('pageshow', (e) => {
    Stored under PRIVACY_KEY in localStorage, cookie, IndexedDB and sessionStorage.
    Bump PRIVACY_VERSION when the notice changes so every student agrees again. */
 const PRIVACY_KEY = 'itict_privacy_ack';
-const PRIVACY_VERSION = 1;
+const PRIVACY_VERSION = 2;
 const pv = {
   panel: document.getElementById('privacyPanel'),
   check: document.getElementById('pvCheck'),
