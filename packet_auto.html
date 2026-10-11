@@ -6,7 +6,7 @@
 <title>The Internet: Packet Auto-Route</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap"></noscript>
 <style>/* apple-converted */
 
 :root{
@@ -224,6 +224,7 @@ function itictGateBypass(n){
   --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
   --sh-2:0 2px 4px rgba(0,0,0,.05),0 12px 32px rgba(0,0,0,.12);
 }
+html:not(.fx-ready) *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 body{background-color:var(--ground)!important;background-image:none!important;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 button:focus-visible,a:focus-visible{outline:3px solid color-mix(in srgb,var(--acc) 35%,transparent);outline-offset:2px}
 
@@ -1629,6 +1630,7 @@ window.PR6 = (() => {
 <script id="apple-fx">
 /* Mesh-gradient shader behind the HUD (presentation only). */
 (function(){
+function boot(){
   var hud=document.querySelector('.hud'); if(!hud) return;
   var cv=document.createElement('canvas'); cv.className='fx'; cv.setAttribute('aria-hidden','true'); hud.insertBefore(cv,hud.firstChild);
   var gl; try{gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:false});}catch(e){}
@@ -1661,7 +1663,7 @@ window.PR6 = (() => {
   function frame(now){
     if(!still && !document.hidden && now-last<33){requestAnimationFrame(frame);return;}
     last=now;
-    var d=Math.min(window.devicePixelRatio||1,1.5), w=Math.max(1,cv.clientWidth*d|0), h=Math.max(1,cv.clientHeight*d|0);
+    var d=1, w=Math.max(1,cv.clientWidth*d|0), h=Math.max(1,cv.clientHeight*d|0);
     if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
     gl.viewport(0,0,w,h); gl.uniform2f(ur,w,h);
     gl.uniform1f(ut,(still||document.body.classList.contains('lite'))?4:(now-t0)/1000);
@@ -1670,6 +1672,11 @@ window.PR6 = (() => {
   }
   requestAnimationFrame(frame);
   if(still) window.addEventListener('resize',function(){requestAnimationFrame(frame);});
+}
+/* Start effects only after the page has loaded and painted. */
+function later(){ document.documentElement.classList.add('fx-ready'); (window.requestIdleCallback||function(f){setTimeout(f,200);})(boot,{timeout:1200}); }
+function go(){ requestAnimationFrame(function(){ setTimeout(later,250); }); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
 })();
 </script>
 </body>

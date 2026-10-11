@@ -1,6 +1,6 @@
 /* Mesh-gradient shader for the hero banners (presentation only).
    Without WebGL the CSS gradient on .stage shows instead. */
-(function () {
+function bootFx() {
   var FS = 'precision mediump float;uniform vec2 r;uniform float t;' +
     'float b(vec2 p,vec2 c,float s){return exp(-dot(p-c,p-c)/s);}' +
     'void main(){vec2 p=gl_FragCoord.xy/r.y;float a=r.x/r.y;' +
@@ -38,7 +38,7 @@
     var t = still ? 4 : (now - t0) / 1000;
     fx.forEach(function (f) {
       if (!f.cv.offsetParent || document.hidden) return;
-      var d = Math.min(window.devicePixelRatio || 1, 1.5), w = Math.max(1, f.cv.clientWidth * d | 0), h = Math.max(1, f.cv.clientHeight * d | 0);
+      var d = 1, w = Math.max(1, f.cv.clientWidth * d | 0), h = Math.max(1, f.cv.clientHeight * d | 0);
       if (f.cv.width !== w || f.cv.height !== h) { f.cv.width = w; f.cv.height = h; }
       f.gl.viewport(0, 0, w, h); f.gl.uniform2f(f.ur, w, h); f.gl.uniform1f(f.ut, t); f.gl.drawArrays(f.gl.TRIANGLE_STRIP, 0, 4);
     });
@@ -50,4 +50,11 @@
     new MutationObserver(function () { requestAnimationFrame(draw); })
       .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
   }
+}
+/* Start effects only after the page has loaded and painted. */
+(function () {
+  function later() { document.documentElement.classList.add('fx-ready'); (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(bootFx, { timeout: 1200 }); }
+  function go() { requestAnimationFrame(function () { setTimeout(later, 250); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
+

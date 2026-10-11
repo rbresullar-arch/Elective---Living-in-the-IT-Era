@@ -6,7 +6,7 @@
 <title>Living in the IT Era</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap"></noscript>
 <style>
   /* Layout: Apple-style portal — shader hero, segmented controls, iOS grouped lists, sheet modals.
      Edit here, then run tools/build_index_theme.py. */
@@ -39,6 +39,7 @@
     --tile-hi:rgba(255,255,255,.22); color-scheme:dark; }
 
   * { box-sizing: border-box; }
+  html:not(.fx-ready) * { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
   [hidden] { display: none !important; }
   html, body { background: var(--bg); }
   body { margin:0; color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.47; letter-spacing:-.01em;
@@ -674,7 +675,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.8';
+const APP_VERSION = '2026.10.11.9';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -2264,7 +2265,7 @@ document.getElementById('privacyLink').addEventListener('click', () => privacyOp
 <script id="apple-fx">
 /* Mesh-gradient shader for the hero banners (presentation only).
    Without WebGL the CSS gradient on .stage shows instead. */
-(function () {
+function bootFx() {
   var FS = 'precision mediump float;uniform vec2 r;uniform float t;' +
     'float b(vec2 p,vec2 c,float s){return exp(-dot(p-c,p-c)/s);}' +
     'void main(){vec2 p=gl_FragCoord.xy/r.y;float a=r.x/r.y;' +
@@ -2302,7 +2303,7 @@ document.getElementById('privacyLink').addEventListener('click', () => privacyOp
     var t = still ? 4 : (now - t0) / 1000;
     fx.forEach(function (f) {
       if (!f.cv.offsetParent || document.hidden) return;
-      var d = Math.min(window.devicePixelRatio || 1, 1.5), w = Math.max(1, f.cv.clientWidth * d | 0), h = Math.max(1, f.cv.clientHeight * d | 0);
+      var d = 1, w = Math.max(1, f.cv.clientWidth * d | 0), h = Math.max(1, f.cv.clientHeight * d | 0);
       if (f.cv.width !== w || f.cv.height !== h) { f.cv.width = w; f.cv.height = h; }
       f.gl.viewport(0, 0, w, h); f.gl.uniform2f(f.ur, w, h); f.gl.uniform1f(f.ut, t); f.gl.drawArrays(f.gl.TRIANGLE_STRIP, 0, 4);
     });
@@ -2314,7 +2315,14 @@ document.getElementById('privacyLink').addEventListener('click', () => privacyOp
     new MutationObserver(function () { requestAnimationFrame(draw); })
       .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
   }
+}
+/* Start effects only after the page has loaded and painted. */
+(function () {
+  function later() { document.documentElement.classList.add('fx-ready'); (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(bootFx, { timeout: 1200 }); }
+  function go() { requestAnimationFrame(function () { setTimeout(later, 250); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
 })();
+
 
 </script>
 </body>
