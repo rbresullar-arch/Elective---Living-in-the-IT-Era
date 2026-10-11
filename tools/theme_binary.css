@@ -1,0 +1,40 @@
+/* --- Activity 4: binary — terminal readout, keycap bit switches, LED slots --- */
+:root{--mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.screen{background:#fff!important}
+.progress-line .seg{border:none!important;height:5px!important;background:var(--fill-ap)!important;border-radius:3px!important}
+.progress-line .seg.done{background:#30B0C7!important}
+.body{border:none!important;background:#fff!important;box-shadow:var(--sh-1);border-radius:20px!important}
+.body h1{font-size:26px!important;letter-spacing:-.03em!important}
+.body h2{background:none!important;color:var(--muted-ap)!important;font-size:12px!important;text-transform:uppercase;letter-spacing:.06em!important;padding:0!important}
+.pv-table th,.pv-table td{border:none!important;border-radius:8px!important;background:var(--ground)}
+.pv-table th{background:none!important;color:var(--muted-ap);font-size:11px!important}
+.pv-table td.bit1{background:#1D1D1F!important;color:#30D158!important;text-shadow:0 0 8px rgba(48,209,88,.6)}
+.steps{background:#1C1C1E!important;color:#30D158!important;border-radius:12px!important;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.1)}
+.callout,.trainer{border:none!important;background:var(--ground)!important;border-radius:14px!important}
+.callout strong{color:#0071A4!important;font-size:11.5px!important;letter-spacing:.04em!important}
+.trainer .t-num{font-weight:700!important;letter-spacing:-.04em}
+.bit-cell .pval,.bit-guide .pv{color:var(--muted-ap)!important;font-weight:600}
+/* keycap switches */
+.bit-btn{border:none!important;border-radius:10px!important;background:linear-gradient(180deg,#FFFFFF,#ECECEF)!important;color:#8E8E93!important;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 2px 0 #C7C7CC,0 3px 6px rgba(0,0,0,.12)!important;font-weight:600!important}
+.bit-btn:active{transform:translateY(2px)!important;box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 0 0 #C7C7CC!important}
+.bit-btn.on{background:linear-gradient(180deg,#3DDC6A,#28B04F)!important;color:#fff!important;box-shadow:0 0 0 .5px rgba(0,0,0,.2),0 2px 0 #1E8A3D,0 4px 12px rgba(52,199,89,.45)!important}
+button.act,a.act{border:none!important;border-radius:999px!important;background:#30B0C7!important;color:#fff!important;font-size:17px!important;font-weight:600!important;letter-spacing:-.01em!important;padding:11px 22px!important;box-shadow:0 6px 16px rgba(48,176,199,.3)}
+button.act.ghost,a.act.ghost{background:var(--fill-ap)!important;color:var(--ink)!important;box-shadow:none}
+/* game */
+.bit-echo-bar{background:#1C1C1E!important;border-radius:14px!important;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.08),var(--sh-1)}
+.bit-echo-bar .echo-label{color:#8E8E93!important;font-size:11px!important}
+.bit-echo-bar .bit-echo{color:#30D158!important;text-shadow:0 0 10px rgba(48,209,88,.55)}
+.bit-echo-bar .bit-echo::after{content:"▍";animation:caret 1s steps(2) infinite;margin-left:2px}
+@keyframes caret{50%{opacity:0}}
+.timer-bar-wrap{border:none!important;height:5px!important;background:var(--fill-ap)!important}
+#timerBar{background:#30B0C7!important}
+.game-mid{border:none!important;background:var(--ground)!important;border-radius:20px!important}
+.prompt-decimal{font-weight:700!important;letter-spacing:-.04em!important;font-variant-numeric:tabular-nums}
+.prompt-hint,.guide-caption{color:var(--muted-ap)!important}
+.tier-tag{background:#1C1C1E!important;color:#30D158!important;border-radius:999px!important;font-size:11px!important;padding:3px 10px!important}
+.bit-guide .slot{border:none!important;background:#1C1C1E!important;color:#3A3A3C!important;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.bit-guide .slot.on{background:#1C1C1E!important;color:#30D158!important;text-shadow:0 0 10px rgba(48,209,88,.8),0 0 2px #30D158}
+.bit-guide .slot.empty{border-style:none!important;color:#2C2C2E!important}
+#binInput{border:none!important;background:#fff!important;border-radius:14px!important;box-shadow:inset 0 0 0 1px var(--hair)!important}
+#binInput:focus{box-shadow:0 0 0 3px rgba(48,176,199,.3),inset 0 0 0 1px #30B0C7!important}
