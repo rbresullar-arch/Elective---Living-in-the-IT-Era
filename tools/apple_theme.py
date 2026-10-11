@@ -131,7 +131,7 @@ def convert_css(css):
     return '/* apple-converted */\n' + css
 
 
-def apply(path, acc, ink='#FFFFFF', extra=''):
+def apply(path, acc, ink='#FFFFFF', extra='', fx=True):
     p = pathlib.Path(path)
     s = p.read_text(encoding='utf-8')
     # fonts
@@ -149,11 +149,12 @@ def apply(path, acc, ink='#FFFFFF', extra=''):
     s = s.replace('</head>', theme + '</head>', 1)
     # shader script
     s = re.sub(r'\n?<script id="apple-fx">.*?</script>\n?', '\n', s, flags=re.S)
-    s = s.replace('</body>', FX.strip() + '\n</body>', 1)
+    if fx:
+        s = s.replace('</body>', FX.strip() + '\n</body>', 1)
     p.write_text(s, encoding='utf-8')
 
 
 if __name__ == '__main__':
     a = sys.argv
     extra = pathlib.Path(a[4]).read_text(encoding='utf-8') if len(a) > 4 else ''
-    apply(a[1], a[2], a[3] if len(a) > 3 else '#FFFFFF', extra)
+    apply(a[1], a[2], a[3] if len(a) > 3 else '#FFFFFF', extra, fx=not (len(a) > 5 and a[5] == 'nofx'))

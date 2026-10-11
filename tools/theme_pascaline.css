@@ -1,0 +1,22 @@
+/* --- Activity 3: Pascaline — keeps the walnut-and-brass machine, Apple chrome --- */
+html,body{background-color:var(--bg)!important;background-image:radial-gradient(120% 80% at 50% 0%,#2A241D,#14110E 70%)!important;color:#F2ECE2}
+#stage{border-radius:clamp(0px,2.4vh,28px)!important;box-shadow:0 0 0 1px rgba(201,180,140,.25),0 30px 80px rgba(0,0,0,.55)!important;
+  background:radial-gradient(120% 90% at 50% 10%,#2E2720,#1E1914 70%)!important}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:repeating-linear-gradient(93deg,rgba(255,255,255,.025) 0 2px,transparent 2px 11px),repeating-linear-gradient(87deg,rgba(0,0,0,.08) 0 1px,transparent 1px 17px)}
+.eyebrow,.place{font-family:var(--sf)!important;font-weight:600;color:#A8977C!important}
+.readout{border-radius:12px!important;border:none!important;box-shadow:inset 0 2px 8px rgba(0,0,0,.7),0 0 0 1px rgba(201,180,140,.35)}
+.digit-window{border-radius:6px}
+.strip span{font-family:"SF Mono",ui-monospace,Menlo,monospace!important;font-weight:600}
+.hud{background:none!important;box-shadow:none!important;border-radius:0!important;padding:0!important;overflow:visible!important;isolation:auto!important}
+.hud>div{border:none!important;border-radius:999px!important;background:rgba(0,0,0,.35)!important;box-shadow:inset 0 0 0 1px rgba(201,180,140,.35);padding:.5vh 1.2vw!important;font-weight:600}
+.pill,.foot button{border:1px solid rgba(201,180,140,.55)!important;border-radius:999px!important;background:rgba(0,0,0,.3)!important;color:#E6D3A8!important;font-weight:600!important;padding:6px 14px!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.overlay{background:rgba(10,8,6,.55)!important}
+.card{background:rgba(36,31,26,.94)!important;color:#EFE6D6!important;box-shadow:0 0 0 1px rgba(201,180,140,.3),0 30px 80px rgba(0,0,0,.6)!important}
+.card h1,.card h2{color:#F6F0E4!important}
+.card h1 em{color:#E6C98A!important}
+.go{background:linear-gradient(180deg,#F0DCAA,#C9A86A)!important;color:#1D160F!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 8px 20px rgba(201,168,106,.25)!important}
+.go.home{background:rgba(255,255,255,.08)!important;color:#E6D3A8!important;box-shadow:inset 0 0 0 1px rgba(201,180,140,.4)!important}
+.scoreline,.kpi{background:rgba(0,0,0,.3)!important;color:#E6D3A8!important}
+.mode-choice{border:none!important;border-radius:16px!important;background:rgba(0,0,0,.3)!important;box-shadow:inset 0 0 0 1px rgba(201,180,140,.3)}
+.mode-name{font-weight:700!important;letter-spacing:-.02em}
