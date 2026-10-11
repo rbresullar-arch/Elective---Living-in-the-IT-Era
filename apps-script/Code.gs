@@ -35,7 +35,10 @@
  * GET ?action=schedules → { ok, schedules: [{ code, label }] }
  *
  * Instructor tools (run from the editor):
- *   setup()        — create tabs, seed Schedules, approve permissions.
+ *   setup()        — create tabs, seed Schedules, approve permissions. Run it again after editing the
+ *                    Schedules tab to apply the change at once (otherwise within 10 minutes).
+ * Speed: log in (restore) does not wait in the write queue; the header check runs once per version;
+ *   the Reset tab is read at most once a minute; Schedules are cached 10 minutes.
  *   purgeLegacy()  — delete every remaining version-1 (name-keyed) row from Auth, Data, Scores and Log.
  *                    Run it when the conversion period ends.
  */
@@ -101,12 +104,23 @@ function doPost(e) {
     if (!CODE_RE.test(rawId)) return json_({ ok: false, error: LEGACY_RE.test(rawId.toUpperCase()) ? 'migrate' : 'bad' });
   }
 
+  /* Log in (restore) only reads: it skips the queue so a class signing in together is not serialized. */
+  if (action === 'restore') {
+    try {
+      var rs = SpreadsheetApp.openById(SHEET_ID);
+      ensureSheetsOnce_(rs);
+      return json_(saveRestore_(rs, req, pin, action));
+    } catch (err) {
+      return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
+    }
+  }
+
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }   // requests queue here
+  try { lock.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }   // writes queue here
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
-    ensureSheets_(ss);
-    applyResets_(ss);
+    ensureSheetsOnce_(ss);
+    applyResetsSoon_(ss);
     if (action === 'register') return json_(register_(ss, req, pin));
     if (action === 'migrate') return json_(migrate_(ss, req, pin));
     if (action === 'save' || action === 'restore') return json_(saveRestore_(ss, req, pin, action));
@@ -201,7 +215,33 @@ function migrate_(ss, req, pin) {
 }
 
 /* ---------------- codes and schedules ---------------- */
+/* ---------------- speed: work skipped on most requests ----------------
+   Header check: once per version of this file (HEAD_SIG), not on every request.
+   Reset tab: read at most once a minute.  Schedules: cached 10 minutes.
+   setup() clears all three. */
+function headSig_() { return 'v2|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
+function ensureSheetsOnce_(ss) {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('HEAD_SIG') === headSig_() && ss.getSheetByName(SHEET.sched)) return;
+  ensureSheets_(ss);
+  props.setProperty('HEAD_SIG', headSig_());
+}
+function applyResetsSoon_(ss) {
+  var cache = CacheService.getScriptCache();
+  if (cache.get('RESETS_CHECKED')) return;
+  applyResets_(ss);
+  cache.put('RESETS_CHECKED', '1', 60);
+}
+
 function getSchedules_(ss) {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('SCHEDULES');
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var list = readSchedules_(ss);
+  if (list.length) cache.put('SCHEDULES', JSON.stringify(list), 600);
+  return list;
+}
+function readSchedules_(ss) {
   var sh = ss.getSheetByName(SHEET.sched);
   if (!sh) { ensureSheets_(ss); sh = ss.getSheetByName(SHEET.sched); }
   var last = sh.getLastRow();
@@ -530,6 +570,8 @@ function setup() {
   ss.rename('IT Era — Student Records');
   ensureSheets_(ss);
   salt_();
+  PropertiesService.getScriptProperties().setProperty('HEAD_SIG', headSig_());
+  CacheService.getScriptCache().removeAll(['SCHEDULES', 'RESETS_CHECKED']);
 }
 
 /* Run from the editor when the conversion period ends: removes every name-keyed (version 1)

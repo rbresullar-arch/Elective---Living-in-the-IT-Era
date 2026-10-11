@@ -778,7 +778,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.6';
+const APP_VERSION = '2026.10.11.7';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1836,6 +1836,7 @@ async function cloudOpenPanel(mode) {
   cp.sched.hidden = conv;
   cp.sched.value = await qrDefaultSched();
   cp.panel.classList.add('show');
+  if (!conv) schedLoad();
   setTimeout(() => (conv ? cp.pin : cp.sched).focus(), 50);
 }
 function cloudClosePanel() { cp.panel.classList.remove('show'); }
@@ -1900,7 +1901,10 @@ function codeShow(code) {
 document.getElementById('cdOk').addEventListener('click', () => document.getElementById('codePanel').classList.remove('show'));
 
 /* ---- Schedules: read from the instructor's Sheet (Schedules tab); the built-in list is the fallback ---- */
-async function schedLoad() {
+let schedLoaded = null;
+/* fetched once, only when a schedule list is about to be shown */
+function schedLoad() { return schedLoaded || (schedLoaded = schedFetch()); }
+async function schedFetch() {
   if (!CLOUD_URL) return;
   try {
     const r = await fetch(CLOUD_URL + '?action=schedules');
@@ -2087,6 +2091,7 @@ function authTab(which) {
   auth.tabLogin.setAttribute('aria-selected', String(which === 'login'));
   auth.tabCreate.setAttribute('aria-selected', String(which === 'create'));
   authMsg(auth.liMsg, ''); authMsg(auth.caMsg, ''); authMsg(auth.cvMsg, '');
+  if (which !== 'login') schedLoad();
 }
 auth.tabLogin.addEventListener('click', () => authTab('login'));
 auth.tabCreate.addEventListener('click', () => authTab('create'));
@@ -2100,7 +2105,6 @@ cloudFillSched(cp.sched);
 cloudFillSched(auth.cvSched);
 knownRender();
 qrDefaultSched().then(v => { if (v) auth.caSched.value = v; });
-schedLoad();
 /* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
 if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
 
@@ -2132,7 +2136,6 @@ async function loginSubmit() {
   if (res.ok) {
     await prepareDeviceFor(code);
     await cloudAdopt(code, hash, res.data || {});
-    cloudLastOk = 0;
     knownApply(code, auth.liRemember.checked);
     authOpen(code);
     if (res.pinSet) setCloudStatus('New PIN saved · logged in.');
@@ -2197,7 +2200,6 @@ async function convertSubmit() {
   if (res.ok) {
     await prepareDeviceFor(res.code);
     await cloudAdopt(res.code, hash, res.data || {});
-    cloudLastOk = 0;
     knownApply(res.code, auth.cvRemember.checked);
     authOpen(res.code);
     codeShow(res.code);
