@@ -659,6 +659,8 @@ const ACTIVITIES = [
     note: r => `Best ${r.bestPoints || 0} pts · ${r.bestAccuracy || 0}% accurate · Runs: ${r.runs || 1}` + (r.lastPercentage != null ? ` · Last run ${r.lastPercentage}%` : '') },
   { label: 'Activity 9', href: 'netiquette_desk.html',
     note: r => `${r.score}/${r.maxScore || 60} pts · Reputation ${r.reputation != null ? r.reputation : '—'}% · Locked` },
+  { label: 'Activity 10', href: 'ecommerce_week.html',
+    note: r => `${r.days || '—'} days · ₱${(r.profit || 0).toLocaleString('en-PH')} profit · ${r.rating != null ? (+r.rating).toFixed(1) : '—'}★ · ${r.score}/${r.maxScore} right calls · Locked` },
 ];
 
 const EXAMS = [
@@ -675,7 +677,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.9';
+const APP_VERSION = '2026.10.11.10';
 
 /* ======================= END OF CONFIG ======================= */
 

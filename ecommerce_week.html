@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Seller Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap"></noscript>
+<style>
+:root{
+  color-scheme: light;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
+  --ink:#1D1D1F; --muted:#6E6E73; --faint:#8E8E93; --ground:#F5F5F7; --paper:#FFFFFF;
+  --hair:rgba(60,60,67,.16); --sep:#E5E5EA; --fill:rgba(118,118,128,.12);
+  --acc:#F26B1D; --acc-ink:#FFFFFF; --acc-soft:#FFF1E8;
+  --blue:#007AFF; --green:#34C759; --green-ink:#1F8A3D; --red:#FF3B30; --orange:#FF9500; --yellow:#FFCC00; --purple:#AF52DE; --teal:#30B0C7; --indigo:#5856D6;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+  --sh-2:0 2px 4px rgba(0,0,0,.05),0 12px 32px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sf);font-size:15px;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html:not(.fx-ready) *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;padding:0}
+button:disabled{cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid rgba(242,107,29,.4);outline-offset:2px}
+.app{max-width:500px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:12px}
+.peso{font-variant-numeric:tabular-nums}
+
+/* HUD */
+.hud{position:relative;overflow:hidden;isolation:isolate;background:#1B1B3A;color:#fff;border-radius:22px;box-shadow:var(--sh-2);padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:10px}
+.hud>canvas.fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;display:block;pointer-events:none}
+.brand{font-weight:700;font-size:22px;letter-spacing:-.025em;line-height:1.1;text-shadow:0 1px 12px rgba(0,0,0,.25)}
+.brand small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:rgba(255,255,255,.82);margin-top:3px;text-transform:uppercase}
+.hudbtns{display:flex;gap:6px;align-self:start}
+.hb{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.38);color:#fff;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.hb.armed{background:#FF453A;border-color:#FF453A}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:.6fr 1fr 1.4fr .8fr;gap:6px}
+.stat{background:rgba(255,255,255,.14);border:.5px solid rgba(255,255,255,.3);border-radius:13px;padding:6px 9px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);min-width:0}
+.stat b{display:block;font-size:16px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat span{font-size:9.5px;color:rgba(255,255,255,.78);font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.pbar{height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin-top:4px;overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:#fff;border-radius:2px;transition:width .4s}
+
+/* Phase rail */
+.rail{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rstep{background:var(--paper);border-radius:14px;padding:8px 10px;box-shadow:var(--sh-1);opacity:.55;min-width:0}
+.rstep b{display:block;font-size:13px;font-weight:700;letter-spacing:-.01em}
+.rstep span{display:block;font-size:11px;color:var(--muted);line-height:1.25}
+.rstep.on{opacity:1;box-shadow:0 0 0 2px var(--acc),var(--sh-1)}
+.rstep.done{opacity:.9}
+.rstep.done b::after{content:" ✓";color:var(--green-ink)}
+
+/* Device */
+.device{background:#fff;border-radius:34px;box-shadow:0 0 0 .5px var(--hair),0 0 0 7px #fff,0 0 0 8px var(--hair),var(--sh-2);overflow:hidden;display:flex;flex-direction:column;height:min(760px,calc(100dvh - 290px));min-height:500px;position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:10px 22px 4px;font-size:14px;font-weight:600;flex:0 0 auto}
+.sbar svg{height:11px;width:auto;fill:currentColor}
+.sbi{display:flex;gap:5px;align-items:center}
+.screen{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+.tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);border-top:.5px solid #D1D1D6;background:rgba(249,249,249,.94);padding:6px 4px 10px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:500;color:var(--faint);position:relative}
+.tab svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--acc)}
+.tab:disabled{opacity:.3}
+.tab .bdg{position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:600;display:grid;place-items:center;padding:0 5px}
+
+/* App chrome */
+.nav{position:sticky;top:0;z-index:3;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);padding:4px 16px 8px;border-bottom:.5px solid transparent}
+.nav.sep{border-bottom-color:#D1D1D6}
+.nav h1{font-size:30px;font-weight:700;letter-spacing:-.03em;margin:2px 0 6px;line-height:1.1}
+.nav .navrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center;min-height:36px;gap:6px}
+.nav .navrow b{font-size:17px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{color:var(--blue);font-size:17px;display:flex;align-items:center;gap:2px;justify-self:start}
+.back svg{width:12px;height:20px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;gap:2px}
+.seg button{flex:1;padding:6px 4px;border-radius:7px;font-size:13px;font-weight:500;white-space:nowrap;position:relative}
+.seg button.on{background:#fff;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+.seg .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:4px;vertical-align:1px}
+.pad{padding:12px 16px 20px}
+.sec{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:16px 4px 6px;font-weight:500}
+.group{background:#fff;border-radius:12px;box-shadow:inset 0 0 0 .5px var(--hair);overflow:hidden}
+.ground{background:var(--ground);min-height:100%}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;position:relative;width:100%;text-align:left}
+.row+.row::before{content:"";position:absolute;top:0;left:62px;right:0;border-top:.5px solid #D1D1D6}
+.row .grow{flex:1;min-width:0}
+.row .t{font-size:15px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:13px;color:var(--muted);line-height:1.3;margin-top:1px}
+.row .r{text-align:right;font-size:15px;font-weight:600;white-space:nowrap}
+.row .r small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.chev{width:8px;height:13px;stroke:#C7C7CC;fill:none;stroke-width:2;flex:0 0 auto}
+.unread{width:10px;height:10px;border-radius:50%;background:var(--blue);flex:0 0 auto}
+.thumb{flex:0 0 46px;height:46px;border-radius:11px;display:grid;place-items:center;color:#fff}
+.thumb svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.thumb.sm{flex-basis:36px;height:36px;border-radius:9px}
+.thumb.sm svg{width:20px;height:20px}
+.thumb.lg{flex-basis:auto;width:100%;height:150px;border-radius:0}
+.thumb.lg svg{width:70px;height:70px;stroke-width:1.2}
+.av{flex:0 0 40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:16px;background:var(--c,#8E8E93);background-image:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))}
+.av.sm{flex-basis:32px;height:32px;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;background:var(--fill);color:var(--ink);white-space:nowrap}
+.chip.g{background:#E3F7E8;color:var(--green-ink)}
+.chip.r{background:#FFE5E3;color:#C4261D}
+.chip.o{background:#FFF0DB;color:#B25E00}
+.chip.b{background:#E5F0FF;color:#0A5DC2}
+.chip.p{background:#F4E6FB;color:#8A3AB9}
+.chip.k{background:#1D1D1F;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;width:100%}
+.btn.acc{background:var(--acc);color:var(--acc-ink)}
+.btn.grey{background:var(--fill);color:var(--ink)}
+.btn.red{background:#FFE5E3;color:#C4261D}
+.btn.green{background:var(--green);color:#fff}
+.btn.sm{width:auto;padding:7px 12px;font-size:14px;border-radius:999px}
+.btn:disabled{opacity:.38}
+.btnrow{display:flex;gap:8px}
+.btnrow .btn{flex:1}
+.note{font-size:13px;color:var(--muted);line-height:1.4}
+.empty{text-align:center;color:var(--faint);padding:40px 20px;font-size:15px}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+
+/* Marketplace listing */
+.lcard{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);overflow:hidden;margin-bottom:12px}
+.lcard .lb{padding:10px 12px 12px}
+.lcard .lt{font-weight:600;font-size:15px}
+.lcard .lc{font-size:13px;color:var(--muted);margin-top:1px}
+.lcard .lp{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:6px}
+.lcard .lm{font-size:12px;color:var(--muted)}
+.lcard.sold{opacity:.65}
+.ltop{display:flex;gap:12px;padding:12px;align-items:center}
+.pricepick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.pp{border-radius:10px;padding:7px 4px;text-align:center;box-shadow:inset 0 0 0 1px var(--hair);font-size:12px;color:var(--muted)}
+.pp b{display:block;font-size:15px;color:var(--ink)}
+.pp.on{box-shadow:inset 0 0 0 2px var(--acc);background:var(--acc-soft)}
+
+/* Chat */
+.chathead{display:flex;align-items:center;gap:10px;padding:2px 12px 8px;border-bottom:.5px solid #D1D1D6;position:sticky;top:0;background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);z-index:3}
+.chathead .grow{flex:1;min-width:0;line-height:1.2}
+.chathead .grow b{display:block;font-size:15px}
+.chathead .grow small{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.about{display:flex;gap:10px;align-items:center;margin:10px 12px;padding:10px 12px;background:var(--ground);border-radius:12px;font-size:12.5px;color:var(--muted)}
+.about .thumb{flex-basis:40px;height:40px}
+.about b{color:var(--ink);font-size:13.5px;display:block}
+.msgs{display:flex;flex-direction:column;gap:3px;padding:6px 12px 14px}
+.when{text-align:center;font-size:11px;color:var(--faint);margin:8px 0 4px;font-weight:500}
+.bub{max-width:78%;padding:8px 12px;border-radius:18px;font-size:15px;line-height:1.35;white-space:pre-line;word-wrap:break-word;animation:pop .25s ease-out both}
+.bub.them{align-self:flex-start;background:#E9E9EB;color:#000;border-bottom-left-radius:6px}
+.bub.me{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:6px}
+.sys{align-self:center;max-width:92%;font-size:12.5px;color:var(--muted);text-align:center;background:var(--ground);border-radius:10px;padding:6px 10px;margin:6px 0;line-height:1.35}
+.sys.bad{background:#FFE5E3;color:#C4261D}
+.sys.good{background:#E3F7E8;color:var(--green-ink)}
+.lesson{align-self:stretch;margin:8px 0 2px;border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.45;background:#FFF8E6;box-shadow:inset 0 0 0 .5px rgba(178,94,0,.25)}
+.lesson b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#B25E00;margin-bottom:2px}
+.lesson.ok{background:#EEFAF1;box-shadow:inset 0 0 0 .5px rgba(31,138,61,.25)}
+.lesson.ok b{color:var(--green-ink)}
+.lesson.no{background:#FFF0EF;box-shadow:inset 0 0 0 .5px rgba(196,38,29,.25)}
+.lesson.no b{color:#C4261D}
+.replies{position:sticky;bottom:0;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:.5px solid #D1D1D6;padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.replies .rl{font-size:11.5px;color:var(--muted);font-weight:500;text-align:center}
+.reply{border-radius:18px;padding:9px 14px;font-size:14.5px;line-height:1.3;text-align:left;box-shadow:inset 0 0 0 1px var(--blue);color:var(--blue);background:#fff}
+.reply:active{background:#E5F0FF}
+
+/* Embedded "screenshot" cards */
+.shot{align-self:flex-start;max-width:78%;border-radius:16px;overflow:hidden;box-shadow:0 0 0 .5px var(--hair),0 2px 8px rgba(0,0,0,.08);background:#fff;font-size:13px;animation:pop .25s ease-out both}
+.shot.right{align-self:flex-end}
+.rcpt{padding:12px 14px 12px;text-align:center;background:linear-gradient(180deg,#0B5ED7,#1877F2 45%,#fff 45%)}
+.rcpt .rlogo{color:#fff;font-weight:700;font-size:13px;letter-spacing:.02em}
+.rcpt .rbox{background:#fff;border-radius:12px;margin-top:22px;padding:12px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.rcpt .chk{width:34px;height:34px;border-radius:50%;background:#1DB954;color:#fff;display:grid;place-items:center;margin:-28px auto 6px;font-weight:700;border:3px solid #fff}
+.rcpt .amt{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.rcpt .kv{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--muted);margin-top:4px;text-align:left}
+.rcpt .kv span:last-child{color:var(--ink);text-align:right}
+.sms{padding:10px 12px;background:#fff}
+.sms .sh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.sms .sh .av{flex-basis:24px;height:24px;font-size:11px}
+.sms .sb{background:#E9E9EB;border-radius:14px;padding:8px 11px;line-height:1.35;color:#000;font-size:13.5px}
+.wcheck{padding:12px;background:#fff}
+.wcheck .wh{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted)}
+.wcheck .wb{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:2px 0 8px}
+.wcheck .wr{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-top:.5px solid var(--sep)}
+.wcheck .wr span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcheck .wr span:last-child{font-weight:600;white-space:nowrap}
+.wcheck .none{font-size:12.5px;color:#C4261D;padding:6px 0;border-top:.5px solid var(--sep);font-weight:600}
+.trk{padding:12px;background:#fff}
+.trk .tl{position:relative;padding-left:18px;margin-top:6px}
+.trk .tl div{position:relative;font-size:12.5px;padding:3px 0;color:var(--muted)}
+.trk .tl div::before{content:"";position:absolute;left:-15px;top:8px;width:8px;height:8px;border-radius:50%;background:#C7C7CC}
+.trk .tl div.on{color:var(--ink);font-weight:600}
+.trk .tl div.on::before{background:var(--green)}
+.mailcard{padding:12px;background:#fff;font-size:13px;line-height:1.4}
+.mailcard .from{font-size:12px;color:var(--muted)}
+.mailcard .from b{color:var(--ink)}
+.mailcard .lnk{color:var(--blue);text-decoration:underline;word-break:break-all}
+
+/* Wallet */
+.wallet{background:linear-gradient(160deg,#0A84FF,#0050C8);color:#fff;border-radius:20px;padding:16px;margin:4px 0 6px;box-shadow:0 8px 20px rgba(10,132,255,.3);position:relative;overflow:hidden}
+.wallet::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.12)}
+.wallet small{font-size:12px;opacity:.85;font-weight:500}
+.wallet .bal{font-size:32px;font-weight:700;letter-spacing:-.03em;margin:2px 0 10px}
+.wallet .wrow{display:flex;justify-content:space-between;font-size:12px;opacity:.9}
+.amt.plus{color:var(--green-ink)}
+.amt.minus{color:var(--ink)}
+.amt.loss{color:#C4261D}
+
+/* Supplier */
+.sup{background:#fff;border-radius:16px;box-shadow:inset 0 0 0 .5px var(--hair);padding:12px;margin-bottom:12px}
+.sup .stop{display:flex;gap:10px;align-items:center}
+.logo{flex:0 0 46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:16px;letter-spacing:-.02em}
+.sup .sn{font-weight:600;font-size:15.5px;line-height:1.2}
+.sup .sl{font-size:12.5px;color:var(--muted);margin-top:2px}
+.sup .chips{margin:9px 0}
+.sup .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.fact{background:var(--ground);border-radius:10px;padding:6px 8px;font-size:11px;color:var(--muted)}
+.fact b{display:block;font-size:14px;color:var(--ink);font-weight:600}
+.sup .blurb{font-size:13px;line-height:1.4;margin:0 0 10px;color:#3A3A3C}
+.cat{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:12px;margin-bottom:10px}
+.cat .ctop{display:flex;gap:12px;align-items:center}
+.tiers{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0}
+.tier{background:var(--ground);border-radius:9px;padding:6px 8px;font-size:11.5px;color:var(--muted)}
+.tier b{display:block;color:var(--ink);font-size:15px}
+.tier.on{box-shadow:inset 0 0 0 1.5px var(--acc);background:var(--acc-soft)}
+.stepper{display:flex;align-items:center;gap:0;background:var(--fill);border-radius:9px;overflow:hidden}
+.stepper button{width:40px;height:34px;font-size:20px;font-weight:500;color:var(--ink)}
+.stepper button:active{background:rgba(0,0,0,.08)}
+.stepper span{min-width:44px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.cline{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cline .sub{font-weight:600;font-variant-numeric:tabular-nums}
+.cartbar{position:sticky;bottom:0;z-index:2;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:.5px solid #D1D1D6;padding:10px 16px 12px;display:flex;align-items:center;gap:12px}
+.cartbar .tot{flex:1;font-size:12px;color:var(--muted)}
+.cartbar .tot b{display:block;font-size:19px;color:var(--ink);letter-spacing:-.02em}
+.cartbar .btn{width:auto;white-space:nowrap}
+.cartbar .btn.sm{padding:8px 12px}
+.payopt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;text-align:left;width:100%}
+.payopt+.payopt{border-top:.5px solid #D1D1D6}
+.radio{flex:0 0 22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #C7C7CC;margin-top:1px}
+.payopt.on .radio{box-shadow:inset 0 0 0 7px var(--blue)}
+.payopt b{display:block;font-size:15px}
+.payopt span{font-size:12.5px;color:var(--muted);line-height:1.35;display:block}
+.doc{background:#fff;border-radius:6px;box-shadow:0 0 0 .5px var(--hair),0 6px 20px rgba(0,0,0,.08);padding:16px;font-size:12.5px;line-height:1.45}
+.doc h3{margin:0;font-size:16px;letter-spacing:-.01em}
+.doc .dm{display:flex;justify-content:space-between;color:var(--muted);font-size:11.5px;margin:2px 0 12px}
+.doc table{width:100%;border-collapse:collapse;margin:8px 0}
+.doc th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;font-weight:600;border-bottom:1px solid var(--sep);padding:4px 0}
+.doc td{padding:5px 0;border-bottom:.5px solid var(--sep);vertical-align:top}
+.doc .n{text-align:right;font-variant-numeric:tabular-nums}
+.doc .tot td{font-weight:700;border-bottom:none}
+.doc .terms{background:var(--ground);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12px}
+
+/* Seller center */
+.ord{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);margin-bottom:10px;overflow:hidden}
+.ord .oh{display:flex;align-items:center;gap:10px;padding:10px 12px 6px}
+.ord .oh .grow{flex:1;min-width:0}
+.ord .on{font-size:12px;color:var(--muted)}
+.ord .oc{font-weight:600;font-size:15px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ord .ol{display:flex;gap:10px;align-items:center;padding:6px 12px;font-size:13.5px}
+.ord .ol .grow{flex:1;min-width:0}
+.ord .of{display:flex;justify-content:space-between;align-items:center;padding:8px 12px 10px;border-top:.5px solid var(--sep);gap:8px}
+.ord .of .tt{font-weight:700;font-size:16px;letter-spacing:-.02em}
+.ord.done{opacity:.55}
+.check{flex:0 0 24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #C7C7CC;display:grid;place-items:center;color:#fff}
+.check.on{background:var(--blue);box-shadow:none}
+.check svg{width:13px;height:13px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sheet{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.28);display:flex;align-items:flex-end;animation:fade .2s ease-out both}
+.sheet .sbody{background:var(--ground);width:100%;max-height:88%;overflow-y:auto;border-radius:16px 16px 0 0;padding:6px 16px 18px;animation:up .28s cubic-bezier(.2,.8,.2,1) both}
+.grab{width:36px;height:5px;border-radius:3px;background:#C7C7CC;margin:4px auto 8px}
+.kv2{display:flex;justify-content:space-between;gap:10px;padding:10px 14px;font-size:14.5px;position:relative}
+.kv2+.kv2::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:.5px solid #D1D1D6}
+.kv2 span:first-child{color:var(--muted)}
+.kv2 span:last-child{text-align:right;font-weight:500}
+.kv2 .bad{color:#C4261D;font-weight:600}
+.kv2 .ok{color:var(--green-ink);font-weight:600}
+.verify{margin:10px 0;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4}
+.verify.bad{background:#FFE5E3;color:#8E1A12}
+.verify.ok{background:#E3F7E8;color:#14612B}
+.prod{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:12px;margin-bottom:10px}
+.prod .ptop{display:flex;gap:12px;align-items:center}
+.prod .grow{flex:1;min-width:0}
+.prod .pt{font-weight:600;font-size:15px}
+.prod .ps{font-size:12.5px;color:var(--muted)}
+.stockn{font-size:22px;font-weight:700;letter-spacing:-.02em;text-align:right;line-height:1}
+.stockn small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.stockn.zero{color:#C4261D}
+.toggle{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;box-shadow:inset 0 0 0 .5px var(--hair);padding:11px 14px;width:100%;text-align:left;margin-bottom:8px}
+.toggle .grow{flex:1}
+.toggle b{display:block;font-size:15px}
+.toggle span{font-size:12.5px;color:var(--muted)}
+.sw{flex:0 0 51px;height:31px;border-radius:16px;background:#E9E9EA;position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 3px 1px rgba(0,0,0,.06);transition:transform .2s}
+.toggle.on .sw{background:var(--green)}
+.toggle.on .sw::after{transform:translateX(20px)}
+.toggle:disabled{opacity:.5}
+.crmrow .r{font-size:13px}
+.pl{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:4px 0}
+.pl .kv2 span:last-child{font-variant-numeric:tabular-nums}
+.big{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.05}
+
+/* Action bar under device */
+.actbar{display:flex;gap:10px;align-items:center}
+.actbar .hint{flex:1;font-size:13px;color:var(--muted);line-height:1.35}
+.actbar .btn{width:auto;padding:12px 20px;border-radius:999px}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.card>*{flex-shrink:0}
+.card{background:#fff;border-radius:24px;box-shadow:0 24px 64px rgba(0,0,0,.28);max-width:540px;width:100%;max-height:100%;overflow-y:auto;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.card h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.08}
+.card h1 em{font-style:normal;color:var(--acc)}
+.card h2{margin:4px 0 0;font-size:18px;letter-spacing:-.02em}
+.card p{margin:0;line-height:1.5}
+.card ol,.card ul{margin:0;padding-left:20px;line-height:1.5}
+.card .kicker{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.models{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.model{background:var(--ground);border-radius:14px;padding:10px;font-size:12.5px;line-height:1.35}
+.model .mt{display:block;font-size:18px;font-weight:700;letter-spacing:-.02em}
+.model i{display:block;font-style:normal;color:var(--muted);font-size:11.5px;margin-bottom:4px}
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:.5px solid var(--sep);vertical-align:top}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.tbl td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.go{border-radius:999px;background:var(--acc);color:var(--acc-ink);font-weight:600;font-size:17px;padding:12px 24px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(242,107,29,.32)}
+.go.home{background:var(--fill);color:var(--ink);box-shadow:none;text-decoration:none;display:inline-block}
+.gorow{display:flex;flex-wrap:wrap;gap:10px}
+.dl{color:var(--muted);font-size:12px;text-decoration:underline;align-self:flex-start}
+.lockline,.scoreline{background:var(--ground);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.4}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.kpi{background:var(--ground);border-radius:12px;padding:8px 10px}
+.kpi b{display:block;font-size:19px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.result{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.result.win{color:var(--green-ink)}.result.mid{color:#B25E00}.result.lose{color:#C4261D}
+.bigscore{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bigscore b{font-size:52px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.bigscore span{color:var(--muted);font-size:14px}
+.rv{border-radius:12px;padding:8px 10px;font-size:13px;line-height:1.4;background:var(--ground)}
+.rv.ok{background:#EEFAF1}.rv.no{background:#FFF0EF}
+.rv .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-weight:600}
+.review{display:flex;flex-direction:column;gap:6px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);background:rgba(29,29,31,.92);color:#fff;font-size:14px;font-weight:600;padding:10px 16px;border-radius:999px;z-index:80;pointer-events:none;max-width:92vw;text-align:center;box-shadow:var(--sh-2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.toast.good{background:rgba(31,138,61,.95)}.toast.bad{background:rgba(196,38,29,.95)}
+@keyframes pop{0%{transform:scale(.94);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:400px){.stats{grid-template-columns:.55fr 1fr 1.45fr .75fr;gap:5px}.stat{padding:6px 7px}.stat b{font-size:14.5px}.stat span{font-size:9px}.models{grid-template-columns:1fr}.device{height:calc(100dvh - 240px)}.nav h1{font-size:27px}}
+</style>
+<script id="itictCloudPush">
+/* Cloud backup: sends a result to the instructor's Google Sheet the moment this
+   page saves it. Works only after the student created a PIN on the hub
+   (localStorage 'itict_cloud'). Never blocks or changes the page; failures are
+   silent and the hub uploads everything on the next visit. */
+(function(){
+  var URL_='https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var ACT={itict_essay_result:'activity1',itict_abacus_result:'activity2',itict_pascaline_result:'activity3',itict_binary_result:'activity4',
+    itict_activity5_result:'activity5',itict_activity6_result:'activity6',itict_activity7_result:'activity7',itict_activity8_result:'activity8',itict_activity9_result:'activity9',
+    itict_activity10_result:'activity10'};
+  var EXAM={itict_prelim:'examPrelim',itict_midterm:'exam1'};
+  var pending={}, timers={};
+  try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
+  function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
+  var RETRY=[10000,30000,90000];
+  function send(key,data,attempt){
+    if(!data){ data=pending[key]; delete pending[key]; clearTimeout(timers[key]); }
+    var a=acct(); if(!a||!data) return;
+    attempt=attempt||0;
+    var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
+    function again(){ if(RETRY[attempt]!=null) setTimeout(function(){ send(key,data,attempt+1); },RETRY[attempt]); }
+    try{
+      fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j&&!j.ok&&(j.error==='busy'||j.error==='server')) again(); })
+        .catch(again);
+    }catch(e){}
+  }
+  function route(k,v){
+    var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
+    if(!rec||typeof rec!=='object') return null;
+    if(ACT[k]){ var d={}; d[ACT[k]]=rec; return {wait:800,data:d}; }
+    var m=/^(itict_[a-z]+)_(result|session)$/.exec(k);
+    if(m&&EXAM[m[1]]){ var x={prefix:m[1]}; x[m[2]]=rec; var e={}; e[EXAM[m[1]]]=x; return {wait:m[2]==='session'?20000:800,data:{exams:e}}; }
+    return null;
+  }
+  var orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    var out=orig.apply(this,arguments);
+    try{
+      if(this===window.localStorage){
+        var key=String(k), r=route(key,String(v));
+        if(r){ pending[key]=r.data; clearTimeout(timers[key]); timers[key]=setTimeout(function(){ send(key); },r.wait); }
+      }
+    }catch(e){}
+    return out;
+  };
+  function flush(){ for(var k in pending) send(k); }
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') flush(); });
+})();
+</script>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="brand">Seller Journey<small>C2C → B2B → B2C</small></div>
+    <div class="hudbtns"><button class="hb" id="homeBtn" type="button">Home</button><button class="hb" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat"><b id="hDay">1</b><span>Day</span></div>
+      <div class="stat"><b id="hCash" class="peso">₱0</b><span>Cash</span></div>
+      <div class="stat"><b id="hGoal" class="peso">₱0</b><span id="hGoalL">Seed goal</span><div class="pbar"><i id="hBar"></i></div></div>
+      <div class="stat"><b id="hRate">—</b><span>Rating</span></div>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Phases">
+    <div class="rstep" id="r1"><b>1 · C2C</b><span>You sell to another person</span></div>
+    <div class="rstep" id="r2"><b>2 · B2B</b><span>Your shop buys from a supplier</span></div>
+    <div class="rstep" id="r3"><b>3 · B2C</b><span>Your shop sells to customers</span></div>
+  </nav>
+
+  <section class="device" aria-label="Phone">
+    <div class="sbar"><span id="clock">9:41</span><span class="sbi"><svg viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx=".7"/><rect x="5" y="5" width="3" height="6" rx=".7"/><rect x="10" y="2.5" width="3" height="8.5" rx=".7"/><rect x="15" y="0" width="3" height="11" rx=".7"/></svg><svg viewBox="0 0 16 11"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.1-1.1C13.2 1.6 10.7.6 8 .6S2.8 1.6.9 3.5L2 4.6c1.6-1.5 3.7-2.4 6-2.4zm0 3.2c1.4 0 2.7.5 3.7 1.4l1.1-1.1C11.5 4.5 9.8 3.8 8 3.8s-3.5.7-4.8 1.9l1.1 1.1c1-.9 2.3-1.4 3.7-1.4zm0 3.2c.6 0 1.1.2 1.5.6L8 10.7 6.5 9.2c.4-.4.9-.6 1.5-.6z"/></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="1.6"/><rect x="24.5" y="4" width="1.6" height="4" rx=".8" opacity=".4"/></svg></span></div>
+    <div class="screen" id="screen"></div>
+    <div id="sheetHost"></div>
+    <div class="tabbar" id="tabbar"></div>
+  </section>
+
+  <div class="actbar">
+    <div class="hint" id="actHint"></div>
+    <button class="btn acc" id="endDayBtn" type="button">End day</button>
+  </div>
+</div>
+
+<!-- Start -->
+<div class="overlay" id="startScreen">
+  <div class="card">
+    <div class="kicker">Activity 10 · E-commerce models</div>
+    <h1>From one sale to a <em>real online store</em>.</h1>
+    <p>You start with <b>₱500</b> in your e-wallet and a few things you no longer use. Grow it into an online shop that earns <b>₱20,000 profit</b>. Every stage is a different e-commerce model.</p>
+    <div class="models">
+      <div class="model"><span class="mt">C2C</span><i>Consumer → Consumer</i>Sell your used items to other people on a marketplace. Goal: <b>₱3,000</b> starting capital.</div>
+      <div class="model"><span class="mt">B2B</span><i>Business → Business</i>Your shop buys stock in bulk from a wholesale supplier, with minimum orders and invoices.</div>
+      <div class="model"><span class="mt">B2C</span><i>Business → Consumer</i>Sell to customers, ship orders, answer messages and keep a customer list (CRM). Restock and repeat.</div>
+    </div>
+    <ol>
+      <li>Read every chat, order and supplier page carefully. Some buyers, sellers and messages are <b>scams</b>. Most are honest; turning away honest people also costs you.</li>
+      <li>Each day, finish what is waiting, then tap <b>End day</b>.</li>
+      <li>If your cash and stock run out, the business closes and you start again from C2C.</li>
+    </ol>
+    <div class="tw"><table class="tbl">
+      <tr><th>Your score</th><th>Weight</th></tr>
+      <tr><td>Correct decisions (scams avoided, honest people served)</td><td class="n">60%</td></tr>
+      <tr><td>Days taken to reach ₱20,000 profit (14 days or fewer = full marks)</td><td class="n">25%</td></tr>
+      <tr><td>Final store rating (out of 5★)</td><td class="n">15%</td></tr>
+    </table></div>
+    <p class="note">Your first business that reaches the goal is recorded and locked. Later runs are practice only. Progress is saved on this device, so you can continue later.</p>
+    <p class="lockline" id="lockLine" hidden></p>
+    <div class="gorow">
+      <button class="go" id="startBtn" type="button">Start</button>
+      <button class="go home" id="resumeBtn" type="button" hidden>Continue</button>
+      <a class="go home" href="index.html">‹ Activities</a>
+    </div>
+    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
+  </div>
+</div>
+
+<!-- Phase intro / day summary / generic -->
+<div class="overlay" id="infoScreen" hidden>
+  <div class="card" id="infoCard"></div>
+</div>
+
+<!-- End -->
+<div class="overlay" id="endScreen" hidden>
+  <div class="card" id="endCard"></div>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <div class="card"><h1>Open in a <em>real browser</em></h1><p id="gateMsg"></p></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =====================================================================
+   CONFIG
+   ===================================================================== */
+const CFG = {
+  hubUrl: 'index.html',
+  startCash: 500,
+  seedGoal: 3000,
+  profitGoal: 20000,
+  parDays: 14,              // total days (C2C + B2B + B2C) for full speed marks
+  dayPenalty: 6,            // speed % lost per day over par
+  minSpeed: 40,
+  minCapital: 400,          // below this after C2C, the store cannot open
+  platformFee: 0.05,        // B2C marketplace commission on each shipped order
+  escrowFee: 0.02,          // SupplyHub buyer protection fee
+  freight: 150,             // B2B delivery fee per purchase order
+  rtsFee: 180,              // return-to-sender fee for a failed COD parcel
+  boostCost: 150,           // sponsored listings, one day
+  promoCost: 80,            // SMS promo to repeat customers
+  weights: { dec: 0.60, speed: 0.25, rating: 0.15 }
+};
+const RESULT_KEY = 'itict_activity10_result', RESULT_IDB = 'activity10_result';
+const PROGRESS_KEY = 'itict_activity10_progress';
+
+/* Products the shop can stock (wholesale cost, suggested retail, base demand per day) */
+const SKUS = {
+  case:    { name: 'Shockproof phone case',      short: 'Phone case',     cost: 45,  retail: 149, base: 4.6, icon: 'case',    c1: '#5E5CE6', c2: '#8E8CF0' },
+  glass:   { name: 'Tempered glass protector',   short: 'Tempered glass', cost: 22,  retail: 99,  base: 5.0, icon: 'glass',   c1: '#30B0C7', c2: '#64D2FF' },
+  charger: { name: '20W USB-C fast charger',     short: 'USB-C charger',  cost: 135, retail: 349, base: 2.6, icon: 'charger', c1: '#FF9500', c2: '#FFB340' },
+  buds:    { name: 'Wireless earbuds (TWS)',     short: 'Earbuds',        cost: 290, retail: 699, base: 1.9, icon: 'buds',    c1: '#FF2D55', c2: '#FF6482' }
+};
+const SKU_IDS = Object.keys(SKUS);
+const MOQ = 10, BULK_QTY = 50, BULK_OFF = 0.10;
+const PRICE_LV = { sale: { k: 0.85, d: 1.45, label: 'Sale' }, std: { k: 1.0, d: 1.0, label: 'Standard' }, prem: { k: 1.15, d: 0.62, label: 'Premium' } };
+
+/* C2C: your own used items (market value) */
+const ITEMS = [
+  { id: 'phone',   name: 'Used smartphone, 64 GB', cond: 'Good condition · with charger', m: 2600, icon: 'phone',   c1: '#1C1C1E', c2: '#48484A' },
+  { id: 'speaker', name: 'Bluetooth speaker',      cond: 'Like new · with box',          m: 750,  icon: 'speaker', c1: '#34C759', c2: '#63DA83' },
+  { id: 'calc',    name: 'Scientific calculator',  cond: 'All functions work',           m: 550,  icon: 'calc',    c1: '#8E8E93', c2: '#AEAEB2' },
+  { id: 'book',    name: 'Anatomy & Physiology textbook', cond: 'Some highlights',       m: 500,  icon: 'book',    c1: '#AF52DE', c2: '#C77DFF' }
+];
+const C2C_LV = { low: { k: 0.85, label: 'Quick sale' }, fair: { k: 1.0, label: 'Fair' }, high: { k: 1.2, label: 'High' } };
+
+/* C2C chat order: day → [item, scenario] */
+const C2C_PLAN = {
+  1: [['calc', 'noshow'], ['speaker', 'otp'], ['speaker', 'legitCod'], ['phone', 'fakeReceipt']],
+  2: [['book', 'overpay'], ['book', 'legit'], ['phone', 'legit'], ['calc', 'legit']]
+};
+
+const FIRST = ['Andrea','Paolo','Mika','Jerome','Kristine','Carlo','Angelica','Joshua','Bea','Miguel','Nicole','Ramon','Trisha','Kevin','Lea','Mark','Joanna','Renz','Camille','Paul','Shaira','Vince','Faith','Ian','Aira','Rhea','Jomar','Kaye','Neil','Hazel','Jessa','Nico','Precious','Arvin','Lovely','Dexter'];
+const LAST = ['Santos','Reyes','Cruz','Bautista','Garcia','Mendoza','Torres','Flores','Ramos','Villanueva','Dela Cruz','Aquino','Navarro','Castillo','Lim','Tan','Ong','Dizon','Ocampo','Lopez','Pascual','Salazar','Gonzales','Rivera'];
+const CITIES = ['Surigao City','Butuan City','Cagayan de Oro','Davao City','Cebu City','Tacloban City','Iligan City','General Santos','Tandag City','Bislig City','Bayugan City','Siargao Island'];
+const AVC = ['#FF9500','#34C759','#007AFF','#AF52DE','#FF2D55','#5AC8FA','#5856D6','#FF3B30','#30B0C7','#A2845E'];
+
+/* =====================================================================
+   ENGINE (pure state; no DOM)
+   ===================================================================== */
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let RNG = Math.random;
+function rnd(){ const v = RNG(); S.rngN = (S.rngN||0) + 1; return v; }
+function ri(a,b){ return a + Math.floor(rnd()*(b-a+1)); }
+function pick(a){ return a[Math.floor(rnd()*a.length)]; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function poisson(l){ if(l<=0) return 0; const L=Math.exp(-l); let k=0,p=1; do{ k++; p*=rnd(); }while(p>L); return k-1; }
+function round10(n){ return Math.round(n/10)*10; }
+const peso = n => (n<0?'−':'') + '₱' + Math.abs(Math.round(n)).toLocaleString('en-PH');
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+let S = null;
+
+function seedRng(){ RNG = mulberry(S.seed); for(let i=0;i<(S.rngN||0);i++) RNG(); }
+
+function newRun(practice){
+  S = {
+    v: 1, seed: (Math.random()*2**31)|0, rngN: 0, practice: !!practice,
+    phase: 'c2c', day: 1, storeDay: 0, cash: CFG.startCash, capital: 0, rating: 4.5,
+    tx: [{ day: 1, label: 'Starting balance', amt: CFG.startCash, kind: 'in' }],
+    items: ITEMS.map(it => ({ id: it.id, level: 'fair', status: 'draft', sold: 0 })),
+    listed: false, chats: [],
+    stock: {}, bad: {}, prices: {}, boostFor: -1, promoFor: -1,
+    shipments: [], orders: [], msgs: [], customers: [], sel: {},
+    dec: [], seq: 1, dayStartCash: CFG.startCash, ended: false,
+    hazardsDone: {},
+    view: { app: 'market', market: 'sell', chat: null, sup: null, cart: {}, pay: 'escrow', po: null, seller: 'orders', order: null, msg: null, crm: 'all', supView: 'list' },
+    visit: null
+  };
+  SKU_IDS.forEach(k => { S.stock[k] = 0; S.bad[k] = 0; S.prices[k] = 'std'; });
+  seedRng();
+  makeC2CChats(1);
+}
+
+function addTx(label, amt, kind){ S.cash += amt; S.tx.unshift({ day: S.day, label, amt, kind: kind || (amt>=0?'in':'out') }); }
+function decide(ok, label, lesson){ S.dec.push({ phase: S.phase, day: S.day, ok: !!ok, label, lesson }); }
+function rate(delta){ S.rating = clamp(Math.round((S.rating + delta)*100)/100, 1, 5); }
+function profit(){ return S.cash - S.capital; }
+function item(id){ return ITEMS.find(i=>i.id===id); }
+function itemS(id){ return S.items.find(i=>i.id===id); }
+function ask(id){ const it=item(id), st=itemS(id); return round10(it.m * C2C_LV[st.level].k); }
+
+/* ---------- C2C ---------- */
+const BUYERS = {
+  noshow:      { name: 'Kyle M.',     meta: 'Joined 3 weeks ago · no ratings', color: '#FF9500' },
+  legitCod:    { name: 'Rose Anne T.', meta: 'Joined 2018 · ★ 4.9 (42 ratings) · ID verified', color: '#34C759' },
+  otp:         { name: 'Dan Villar',  meta: 'Joined 5 days ago · no ratings', color: '#5856D6' },
+  fakeReceipt: { name: 'Jun R.',      meta: 'Joined 2 weeks ago · 1 rating', color: '#FF2D55' },
+  legit:       [{ name: 'Mae Santos', meta: 'Joined 2019 · ★ 4.8 (31 ratings) · ID verified', color: '#007AFF' },
+                { name: 'Lance Ong', meta: 'Joined 2020 · ★ 5.0 (18 ratings) · ID verified', color: '#30B0C7' },
+                { name: 'Bea Navarro', meta: 'Joined 2021 · ★ 4.9 (12 ratings) · BSN student', color: '#AF52DE' }],
+  overpay:     { name: 'Ella C.',     meta: 'Joined yesterday · no ratings', color: '#FF3B30' }
+};
+
+function makeC2CChats(day){
+  let li = 0; const scamFor = {};
+  (C2C_PLAN[day]||[]).forEach(([iid, type]) => {
+    const b = type==='legit' ? BUYERS.legit[li++ % 3] : BUYERS[type];
+    const c = { id: 'c'+(S.seq++), item: iid, type, day, who: b.name, meta: b.meta, color: b.color, msgs: [], done: false, read: false, opts: null, started: false };
+    if(type==='legit' || type==='legitCod'){ if(scamFor[iid]) c.after = scamFor[iid]; }
+    else scamFor[iid] = c.id;
+    S.chats.push(c);
+  });
+}
+function chatVisible(c){ if(!c.after) return true; const p = S.chats.find(x=>x.id===c.after); return !p || p.done; }
+
+/* Builds the opening of a chat when it is first opened (prices are known by then). */
+function startChat(c){
+  if(c.started) return;
+  c.started = true;
+  const it = item(c.item), st = itemS(c.item), A = ask(c.item);
+  const M = (f,t,extra) => c.msgs.push(Object.assign({ f, t }, extra||{}));
+  if(st.status === 'sold' || st.status === 'lost'){
+    M('them', `Hi! Available pa po yung ${it.name.toLowerCase()}?`);
+    M('sys', st.status==='sold' ? 'This item is already sold. The chat closes.' : 'You no longer have this item. The chat closes.');
+    c.done = true; c.skipped = true; c.opts = []; return;
+  }
+  switch(c.type){
+    case 'noshow':
+      M('them', `Hi, available pa? G ako sa ₱${A.toLocaleString()}. Meet tayo 3 PM sa bus terminal later? Otw na ako by then.`);
+      c.opts = [
+        { k: 'go',      t: 'Sure! I’ll head to the terminal at 3 PM with the item.' },
+        { k: 'confirm', t: 'Okay. Let’s meet at the mall entrance. Please confirm 1 hour before so I don’t travel for nothing.' },
+        { k: 'house',   t: 'Just come to my house, I’ll send you my address.' }
+      ]; break;
+    case 'otp':
+      M('them', `Interested ako sa speaker, ₱${A.toLocaleString()} okay na. I'll pay via e-wallet now. I sent a payment request, just enter the 6-digit code na matatanggap mo para ma-receive mo yung bayad.`);
+      M('card', '', { card: 'otp' });
+      M('them', 'Send mo na yung code dito para pumasok na yung bayad 😊');
+      c.opts = [
+        { k: 'give',   t: 'Here’s the code: 482915' },
+        { k: 'refuse', t: 'I don’t share OTPs. You can pay to my number directly, or we can do COD.' }
+      ]; break;
+    case 'fakeReceipt':
+      M('them', `Kuha ko na yung phone, ₱${A.toLocaleString()}. Bayad na ko via e-wallet, eto screenshot.`);
+      M('card', '', { card: 'receipt', amt: A });
+      M('them', 'Pa-book na lang ng rider papunta sa akin, ASAP sana. Thanks!');
+      c.opts = [
+        { k: 'ship',  t: 'Got it! Booking a rider to bring the phone to you now.' },
+        { k: 'check', t: 'Let me check my e-wallet first before I send it.' }
+      ]; break;
+    case 'overpay':
+      M('them', `Hi! Bili ako ng book, ₱${A.toLocaleString()}. Sent ko na.`);
+      M('card', '', { card: 'sms', amt: A + 1000 });
+      M('them', `Ay sorry!! Napasobra, ₱${(A+1000).toLocaleString()} na-send ko 😭 Pa-return na lang yung ₱1,000 sa number ng ate ko 0918 552 3310 please, kailangan niya ngayon.`);
+      c.opts = [
+        { k: 'refund', t: 'No problem, sending ₱1,000 to your sister now.' },
+        { k: 'check',  t: 'Let me open my e-wallet and check the balance first.' }
+      ]; break;
+    case 'legitCod': {
+      const off = Math.min(A, round10(it.m*0.95));
+      M('them', `Good day! Is the speaker still available? I'm from ${pick(['Butuan','Tandag','Bayugan'])}. Can you ship via courier, cash on delivery? I can pay ₱${off.toLocaleString()} plus shipping.`);
+      c.offer = off;
+      c.opts = [
+        { k: 'cod',   t: `Yes! I’ll ship via courier, COD ₱${off.toLocaleString()}. Please send your full name, address and number.` },
+        { k: 'block', t: 'Sorry, I don’t deal with people from other towns. (Block)' }
+      ]; break; }
+    case 'legit': {
+      const lv = st.level, m = it.m;
+      if(lv === 'low'){
+        M('them', `Hello! Kukunin ko na po sa ₱${A.toLocaleString()}. Saan po pwede mag-meet?`);
+        c.offer = A;
+        c.opts = [
+          { k: 'meet',  t: 'Thanks! Let’s meet at the mall entrance near the guard, 4 PM. Cash or e-wallet is fine.' },
+          { k: 'house', t: 'Pick it up at my house, I’ll send my address and room number.' },
+          { k: 'block', t: 'This feels like a scam. (Block)' }
+        ];
+      } else {
+        const off = lv==='fair' ? round10(A*0.9) : round10(m*0.9);
+        const ctr = round10((A+off)/2);
+        M('them', lv==='fair' ? `Hi! Available pa? Pwede ₱${off.toLocaleString()}? Meet tayo sa mall.` : `Hello, medyo mahal po. ₱${off.toLocaleString()} na lang? Meet tayo sa mall.`);
+        c.offer = off; c.counter = ctr;
+        c.opts = [
+          { k: 'accept',  t: `Deal, ₱${off.toLocaleString()}. Mall entrance near the guard, 4 PM.` },
+          { k: 'counter', t: `How about ₱${ctr.toLocaleString()}? Mall entrance near the guard, 4 PM.` },
+          { k: 'block',   t: 'You’re lowballing. This feels like a scam. (Block)' }
+        ];
+      }
+      break; }
+  }
+}
+
+function sellItem(id, amt, how){
+  const st = itemS(id); st.status = 'sold'; st.sold = amt;
+  addTx(`${item(id).name} · sold (${how})`, amt, 'in');
+}
+
+/* Returns {ok:bool|null} after applying the reply. */
+function c2cReply(c, k){
+  const it = item(c.item), A = ask(c.item);
+  const M = (f,t,extra) => c.msgs.push(Object.assign({ f, t }, extra||{}));
+  const opt = c.opts.find(o=>o.k===k); if(!opt || c.done) return null;
+  M('me', opt.t);
+  let ok = null, lesson = '';
+  switch(c.type){
+    case 'noshow':
+      if(k==='go'){
+        M('sys', '3:00 PM · You are at the terminal.'); M('sys', '4:10 PM · Kyle is not replying. You go home.', { cls: 'bad' });
+        addTx('Fare to bus terminal (buyer no-show)', -100, 'loss');
+        ok = false; lesson = 'No-shows waste your time and fare. Ask the buyer to confirm before you travel, and meet only in busy public places.';
+      } else if(k==='confirm'){
+        M('them', 'Sige sige 👍'); M('sys', '2:00 PM · You asked Kyle to confirm. No reply. You did not travel.', { cls: 'good' });
+        ok = true; lesson = 'Asking a buyer to confirm before you leave protects your time and money from no-shows.';
+      } else {
+        M('them', 'Sige send mo address mo 😁'); M('sys', 'Kyle never came, and a stranger now knows where you live.', { cls: 'bad' });
+        ok = false; lesson = 'Never give your home address to a stranger. Meet in a busy public place with guards or CCTV.';
+      }
+      break;
+    case 'otp':
+      if(k==='give'){
+        const lost = S.cash;
+        M('them', 'Salamat! 😊'); M('sys', `Your e-wallet was logged into from a new device. ${peso(lost)} was transferred out. Dan blocked you.`, { cls: 'bad' });
+        if(lost>0) addTx('Unauthorized transfer (shared OTP)', -lost, 'loss');
+        ok = false; lesson = 'An OTP (one-time PIN) is a key to your account, not a way to receive money. Receiving money never needs your OTP.';
+      } else {
+        M('them', 'Ang arte mo naman, wag na lang.'); M('sys', 'Dan left. Your e-wallet is safe.', { cls: 'good' });
+        ok = true; lesson = 'Real buyers never ask for your OTP. Anyone who does is trying to take over your account.';
+      }
+      break;
+    case 'fakeReceipt':
+      if(k==='ship'){
+        M('sys', 'The rider delivered the phone.'); M('card','',{ card: 'wallet', none: true, amt: A });
+        M('sys', 'No money arrived. Jun blocked you. The phone is gone.', { cls: 'bad' });
+        itemS(c.item).status = 'lost';
+        ok = false; lesson = 'A screenshot can be edited in seconds. Release an item only after you see the money in your own e-wallet or bank app.';
+      } else {
+        M('card','',{ card: 'wallet', none: true, amt: A, right: true });
+        M('me', 'I don’t see any payment in my e-wallet.'); M('them', 'Baka delay lang yan, send mo na lang yung phone.');
+        M('sys', 'Jun stopped replying. You still have the phone.', { cls: 'good' });
+        ok = true; lesson = 'Always check your own e-wallet balance. A payment is real only when it appears in your account.';
+      }
+      break;
+    case 'overpay':
+      if(k==='refund'){
+        const lost = Math.min(1000, Math.max(0,S.cash));
+        M('sys', `You sent ${peso(lost)} to 0918 552 3310.`);
+        M('card','',{ card: 'wallet', none: true, amt: A+1000 });
+        M('sys', 'The "₱1,500 received" text came from a regular mobile number, not the e-wallet. No money was ever sent.', { cls: 'bad' });
+        if(lost>0) addTx('Sent "refund" to stranger (overpayment scam)', -lost, 'loss');
+        ok = false; lesson = 'Overpayment scam: a fake "you received" text, then a request to send back the "extra". Check your real balance first.';
+      } else {
+        M('card','',{ card: 'wallet', none: true, amt: A+1000, right: true });
+        M('me', 'I didn’t receive anything. The text came from a regular number.'); M('sys', 'Ella left the chat.', { cls: 'good' });
+        ok = true; lesson = 'Official e-wallet notices come from the app or the official sender name, not a regular mobile number.';
+      }
+      break;
+    case 'legitCod':
+      if(k==='cod'){
+        M('them', 'Sent my details. Thank you!'); M('sys', 'The courier delivered the speaker and collected the payment. Paid out to your e-wallet.', { cls: 'good' });
+        sellItem(c.item, c.offer, 'courier COD');
+        ok = true; lesson = 'Rose Anne had a long history, many ratings and a verified ID. Courier COD lets strangers in other towns buy safely.';
+      } else {
+        M('sys', 'You blocked an honest buyer with 42 good ratings.', { cls: 'bad' });
+        ok = false; lesson = 'Being careful is good, but this buyer had a verified ID and years of good ratings. Check the signs, not just distance.';
+      }
+      break;
+    case 'legit':
+      if(k==='block'){
+        M('sys', `You blocked ${c.who}, a verified buyer with good ratings.`, { cls: 'bad' });
+        ok = false; lesson = 'Haggling is normal in C2C. Verified profiles with ratings and a public meetup are signs of an honest buyer.';
+      } else if(k==='house'){
+        M('them', 'Ay, sa mall na lang po sana… pero sige po.'); M('sys', 'You sold the item, but a stranger now knows where you live.', { cls: 'bad' });
+        sellItem(c.item, c.offer, 'pickup at home');
+        ok = false; lesson = 'Even honest-looking buyers should meet you in a busy public place. Keep your address private.';
+      } else if(k==='counter'){
+        const st = itemS(c.item);
+        if(st.level==='high'){
+          M('them', 'Pass na lang po, may nakita akong mas mura. Thank you!'); M('sys', 'No sale. Your price is above the usual market price.');
+          ok = true; lesson = 'Asking too much makes buyers look elsewhere. C2C prices are set by comparison with other sellers.';
+        } else {
+          M('them', `Sige po, ₱${c.counter.toLocaleString()}. See you!`); M('sys', 'You met at the mall entrance and got paid.', { cls: 'good' });
+          sellItem(c.item, c.counter, 'meetup'); ok = true; lesson = 'Fair counter-offers and public meetups are how most safe C2C deals happen.';
+        }
+      } else {
+        M('them', 'Thank you po! See you.'); M('sys', 'You met at the mall entrance and got paid.', { cls: 'good' });
+        sellItem(c.item, c.offer, 'meetup'); ok = true; lesson = 'Verified profile, good ratings, public meetup: a safe C2C deal.';
+      }
+      break;
+  }
+  c.done = true; c.opts = []; c.result = ok; c.lesson = lesson;
+  M('lesson', lesson, { ok });
+  decide(ok, `C2C · ${it.name} · ${c.who}`, lesson);
+  return { ok };
+}
+
+/* ---------- B2B ---------- */
+const SUP_NAMES = {
+  verified: ['Cebu Gadget Wholesale Corp.','Mindanao Mobile Supply Inc.','Visayas Accessories Trading Corp.'],
+  trader:   ['TechHub Trading','PhoneMart Distributor','Gizmo Depot Enterprises'],
+  scam:     ['Gadget Factory Direct','Super Cheap Wholesale PH','Mega Supplier Outlet']
+};
+function makeVisit(){
+  const pool = shuffle(['verified','trader','scam']);
+  S.visit = { day: S.day, suppliers: pool.map((type,i) => {
+    const name = pick(SUP_NAMES[type]);
+    const base = { id: 's'+i+'-'+S.day, type, name };
+    if(type==='verified') return Object.assign(base, { k: 1.0, years: ri(5,9), rate: 4.9, txn: ri(900,2400), resp: '98%', color: '#0A84FF', pays: ['escrow','bank'] });
+    if(type==='trader')   return Object.assign(base, { k: 0.92, years: ri(1,2), rate: 4.3, txn: ri(60,180), resp: '81%', color: '#FF9500', pays: ['escrow','bank'] });
+    return Object.assign(base, { k: 0.45, years: 0, rate: null, txn: 0, resp: '—', color: '#8E8E93', pays: ['personal'] });
+  }) };
+}
+function unitCost(sup, sku, qty){ let u = SKUS[sku].cost * sup.k; if(qty >= BULK_QTY) u *= (1-BULK_OFF); return Math.round(u*100)/100; }
+function cartTotal(sup, cart){
+  let sub = 0; SKU_IDS.forEach(k => { const q = cart[k]||0; if(q>0) sub += unitCost(sup,k,q)*q; });
+  return Math.round(sub);
+}
+function cartFee(sub, pay){ return pay==='escrow' ? Math.round(sub*CFG.escrowFee) : 0; }
+
+function placePO(sup, cart, pay){
+  const sub = cartTotal(sup, cart); if(sub<=0) return { err: 'empty' };
+  const fee = cartFee(sub, pay), total = sub + CFG.freight + fee;
+  if(total > S.cash) return { err: 'cash' };
+  const lines = SKU_IDS.filter(k=>(cart[k]||0)>0).map(k => ({ sku: k, qty: cart[k], unit: unitCost(sup,k,cart[k]) }));
+  const po = 'PO-2026-' + String(1000 + S.seq++);
+  addTx(`${po} · ${sup.name}${pay==='escrow'?' (held in escrow)':''}`, -total, 'stock');
+  let defect = null;
+  if(sup.type==='trader' && rnd() < 0.45){
+    const l = pick(lines); defect = { sku: l.sku, n: Math.max(1, Math.round(l.qty*0.2)), unit: l.unit };
+  }
+  const ship = { id: po, po, sup: { name: sup.name, type: sup.type }, pay, lines, sub, fee, freight: CFG.freight, total, ordered: S.day, arrive: S.day+1, defect, scam: sup.type==='scam', status: 'transit' };
+  S.shipments.push(ship);
+  if(sup.type==='scam'){
+    decide(false, `B2B · Paid ${sup.name}`, 'A brand-new supplier with no records, prices far below everyone else, and payment only to a personal account: classic fake supplier.');
+  } else {
+    decide(true, `B2B · Ordered from ${sup.name}`, sup.type==='verified'
+      ? 'A verified business with years of records and buyer protection is the safest B2B supplier.'
+      : 'A real trader with a short record. Cheaper, but check deliveries carefully and use buyer protection.');
+  }
+  return { ok: true, ship };
+}
+
+/* Called at the start of each day: deliveries arrive (or don't). */
+function receiveShipments(){
+  const out = [];
+  S.shipments.forEach(sh => {
+    if(sh.status!=='transit' || sh.arrive > S.day) return;
+    if(sh.scam){
+      sh.status = 'scammed';
+      S.msgs.push(mkMsg('supplier', { from: sh.sup.name, sub: 'Supplier unreachable', ship: sh.id, done: true, scamShip: true }));
+      out.push({ t: `${sh.po}: nothing arrived. ${sh.sup.name} deleted its page. ${peso(sh.total)} is gone.`, bad: true });
+      return;
+    }
+    sh.status = 'delivered';
+    sh.lines.forEach(l => { S.stock[l.sku] += l.qty - (sh.defect && sh.defect.sku===l.sku ? sh.defect.n : 0); });
+    if(sh.pay==='escrow') { /* payment released to supplier on receipt */ }
+    if(sh.defect){
+      S.msgs.push(mkMsg('inspect', { from: 'Receiving · ' + sh.po, ship: sh.id }));
+      out.push({ t: `${sh.po} arrived. Inspection found a problem. See Inbox.`, bad: true });
+    } else out.push({ t: `${sh.po} arrived: ${sh.lines.map(l=>l.qty+' × '+SKUS[l.sku].short).join(', ')}.` });
+  });
+  return out;
+}
+
+/* ---------- B2C ---------- */
+function mkMsg(kind, extra){ return Object.assign({ id: 'm'+(S.seq++), kind, day: S.day, done: false, read: false, thread: [], opts: null, started: false }, extra||{}); }
+function newCustomer(opts){
+  opts = opts || {};
+  const c = { id: 'u'+(S.seq++), name: pick(FIRST)+' '+pick(LAST), city: pick(CITIES), orders: 0, spent: 0,
+    joined: opts.joined != null ? opts.joined : ri(30, 1500), phoneOk: opts.phoneOk != null ? opts.phoneOk : true,
+    flagged: false, color: pick(AVC), since: S.day, notify: false };
+  S.customers.push(c); return c;
+}
+function cust(id){ return S.customers.find(c=>c.id===id); }
+function custTag(c){
+  if(c.flagged) return { t: 'Flagged', cls: 'r' };
+  if(c.orders >= 3) return { t: 'VIP', cls: 'p' };
+  if(c.orders >= 2) return { t: 'Repeat', cls: 'b' };
+  if(c.orders >= 1) return { t: 'Returning', cls: 'b' };
+  return { t: 'New', cls: '' };
+}
+function retailPrice(sku){ return Math.round(SKUS[sku].retail * PRICE_LV[S.prices[sku]].k); }
+function availStock(sku){
+  let n = S.stock[sku];
+  S.orders.forEach(o => { if(o.status==='new') o.lines.forEach(l => { if(l.sku===sku) n -= l.qty; }); });
+  return n;
+}
+function orderTotal(o){ return o.lines.reduce((s,l)=>s+l.qty*l.price,0); }
+function addOrder(kind, c, lines, pay, extra){
+  const o = Object.assign({ id: 'o'+(S.seq++), no: '2610' + String(S.day).padStart(2,'0') + String(ri(1000,9999)), cust: c.id, lines, pay, kind, status: 'new', verified: false, day: S.day, time: `${ri(7,21)}:${String(ri(0,59)).padStart(2,'0')}` }, extra||{});
+  S.orders.push(o); return o;
+}
+
+function genDay(){
+  const sd = S.storeDay;
+  const ratingF = clamp((S.rating - 2.5)/2, 0.3, 1.25);
+  const growth = Math.min(1.7, 1 + 0.06*(sd-1));
+  const boost = S.boostFor === S.day ? 1.4 : 1;
+  const repeaters = S.customers.filter(c => c.orders>0 && !c.flagged);
+  const promo = S.promoFor === S.day;
+  let pRepeat = Math.min(0.55, 0.05*repeaters.length + (promo ? 0.25 : 0));
+
+  // scheduled scenario items
+  const plan = { 1: { o: ['newpaid'], m: ['question'] }, 2: { o: ['bogus'], m: [] }, 3: { o: ['fakeproof','vip'], m: ['defect'] },
+                 4: { o: [], m: ['refundabuse'] }, 5: { o: ['bogus'], m: ['phish'] } }[sd];
+  let oKinds = plan ? plan.o.slice() : [];
+  let mKinds = plan ? plan.m.slice() : [];
+  if(!plan){
+    if(rnd() < 0.75) oKinds.push(pick(['bogus','fakeproof','vip','newpaid','bogus']));
+    if(rnd() < 0.45) mKinds.push(pick(['defect','refundabuse','question']));
+  }
+
+  // regular orders
+  SKU_IDS.forEach(sku => {
+    const lam = SKUS[sku].base * PRICE_LV[S.prices[sku]].d * ratingF * growth * boost;
+    let n = poisson(lam);
+    for(let i=0;i<n;i++){
+      const left = availStock(sku); if(left <= 0) break;
+      const qty = Math.min(left, rnd() < 0.78 ? 1 : (rnd() < 0.8 ? 2 : 3));
+      let c;
+      if(repeaters.length && rnd() < pRepeat) c = pick(repeaters);
+      else c = newCustomer();
+      const pay = rnd() < 0.55 ? 'cod' : (rnd() < 0.75 ? 'ewallet' : 'card');
+      addOrder('normal', c, [{ sku, qty, price: retailPrice(sku) }], pay);
+    }
+  });
+  if(promo && repeaters.length){
+    const extra = Math.min(repeaters.length, ri(2,4));
+    shuffle(repeaters).slice(0, extra).forEach(c => {
+      const sku = pick(SKU_IDS.filter(k => availStock(k) > 0)); if(!sku) return;
+      addOrder('normal', c, [{ sku, qty: 1, price: retailPrice(sku) }], rnd()<0.5?'ewallet':'cod', { promo: true });
+    });
+  }
+
+  // scenario orders
+  oKinds.forEach(kind => {
+    const skus = SKU_IDS.filter(k => availStock(k) >= 2); if(!skus.length) return;
+    const sku = kind==='bogus' ? (skus.includes('buds') ? 'buds' : pick(skus)) : pick(skus);
+    const left = availStock(sku);
+    if(kind==='bogus'){
+      const c = newCustomer({ joined: 0, phoneOk: false });
+      addOrder('bogus', c, [{ sku, qty: Math.min(left, ri(8,14)), price: retailPrice(sku) }], 'cod',
+        { addr: 'Purok 3, near the chapel', note: 'RUSH!! COD lang, bayad pagdating. Wag na tumawag.' });
+    } else if(kind==='fakeproof'){
+      const c = newCustomer({ joined: ri(1,6), phoneOk: true });
+      addOrder('fakeproof', c, [{ sku, qty: Math.min(left, ri(2,4)), price: retailPrice(sku) }], 'bank',
+        { note: 'Paid na via bank transfer, see attached proof. Pa-ship agad please.' });
+    } else if(kind==='vip'){
+      let c = S.customers.filter(x=>x.orders>=2 && !x.flagged).sort((a,b)=>b.orders-a.orders)[0];
+      if(!c){ c = newCustomer({ joined: ri(400,1500), phoneOk: true }); c.orders = 3; c.spent = ri(1200,2600); c.seeded = true; }
+      addOrder('vip', c, [{ sku, qty: Math.min(left, ri(5,8)), price: retailPrice(sku) }], 'ewallet',
+        { note: 'For my barkada ulit 😄 Same address. Salamat!' });
+    } else if(kind==='newpaid'){
+      const c = newCustomer({ joined: 0, phoneOk: true });
+      addOrder('newpaid', c, [{ sku, qty: Math.min(left, ri(1,2)), price: retailPrice(sku) }], 'card');
+    }
+  });
+
+  // messages
+  mKinds.forEach(kind => {
+    if(kind==='defect'){
+      const past = S.orders.filter(o=>o.status==='shipped' && o.kind!=='fakeproof'); if(!past.length) return;
+      const o = pick(past); S.msgs.push(mkMsg('defect', { cust: o.cust, order: o.id, sku: o.lines[0].sku }));
+    } else if(kind==='refundabuse'){
+      const past = S.orders.filter(o=>o.status==='shipped' && o.kind!=='fakeproof'); if(!past.length) return;
+      const o = pick(past); S.msgs.push(mkMsg('refundabuse', { cust: o.cust, order: o.id }));
+    } else if(kind==='question'){
+      const c = newCustomer(); S.msgs.push(mkMsg('question', { cust: c.id }));
+    } else if(kind==='phish'){
+      S.msgs.push(mkMsg('phish', { from: 'ShopFront Seller Support' }));
+    }
+  });
+}
+
+/* Ship one order. Returns text for feedback. */
+function shipOrder(o){
+  if(o.status!=='new') return null;
+  const c = cust(o.cust);
+  for(const l of o.lines) if(S.stock[l.sku] < l.qty) return { err: 'stock' };
+  const total = orderTotal(o);
+  let res = { ok: true };
+  o.lines.forEach(l => {
+    // defective units shipped (if any were put on sale)
+    let badOut = 0;
+    for(let i=0;i<l.qty;i++){ if(S.bad[l.sku] > 0 && rnd() < S.bad[l.sku]/Math.max(1,S.stock[l.sku])){ S.bad[l.sku]--; badOut++; } }
+    S.stock[l.sku] -= l.qty;
+    if(badOut){ S.msgs.push(mkMsg('defect', { cust: o.cust, order: o.id, sku: l.sku, dayDue: S.day+1, hidden: true, fromBad: true })); }
+  });
+  if(o.kind==='bogus'){
+    o.status = 'rts';
+    o.lines.forEach(l => { S.returning = S.returning || []; S.returning.push({ sku: l.sku, qty: l.qty, day: S.day+2 }); });
+    addTx(`Order #${o.no} · returned to sender (buyer refused)`, -CFG.rtsFee, 'loss');
+    c.flagged = true;
+    decide(false, `B2C · Shipped bulk COD to ${c.name}`, 'New account, no order history, unverified phone, vague address, big COD order: a bogus order. The parcel came back and you paid the return fee.');
+    res = { bad: true, t: `Buyer refused the parcel. ${peso(CFG.rtsFee)} return fee. Stock comes back in 2 days.` };
+  } else if(o.kind==='fakeproof'){
+    o.status = 'shipped';
+    addTx(`Order #${o.no} · shipped, no payment received (fake proof)`, 0, 'loss');
+    c.flagged = true;
+    decide(false, `B2C · Shipped on a payment screenshot from ${c.name}`, 'The "proof" was an edited screenshot. For manual bank transfers, ship only after the money shows in your own account.');
+    res = { bad: true, t: 'Delivered, but no money ever arrived. The proof was fake.' };
+  } else {
+    o.status = 'shipped';
+    const fee = Math.round(total * CFG.platformFee);
+    addTx(`Order #${o.no} · ${c.name}`, total - fee, 'sale');
+    S.today.rev += total; S.today.fees += fee;
+    c.orders++; c.spent += total;
+    if(o.kind==='vip') decide(true, `B2C · Shipped big order for loyal customer ${c.name}`, 'A repeat customer with a long history who already paid. Big orders from loyal customers are good business.');
+    if(o.kind==='newpaid') decide(true, `B2C · Shipped first order from ${c.name}`, 'A new account is not a red flag by itself. The order was already paid by card through the platform.');
+    rate(+0.004);
+    res = { ok: true };
+  }
+  return res;
+}
+
+function cancelOrder(o){
+  if(o.status!=='new') return;
+  const c = cust(o.cust);
+  o.status = 'cancelled';
+  if(o.kind!=='bogus' && o.kind!=='fakeproof' && o.lines.some(l=>S.stock[l.sku] < l.qty)){ rate(-0.05); o.oos = true; return; }
+  if(o.kind==='bogus' || o.kind==='fakeproof'){
+    c.flagged = true;
+    decide(true, `B2C · Cancelled ${o.kind==='bogus'?'bogus COD':'fake-proof'} order from ${c.name}`,
+      o.kind==='bogus' ? 'Unverified new account + vague address + rush bulk COD. Cancelling saved you the return fee and your stock.'
+                       : 'No matching deposit in your account. Cancelling a fake-proof order protects your stock.');
+  } else {
+    decide(false, `B2C · Cancelled ${o.kind==='normal'?'an honest':'a paid'} order from ${c.name}`,
+      o.kind==='vip' ? 'This loyal customer had already paid. Cancelling lost the sale and hurt your rating.'
+      : o.kind==='newpaid' ? 'The order was already paid by card. New customers are how a store grows.'
+      : 'Nothing about this order was suspicious. Seller cancellations lower your store rating.');
+    rate(-0.12);
+  }
+}
+
+function verifyOrder(o){
+  o.verified = true;
+  if(o.kind==='bogus') return { bad: true, t: 'You messaged and called the buyer. The number is unreachable and the account has no other activity.' };
+  if(o.kind==='fakeproof') return { bad: true, t: 'Your bank account shows no matching deposit. The screenshot does not match any real transfer.' };
+  if(o.pay==='cod') return { ok: true, t: 'The buyer replied right away and confirmed the order and address.' };
+  return { ok: true, t: 'Payment is confirmed by the platform. This order is safe to ship.' };
+}
+
+/* B2C messages */
+function startMsg(m){
+  if(m.started) return; m.started = true;
+  const T = (f,t,extra) => m.thread.push(Object.assign({ f, t }, extra||{}));
+  const c = m.cust ? cust(m.cust) : null;
+  const o = m.order ? S.orders.find(x=>x.id===m.order) : null;
+  switch(m.kind){
+    case 'question':
+      T('them', 'Hello! Pwede ba yung USB-C charger sa phone ko? Type-C siya. Mabilis ba mag-charge?');
+      m.opts = [
+        { k: 'honest', t: 'Yes, it has a USB-C port and works with Type-C phones. It supports 20W fast charging if your phone supports fast charging too.' },
+        { k: 'hype', t: 'Yes!! It charges ANY phone 3x faster, guaranteed! 🔥' }
+      ]; break;
+    case 'defect':
+      T('them', `Hi, natanggap ko na yung ${SKUS[m.sku].short.toLowerCase()} pero sira po. ${m.sku==='buds'?'Walang tunog yung left side.':m.sku==='charger'?'Hindi siya nag-charge.':m.sku==='glass'?'May crack na pagdating.':'May lamat na yung case.'} Order #${o?o.no:''}`);
+      T('card', '', { card: 'photo', sku: m.sku });
+      m.opts = [
+        { k: 'replace', t: 'So sorry about that! We’ll send a replacement today at no extra cost. No need to return the broken one.' },
+        { k: 'blame', t: 'It was working when we shipped it. You probably damaged it.' },
+        { k: 'ignore', t: '(Mark as read. Don’t reply.)' }
+      ]; break;
+    case 'refundabuse':
+      T('them', `Hindi ko natanggap yung order ko (#${o?o.no:''})!! Refund niyo na ngayon or i-report ko kayo at 1 star.`);
+      T('card', '', { card: 'tracking', order: o ? o.no : '', who: c ? c.name : '' });
+      m.opts = [
+        { k: 'refund', t: `Sorry po! Refunding ${peso(o?orderTotal(o):0)} now.` },
+        { k: 'proof', t: 'Our tracking shows it was delivered and signed for, with a photo at your door. Could you check with your household? If not, we’ll open a courier investigation for you.' },
+        { k: 'block', t: '(Block this customer.)' }
+      ]; break;
+    case 'phish':
+      T('card', '', { card: 'phishmail' });
+      m.opts = [
+        { k: 'login', t: 'Open the link and log in to verify my store.' },
+        { k: 'report', t: 'Report as phishing. Check the Notifications page of the real ShopFront app instead.' }
+      ]; break;
+    case 'inspect': {
+      const sh = S.shipments.find(s=>s.id===m.ship);
+      T('card', '', { card: 'inspect', ship: sh.id });
+      m.opts = [
+        { k: 'claim', t: sh.pay==='escrow' ? 'File a buyer-protection claim with photos.' : 'Message the supplier and ask for a refund.' },
+        { k: 'sell', t: 'Put them on sale anyway. Customers might not notice.' }
+      ]; break; }
+    case 'supplier':
+      T('card', '', { card: 'gone', ship: m.ship });
+      m.opts = []; m.done = true;
+      break;
+  }
+}
+
+function msgReply(m, k){
+  const opt = (m.opts||[]).find(o=>o.k===k); if(!opt || m.done) return;
+  const T = (f,t,extra) => m.thread.push(Object.assign({ f, t }, extra||{}));
+  const c = m.cust ? cust(m.cust) : null;
+  const o = m.order ? S.orders.find(x=>x.id===m.order) : null;
+  if(m.kind!=='inspect' && m.kind!=='phish') T('me', opt.t);
+  let ok = null, lesson = '';
+  switch(m.kind){
+    case 'question':
+      if(k==='honest'){ T('them', 'Ayos, salamat sa honest na sagot! Order ako.'); ok = true; lesson = 'Clear, honest product answers turn questions into sales and keep returns low.';
+        const sku='charger'; if(availStock(sku)>0){ addOrder('normal', c, [{ sku, qty: 1, price: retailPrice(sku) }], 'ewallet', { fromChat: true }); T('sys','New order received from this customer.', { cls: 'good' }); } }
+      else { T('them', 'Wow sige order ako!'); T('sys', 'Two days later: "Hindi naman 3x faster 😡 1 star." The customer asked for a return.', { cls: 'bad' }); rate(-0.15); ok = false; lesson = 'Overclaiming wins one sale and loses trust. Bad reviews cost you future customers.'; }
+      break;
+    case 'defect': {
+      const sku = m.sku;
+      if(k==='replace'){
+        if(S.stock[sku] > 0){ S.stock[sku]--; T('sys', `Replacement shipped (1 × ${SKUS[sku].short} from stock).`, { cls: 'good' }); }
+        else { const amt = SKUS[sku].retail; addTx(`Refund · defective item (out of stock)`, -amt, 'loss'); T('sys', `Out of stock, so you refunded ${peso(amt)} instead.`, { cls: 'good' }); }
+        T('them', 'Wow ang bilis! Salamat po, order ulit ako soon ❤️'); rate(+0.08); if(c) c.notify = true;
+        ok = true; lesson = 'Fixing a problem fast turns an unhappy customer into a loyal one. That is customer relationship management (CRM).';
+      } else if(k==='blame'){
+        T('them', 'Grabe kayo. 1 star at report ko kayo.'); T('sys', 'A 1-star review with photos is now on your store page.', { cls: 'bad' }); rate(-0.3);
+        ok = false; lesson = 'Blaming customers for a real defect loses them and everyone who reads the review.';
+      } else {
+        T('sys', 'The customer left a 1-star review: "Seller did not reply."', { cls: 'bad' }); rate(-0.22);
+        ok = false; lesson = 'Ignoring complaints hurts your rating. Most customers forgive defects that are fixed quickly.';
+      }
+      break; }
+    case 'refundabuse': {
+      const amt = o ? orderTotal(o) : 0;
+      if(k==='refund'){ addTx(`Refund to ${c?c.name:''} (item was delivered)`, -amt, 'loss'); T('them', 'Thanks! 😁'); T('sys', 'The courier photo shows the parcel at their door. You refunded an item that was delivered.', { cls: 'bad' });
+        ok = false; lesson = 'Check proof of delivery before refunding. Tracking records protect honest sellers.'; }
+      else if(k==='proof'){ T('them', 'Ay… nakita ko na po, kinuha pala ng kapatid ko. Sorry po!'); T('sys', 'Resolved. No refund needed.', { cls: 'good' }); rate(+0.03);
+        ok = true; lesson = 'Polite reply + delivery proof + an offer to help settles most "not received" claims fairly.'; }
+      else { T('sys', 'The buyer opened a platform dispute. You answered late and your rating dropped.', { cls: 'bad' }); rate(-0.15); if(c) c.flagged = true;
+        ok = false; lesson = 'Blocking does not end a dispute. Answer with evidence through the platform.'; }
+      break; }
+    case 'phish':
+      if(k==='login'){ const lost = Math.max(500, Math.round(S.cash*0.3)); const take = Math.min(lost, Math.max(0,S.cash));
+        T('sys', `You entered your password on shopfr0nt-seller.verify-acct.com. That night your payout account was changed and ${peso(take)} was withdrawn.`, { cls: 'bad' });
+        if(take>0) addTx('Payout stolen (phishing login)', -take, 'loss');
+        ok = false; lesson = 'Look at the sender and the link: "shopfr0nt" with a zero and a strange domain. Real notices appear inside the official app.'; }
+      else { T('sys', 'Reported. The real ShopFront Notifications page shows no warning for your store.', { cls: 'good' });
+        ok = true; lesson = 'Phishing copies a platform’s name and creates panic. Never log in from a link in a message.'; }
+      break;
+    case 'inspect': {
+      const sh = S.shipments.find(s=>s.id===m.ship), d = sh.defect;
+      if(k==='claim'){
+        if(sh.pay==='escrow'){ const amt = Math.round(d.n*d.unit); addTx(`${sh.po} · buyer-protection refund (${d.n} defective)`, amt, 'in'); T('sys', `Claim approved. ${peso(amt)} refunded from escrow. Defective units discarded.`, { cls: 'good' }); }
+        else T('sys', 'The supplier stopped replying. Without buyer protection there is no refund. You pulled the defective units from sale.', { cls: 'bad' });
+        ok = true; lesson = sh.pay==='escrow' ? 'Inspect deliveries and claim right away. Escrow (buyer protection) is how B2B buyers get refunds.' : 'Pulling defective stock was right, but paying by direct transfer left you with no way to get a refund. Use buyer protection with new suppliers.';
+      } else {
+        S.stock[d.sku] += d.n; S.bad[d.sku] += d.n;
+        T('sys', `${d.n} defective ${SKUS[d.sku].short.toLowerCase()} units are now mixed into your stock.`, { cls: 'bad' });
+        ok = false; lesson = 'Selling items you know are defective leads to complaints, refunds and bad reviews.';
+      }
+      break; }
+  }
+  m.done = true; m.opts = []; m.result = ok; m.lesson = lesson;
+  T('lesson', lesson, { ok });
+  const label = { question: 'Product question', defect: 'Defect complaint', refundabuse: '"Not received" refund demand', phish: 'Store-suspension message', inspect: 'Defective delivery' }[m.kind];
+  decide(ok, `B2C · ${label}${c?' · '+c.name:''}`, lesson);
+}
+
+/* ---------- Days ---------- */
+function pendingWork(){
+  if(S.phase==='c2c'){
+    if(!S.listed) return 'Publish your listings first.';
+    const n = S.chats.filter(c=>c.day===S.day && !c.done).length;
+    return n ? `${n} chat${n>1?'s':''} still waiting for a reply.` : '';
+  }
+  if(S.phase==='b2b'){
+    return S.shipments.some(s=>s.ordered===S.day) ? '' : 'Place at least one purchase order.';
+  }
+  if(S.phase==='b2c'){
+    const o = S.orders.filter(x=>x.status==='new').length;
+    const m = S.msgs.filter(x=>!x.done && !x.hidden).length;
+    const parts = []; if(o) parts.push(`${o} order${o>1?'s':''} to ship`); if(m) parts.push(`${m} message${m>1?'s':''} to answer`);
+    return parts.length ? parts.join(' and ') + '.' : '';
+  }
+  return '';
+}
+
+function endDay(){
+  const summary = { day: S.day, phase: S.phase, start: S.dayStartCash, end: S.cash, tx: S.tx.filter(t=>t.day===S.day) };
+  if(S.phase==='c2c'){
+    if(S.day===1){ S.day = 2; makeC2CChats(2); S.dayStartCash = S.cash; return { summary }; }
+    // end of C2C
+    if(S.cash < CFG.minCapital){ S.phase = 'bust'; summary.bust = 'c2c'; return { summary }; }
+    S.phase = 'b2b'; S.day = 3; S.capital = S.cash; S.dayStartCash = S.cash; makeVisit();
+    S.view.app = 'supply'; S.view.supView = 'list';
+    return { summary, next: 'b2b' };
+  }
+  if(S.phase==='b2b'){
+    S.phase = 'b2c'; S.day++; S.storeDay = 1; S.dayStartCash = S.cash;
+    S.today = { rev: 0, fees: 0 };
+    const arr = receiveShipments(); genDay(); makeVisit();
+    S.view.app = 'seller'; S.view.seller = 'orders';
+    return { summary, next: 'b2c', arrivals: arr };
+  }
+  if(S.phase==='b2c'){
+    summary.rev = S.today.rev; summary.fees = S.today.fees; summary.profit = profit();
+    if(profit() >= CFG.profitGoal){ S.phase = 'won'; summary.won = true; return { summary }; }
+    const pendingIn = S.shipments.some(s=>s.status==='transit' && !s.scam) || (S.returning||[]).length;
+    const anyStock = SKU_IDS.some(k=>S.stock[k]>0);
+    if(!anyStock && !pendingIn && S.cash < CFG.minCapital){ S.phase = 'bust'; summary.bust = 'b2c'; return { summary }; }
+    S.day++; S.storeDay++; S.dayStartCash = S.cash; S.today = { rev: 0, fees: 0 };
+    (S.returning||[]).forEach(r => { if(r.day<=S.day){ S.stock[r.sku] += r.qty; r.done = true; } });
+    S.returning = (S.returning||[]).filter(r=>!r.done);
+    S.msgs.forEach(m => { if(m.hidden && m.dayDue<=S.day){ m.hidden = false; m.day = S.day; } });
+    const arr = receiveShipments(); genDay(); makeVisit();
+    S.sel = {};
+    return { summary, arrivals: arr };
+  }
+  return { summary };
+}
+
+function scoreRun(){
+  const tot = S.dec.length, ok = S.dec.filter(d=>d.ok).length;
+  const decPct = tot ? Math.round(ok/tot*100) : 100;
+  const speedPct = S.day <= CFG.parDays ? 100 : Math.max(CFG.minSpeed, 100 - (S.day-CFG.parDays)*CFG.dayPenalty);
+  const ratingPct = Math.round(S.rating/5*100);
+  const W = CFG.weights;
+  const pct = Math.round(decPct*W.dec + speedPct*W.speed + ratingPct*W.rating);
+  return { pct, decPct, speedPct, ratingPct, ok, tot };
+}
+</script>
+<script>
+/* =====================================================================
+   VIEW
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CHEV = '<svg class="chev" viewBox="0 0 8 13"><path d="M1.5 1.5 6.5 6.5 1.5 11.5"/></svg>';
+const BACK = '<svg viewBox="0 0 12 20"><path d="M10 2 2 10l8 8"/></svg>';
+const TICK = '<svg viewBox="0 0 14 14"><path d="M3 7.5 6 10.5 11 4"/></svg>';
+const ICONS = {
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+  speaker: '<rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7.2" r="1.2"/>',
+  calc: '<rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="4" rx="1"/><path d="M8.5 13h1M11.5 13h1M14.5 13h1M8.5 16h1M11.5 16h1M14.5 16h1M8.5 19h1M11.5 19h1M14.5 19h1"/>',
+  book: '<path d="M4 4.5h6.5a2 2 0 0 1 2 2V20a1.6 1.6 0 0 0-1.6-1.6H4z"/><path d="M20 4.5h-6.5a2 2 0 0 0-2 2V20a1.6 1.6 0 0 1 1.6-1.6H20z"/>',
+  case: '<rect x="6.5" y="2.5" width="11" height="19" rx="3"/><rect x="8.8" y="4.6" width="3.6" height="3.6" rx="1"/><circle cx="10.6" cy="6.4" r=".6"/>',
+  glass: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M9 7l5-3M9 12l6.5-4M10 17l5.5-3.5"/>',
+  charger: '<rect x="6" y="7" width="12" height="11" rx="2.5"/><path d="M9.5 7V3.5M14.5 7V3.5M12 18v3.5"/><path d="M12.6 10l-2 3h2.4l-1.6 2.6"/>',
+  buds: '<path d="M7 5.5a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3 2.5 2.5 0 0 1-2.5-2.5v-3A2.5 2.5 0 0 1 7 5.5zM9 13v6M17 5.5a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3 2.5 2.5 0 0 0 2.5-2.5v-3A2.5 2.5 0 0 0 17 5.5zM15 13v6"/>',
+  market: '<path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M5.5 11.5V20h13v-8.5"/><path d="M10 20v-5h4v5"/>',
+  wallet: '<rect x="3.5" y="6" width="17" height="13" rx="2.5"/><path d="M3.5 9.5h17"/><path d="M6 6 15.5 3.5l1 2.5"/><circle cx="16.5" cy="14" r="1.2"/>',
+  supply: '<path d="M3.5 8.5 12 4l8.5 4.5v9L12 22l-8.5-4.5z"/><path d="M3.5 8.5 12 13l8.5-4.5M12 13v9"/><path d="M7.8 6.2l8.4 4.6"/>',
+  seller: '<path d="M4 7h16l-1.4 11.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/><path d="M8.5 9.5V6.5a3.5 3.5 0 0 1 7 0v3"/>'
+};
+function svgI(n){ return `<svg viewBox="0 0 24 24">${ICONS[n]||''}</svg>`; }
+function thumb(n, c1, c2, cls){ return `<span class="thumb ${cls||''}" style="background:linear-gradient(145deg,${c2},${c1})">${svgI(n)}</span>`; }
+function skuThumb(k, cls){ const s=SKUS[k]; return thumb(s.icon, s.c1, s.c2, cls); }
+function itemThumb(id, cls){ const s=item(id); return thumb(s.icon, s.c1, s.c2, cls); }
+function av(name, color, cls){ const ini = name.split(/\s+/).filter(w=>/^[A-Za-z0-9]/.test(w)).map(w=>w[0]).slice(0,2).join('').toUpperCase(); return `<span class="av ${cls||''}" style="--c:${color||'#8E8E93'}">${esc(ini)}</span>`; }
+
+/* ---------- Sound ---------- */
+const Snd = (()=>{
+  let ctx, out, muted = false;
+  function init(){ if(ctx) return; const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return; try{ ctx = new AC(); out = ctx.createGain(); out.gain.value = .5; out.connect(ctx.destination); }catch(e){ ctx = null; } }
+  function tone(f,t,d,g,type){ const o=ctx.createOscillator(), a=ctx.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,t); a.gain.setValueAtTime(.0001,t); a.gain.linearRampToValueAtTime(g,t+.01); a.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(a); a.connect(out); o.start(t); o.stop(t+d+.05); }
+  const fx = {
+    msg(){ const t=ctx.currentTime; tone(1046,t,.12,.25); tone(1568,t+.09,.18,.2); },
+    tap(){ tone(880,ctx.currentTime,.05,.08,'triangle'); },
+    cash(){ const t=ctx.currentTime; tone(1318,t,.08,.2,'triangle'); tone(1976,t+.07,.25,.2,'triangle'); },
+    bad(){ const t=ctx.currentTime; tone(311,t,.22,.25,'sawtooth'); tone(233,t+.12,.3,.2,'sawtooth'); },
+    good(){ const t=ctx.currentTime; [784,988,1318].forEach((f,i)=>tone(f,t+i*.07,.18,.18,'triangle')); },
+    win(){ const t=ctx.currentTime; [523,659,784,1046,1318].forEach((f,i)=>tone(f,t+i*.11,.3,.2,'triangle')); }
+  };
+  return { init, play(n){ if(!ctx||muted) return; if(ctx.state==='suspended') ctx.resume(); try{ fx[n](); }catch(e){} }, toggle(){ muted=!muted; return muted; } };
+})();
+
+let toastT;
+function toast(msg, cls){ const t=$('toast'); t.textContent=msg; t.className='toast'+(cls?' '+cls:''); t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 2200); }
+
+/* ---------- HUD ---------- */
+function hud(){
+  if(!S) return;
+  $('hDay').textContent = S.day;
+  $('hCash').textContent = peso(S.cash);
+  if(S.phase==='c2c'){
+    $('hGoalL').textContent = 'Seed goal';
+    $('hGoal').textContent = peso(S.cash) + ' / ' + (CFG.seedGoal/1000) + 'k';
+    $('hBar').style.width = clamp(S.cash/CFG.seedGoal*100,0,100) + '%';
+  } else {
+    $('hGoalL').textContent = 'Profit goal';
+    $('hGoal').textContent = peso(profit()) + ' / ' + (CFG.profitGoal/1000) + 'k';
+    $('hBar').style.width = clamp(profit()/CFG.profitGoal*100,0,100) + '%';
+  }
+  $('hRate').textContent = S.phase==='b2c'||S.phase==='won' ? S.rating.toFixed(1)+'★' : '—';
+  const ph = S.phase==='won'?'b2c':S.phase;
+  ['c2c','b2b','b2c'].forEach((p,i)=>{ const el=$('r'+(i+1)); el.className='rstep'+(p===ph?' on':'')+(['c2c','b2b','b2c'].indexOf(ph)>i?' done':''); });
+  $('clock').textContent = S.phase==='b2c' ? '8:00' : (S.phase==='b2b' ? '10:15' : '9:41');
+  const w = pendingWork();
+  $('actHint').textContent = w || (S.phase==='b2c' ? 'All done for today. Restock in SupplyHub before you close if stock is low.' : 'All done for today.');
+  $('endDayBtn').disabled = !!w || S.phase==='won' || S.phase==='bust';
+  $('endDayBtn').textContent = S.phase==='b2b' ? 'End day · wait for delivery' : (S.phase==='c2c' && S.day===2 ? 'End day · open a store' : 'End day');
+}
+
+/* ---------- Tab bar ---------- */
+function badgeCounts(){
+  return {
+    market: S.listed ? S.chats.filter(c=>c.day===S.day && !c.done && chatVisible(c)).length : 0,
+    supply: 0,
+    seller: S.phase==='b2c' ? S.orders.filter(o=>o.status==='new').length + S.msgs.filter(m=>!m.done && !m.hidden).length : 0,
+    wallet: 0
+  };
+}
+function tabs(){
+  const b = badgeCounts();
+  const T = [['market','Market'],['supply','SupplyHub'],['seller','Seller Center'],['wallet','Wallet']];
+  $('tabbar').innerHTML = T.map(([k,l]) => {
+    const dis = (k==='supply' && S.phase==='c2c') || (k==='seller' && S.phase!=='b2c' && S.phase!=='won');
+    return `<button type="button" class="tab${S.view.app===k?' on':''}" data-tab="${k}" ${dis?'disabled':''}>${svgI(k)}${l}${b[k]?`<span class="bdg">${b[k]}</span>`:''}</button>`;
+  }).join('');
+}
+
+/* ---------- Screens ---------- */
+function render(keepScroll){
+  if(!S) return;
+  const sc = $('screen'), top = sc.scrollTop;
+  const a = S.view.app;
+  let html = '';
+  if(a==='market') html = S.view.chat ? viewChat() : viewMarket();
+  else if(a==='wallet') html = viewWallet();
+  else if(a==='supply') html = viewSupply();
+  else if(a==='seller') html = viewSeller();
+  sc.innerHTML = html;
+  const sheetTop = $('sheetHost').querySelector('.sbody'); const st0 = sheetTop ? sheetTop.scrollTop : 0;
+  $('sheetHost').innerHTML = (a==='seller' && S.view.order && !S.view.msg) ? viewOrderSheet() : '';
+  const sb = $('sheetHost').querySelector('.sbody'); if(sb && keepScroll) sb.scrollTop = st0;
+  sc.scrollTop = keepScroll ? top : 0;
+  if(keepScroll==='bottom') sc.scrollTop = sc.scrollHeight;
+  tabs(); hud(); save();
+}
+
+/* Market (C2C) */
+function viewMarket(){
+  const v = S.view;
+  const unread = S.listed ? S.chats.filter(c=>c.day===S.day && !c.done && chatVisible(c)).length : 0;
+  let h = `<div class="nav sep"><h1>Marketplace</h1><div class="seg"><button type="button" data-mk="sell" class="${v.market==='sell'?'on':''}">Selling</button><button type="button" data-mk="inbox" class="${v.market==='inbox'?'on':''}">Inbox${unread?'<span class="dot"></span>':''}</button></div></div>`;
+  if(v.market==='sell'){
+    h += '<div class="pad">';
+    if(!S.listed && S.phase==='c2c'){
+      h += `<p class="note" style="margin:0 4px 12px">Set a price for each item, then publish. <b>Fair</b> is the usual price for used items like these. Higher prices earn more but make buyers haggle or walk away.</p>`;
+    }
+    S.items.forEach(st => {
+      const it = item(st.id), A = ask(st.id);
+      const status = st.status==='sold' ? `<span class="chip g">Sold · ${peso(st.sold)}</span>` : st.status==='lost' ? '<span class="chip r">Lost to scammer</span>' : st.status==='listed' ? '<span class="chip b">Listed</span>' : '<span class="chip">Draft</span>';
+      h += `<div class="lcard ${st.status==='sold'||st.status==='lost'?'sold':''}"><div class="ltop">${itemThumb(st.id)}<div style="flex:1;min-width:0"><div class="lt">${esc(it.name)}</div><div class="lc">${esc(it.cond)}</div><div class="lp peso">${peso(A)}</div><div style="margin-top:4px">${status}</div></div></div>`;
+      if(!S.listed){
+        h += `<div class="lb" style="padding-top:0"><div class="pricepick">${Object.keys(C2C_LV).map(lv=>`<button type="button" class="pp ${st.level===lv?'on':''}" data-lv="${st.id}:${lv}"><b class="peso">${peso(round10(it.m*C2C_LV[lv].k))}</b>${C2C_LV[lv].label}</button>`).join('')}</div></div>`;
+      }
+      h += '</div>';
+    });
+    if(!S.listed) h += `<button type="button" class="btn acc" data-act="publish">Publish listings</button>`;
+    else h += `<p class="note" style="text-align:center">Buyers reply in your Inbox.</p>`;
+    h += '</div>';
+  } else {
+    const list = S.chats.filter(c=>c.day<=S.day && S.listed && chatVisible(c)).slice().reverse();
+    if(!list.length) return h + `<div class="empty"><b>No messages yet</b>Publish your listings first.</div>`;
+    h += '<div class="group" style="margin:8px 0;border-radius:0">';
+    list.forEach(c => {
+      const it = item(c.item);
+      const last = c.msgs.length ? c.msgs.filter(m=>m.f==='them'||m.f==='me'||m.f==='sys').slice(-1)[0] : null;
+      const prev = c.done ? (c.skipped ? 'Item no longer available' : (c.result ? 'Done ✓' : 'Done')) : (last ? last.t : `Re: ${it.name}`);
+      h += `<button type="button" class="row" data-chat="${c.id}">${!c.done&&c.day===S.day?'<span class="unread"></span>':'<span style="width:10px"></span>'}${av(c.who,c.color)}<div class="grow"><div class="t">${esc(c.who)}</div><div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(prev)}</div></div><div class="r"><small>Day ${c.day}</small></div>${CHEV}</button>`;
+    });
+    h += '</div>';
+  }
+  return h;
+}
+
+function bubble(m){
+  if(m.f==='them') return `<div class="bub them">${esc(m.t)}</div>`;
+  if(m.f==='me') return `<div class="bub me">${esc(m.t)}</div>`;
+  if(m.f==='sys') return `<div class="sys ${m.cls||''}">${esc(m.t)}</div>`;
+  if(m.f==='lesson') return `<div class="lesson ${m.ok===true?'ok':m.ok===false?'no':''}"><b>${m.ok===true?'Good call':m.ok===false?'Lesson':'Note'}</b>${esc(m.t)}</div>`;
+  if(m.f==='card') return cardHtml(m);
+  return '';
+}
+function cardHtml(m){
+  const R = m.right ? ' right' : '';
+  switch(m.card){
+    case 'receipt': return `<div class="shot${R}"><div class="rcpt"><div class="rlogo">e-Pay</div><div class="rbox"><div class="chk">✓</div><div style="font-size:12px;color:var(--muted)">Sent via e-Pay</div><div class="amt">${peso(m.amt)}</div>
+      <div class="kv"><span>To</span><span>${esc(PLAYER_MASK)}</span></div><div class="kv"><span>Ref. No.</span><span>5012 33</span></div><div class="kv"><span>Date</span><span>Oct 13, 2026 2:14 PM</span></div></div></div></div>`;
+    case 'sms': return `<div class="shot${R}"><div class="sms"><div class="sh">${av('6 3','#8E8E93','')}<span><b style="color:var(--ink)">+63 917 555 0142</b> · Text Message</span></div><div class="sb">You have received P${m.amt.toLocaleString()}.00 from ELLA C. Your new balance is available. Ref No. 0012. -ePay</div></div></div>`;
+    case 'otp': return `<div class="shot${R}"><div class="sms"><div class="sh">${av('e P','#0A84FF','')}<span><b style="color:var(--ink)">ePay</b> · Text Message</span></div><div class="sb">482915 is your ePay one-time PIN to <b>log in on a new device</b>. Do NOT share this code with anyone, including ePay staff.</div></div></div>`;
+    case 'wallet': {
+      const recent = S.tx.slice(0,2);
+      return `<div class="shot${R}"><div class="wcheck"><div class="wh"><span>My ePay wallet</span><span>Just now</span></div><div class="wb peso">${peso(S.cash)}</div>
+        ${m.none?`<div class="none">No incoming transfer of ${peso(m.amt)} found</div>`:''}${recent.map(t=>`<div class="wr"><span>${esc(t.label)}</span><span class="peso">${t.amt>=0?'+':''}${peso(t.amt)}</span></div>`).join('')}</div></div>`; }
+    case 'photo': return `<div class="shot${R}" style="width:180px">${skuThumb(m.sku,'lg')}<div style="padding:6px 10px;font-size:12px;color:var(--muted)">Photo · received item</div></div>`;
+    case 'tracking': return `<div class="shot right"><div class="trk"><b style="font-size:13px">Courier tracking · #${esc(m.order)}</b><div class="tl"><div>Picked up from seller</div><div>Arrived at sorting hub</div><div>Out for delivery</div><div class="on">Delivered · signed by "${esc((m.who||'').split(' ')[0])}" · photo at door ✓</div></div></div></div>`;
+    case 'phishmail': return `<div class="shot" style="max-width:96%"><div class="mailcard"><div class="from">From: <b>ShopFront Seller Support</b> &lt;notice@shopfr0nt-seller.verify-acct.com&gt;</div><div style="font-weight:700;margin:6px 0 4px;color:#C4261D">⚠ FINAL WARNING: Your store will be SUSPENDED in 24 hours</div>Dear Seller, we detected a policy violation on your store. To avoid suspension and loss of your balance, verify your account immediately:<br><span class="lnk">http://shopfr0nt-seller.verify-acct.com/login</span><br><br>ShopFront Trust &amp; Safety Team</div></div>`;
+    case 'inspect': { const sh = S.shipments.find(s=>s.id===m.ship), d = sh.defect;
+      return `<div class="shot" style="max-width:96%"><div class="mailcard"><div class="from">Receiving check · <b>${esc(sh.po)}</b> from ${esc(sh.sup.name)}</div><div style="display:flex;gap:10px;align-items:center;margin:8px 0">${skuThumb(d.sku,'sm')}<div><b>${d.n} of ${sh.lines.find(l=>l.sku===d.sku).qty} ${esc(SKUS[d.sku].short.toLowerCase())} units are defective</b><br><span style="color:var(--muted)">Paid by: ${sh.pay==='escrow'?'SupplyHub buyer protection (escrow)':'direct bank transfer'}</span></div></div>The good units are already in your stock.</div></div>`; }
+    case 'gone': { const sh = S.shipments.find(s=>s.id===m.ship);
+      return `<div class="shot" style="max-width:96%"><div class="mailcard"><div class="from">SupplyHub · <b>${esc(sh.po)}</b></div><div style="font-weight:700;margin:6px 0;color:#C4261D">This seller is no longer available</div>${esc(sh.sup.name)} deleted its page and its Telegram account. Your payment of <b>${peso(sh.total)}</b> went to a personal e-wallet, outside SupplyHub, so it is not covered by buyer protection.</div></div><div class="lesson no"><b>Lesson</b>No records, no ratings, prices at half of everyone else, payment only to a personal account: a fake supplier. Real B2B suppliers can show business records and accept protected payment.</div>`; }
+  }
+  return '';
+}
+const PLAYER_MASK = 'YOU (09** *** 4417)';
+
+function viewChat(){
+  const c = S.chats.find(x=>x.id===S.view.chat); if(!c) { S.view.chat=null; return viewMarket(); }
+  startChat(c); c.read = true;
+  const it = item(c.item), st = itemS(c.item);
+  let h = `<div class="chathead"><button type="button" class="back" data-act="chatback">${BACK}</button>${av(c.who,c.color,'sm')}<div class="grow"><b>${esc(c.who)}</b><small>${esc(c.meta)}</small></div></div>`;
+  h += `<div class="about">${itemThumb(c.item)}<div><b>${esc(it.name)}</b>Listed at ${peso(ask(c.item))} · ${st.status==='sold'?'Sold':st.status==='lost'?'Gone':'Available'}</div></div>`;
+  h += `<div class="msgs"><div class="when">Day ${c.day}</div>${c.msgs.map(bubble).join('')}</div>`;
+  if(c.opts && c.opts.length && !c.done){
+    h += `<div class="replies"><div class="rl">Choose your reply</div>${c.opts.map(o=>`<button type="button" class="reply" data-reply="${o.k}">${esc(o.t)}</button>`).join('')}</div>`;
+  }
+  return h;
+}
+
+/* Wallet */
+function viewWallet(){
+  let h = `<div class="nav"><h1>Wallet</h1></div><div class="pad" style="padding-top:0">`;
+  h += `<div class="wallet"><small>ePay balance</small><div class="bal peso">${peso(S.cash)}</div><div class="wrow"><span>${S.phase==='c2c'?'Seed goal '+peso(CFG.seedGoal):'Business profit '+peso(profit())}</span><span>Day ${S.day}</span></div></div>`;
+  h += `<div class="sec">Transactions</div><div class="group">`;
+  S.tx.slice(0,60).forEach(t => {
+    const cls = t.kind==='loss' ? 'loss' : t.amt>=0 ? 'plus' : 'minus';
+    const ic = t.kind==='loss' ? '#FF3B30' : t.kind==='sale' ? '#34C759' : t.kind==='stock' ? '#007AFF' : t.amt>=0 ? '#34C759' : '#8E8E93';
+    h += `<div class="row"><span class="av sm" style="--c:${ic}">${t.amt>=0?'↓':'↑'}</span><div class="grow"><div class="t" style="font-weight:500;white-space:normal">${esc(t.label)}</div><div class="s">Day ${t.day}${t.kind==='loss'?' · loss':''}</div></div><div class="r amt ${cls} peso">${t.amt>0?'+':''}${t.amt===0?'₱0':peso(t.amt)}</div></div>`;
+  });
+  h += '</div></div>';
+  return h;
+}
+
+/* SupplyHub (B2B) */
+function viewSupply(){
+  const v = S.view;
+  if(v.supView==='po' && v.po) return viewPO();
+  if(v.supView==='checkout' && v.sup) return viewCheckout();
+  if(v.supView==='cat' && v.sup) return viewCatalog();
+  if(v.supView==='orders') return viewPOList();
+  if(!S.visit || S.visit.day!==S.day) makeVisit();
+  let h = `<div class="nav sep"><h1>SupplyHub</h1><div class="seg"><button type="button" class="on">Suppliers</button><button type="button" data-act="polist">Purchase orders</button></div></div><div class="pad">`;
+  h += `<p class="note" style="margin:0 4px 12px">Wholesale for businesses. Buy at least <b>${MOQ}</b> units per product (MOQ). <b>${BULK_QTY}+</b> units get ${BULK_OFF*100}% off. Delivery arrives the next morning. Freight ${peso(CFG.freight)} per order.</p>`;
+  S.visit.suppliers.forEach(s => {
+    const ini = s.name.split(/\s+/).filter(w=>/^[A-Z]/.test(w)).map(w=>w[0]).slice(0,2).join('');
+    h += `<div class="sup"><div class="stop"><span class="logo" style="background:${s.color}">${esc(ini)}</span><div style="flex:1;min-width:0"><div class="sn">${esc(s.name)}</div><div class="sl">${s.type==='scam'?'Joined this week · Philippines':`${s.years} yr${s.years>1?'s':''} on SupplyHub · Philippines`}</div></div></div>`;
+    h += '<div class="chips">';
+    if(s.type==='verified') h += '<span class="chip g">✓ Verified business</span><span class="chip b">Buyer protection</span><span class="chip">DTI/SEC docs on file</span>';
+    if(s.type==='trader') h += '<span class="chip o">Trader</span><span class="chip b">Buyer protection</span><span class="chip">ID verified</span>';
+    if(s.type==='scam') h += '<span class="chip r">Not verified</span><span class="chip">Lowest price!!!</span><span class="chip">Chat on Telegram</span>';
+    h += '</div>';
+    h += `<div class="facts"><div class="fact"><b>${s.rate?s.rate+'★':'—'}</b>Rating</div><div class="fact"><b>${s.txn.toLocaleString()}</b>Transactions</div><div class="fact"><b>${s.resp}</b>Response</div></div>`;
+    h += `<p class="blurb">${s.type==='verified'?'Authorized distributor of phone accessories. Official receipts and invoices. Warranty on chargers and earbuds.':s.type==='trader'?'Fast-moving accessories at trader prices. Mixed batches from several factories.':'FACTORY PRICE 50% OFF!! Limited slots. 100% full payment first to owner’s GCash, we ship same day. Message us on Telegram for faster deal.'}</p>`;
+    h += `<button type="button" class="btn ${s.type==='scam'?'grey':'acc'}" data-sup="${s.id}">View catalog</button></div>`;
+  });
+  h += '</div>';
+  return h;
+}
+function curSup(){ return (S.visit && S.visit.suppliers || []).find(s=>s.id===S.view.sup); }
+function viewCatalog(){
+  const s = curSup(); if(!s){ S.view.supView='list'; return viewSupply(); }
+  const cart = S.view.cart;
+  let h = `<div class="nav sep"><div class="navrow"><button type="button" class="back" data-act="suplist">${BACK}Suppliers</button><b>${esc(s.name)}</b><span></span></div></div><div class="pad">`;
+  SKU_IDS.forEach(k => {
+    const q = cart[k]||0, u1 = unitCost(s,k,MOQ), u2 = unitCost(s,k,BULK_QTY);
+    h += `<div class="cat"><div class="ctop">${skuThumb(k)}<div style="flex:1;min-width:0"><div style="font-weight:600">${esc(SKUS[k].name)}</div><div class="note">Retail around ${peso(SKUS[k].retail)} · You have ${S.stock[k]} in stock</div></div></div>
+      <div class="tiers"><div class="tier ${q>0&&q<BULK_QTY?'on':''}"><b class="peso">₱${u1.toFixed(2)}</b>${MOQ}–${BULK_QTY-1} units</div><div class="tier ${q>=BULK_QTY?'on':''}"><b class="peso">₱${u2.toFixed(2)}</b>${BULK_QTY}+ units</div></div>
+      <div class="cline"><div class="stepper"><button type="button" data-qty="${k}:-10" aria-label="Less">−</button><span>${q}</span><button type="button" data-qty="${k}:10" aria-label="More">+</button></div><div class="sub peso">${q?peso(unitCost(s,k,q)*q):'—'}</div></div></div>`;
+  });
+  const sub = cartTotal(s, cart);
+  h += `</div><div class="cartbar"><div class="tot">Subtotal (before freight)<b class="peso">${peso(sub)}</b></div><button type="button" class="btn acc" data-act="checkout" ${sub>0?'':'disabled'}>Checkout</button></div>`;
+  return h;
+}
+function viewCheckout(){
+  const s = curSup(); const cart = S.view.cart;
+  if(!s.pays.includes(S.view.pay)) S.view.pay = s.pays[0];
+  const sub = cartTotal(s, cart), fee = cartFee(sub, S.view.pay), total = sub + CFG.freight + fee;
+  let h = `<div class="nav sep"><div class="navrow"><button type="button" class="back" data-act="supcat">${BACK}Catalog</button><b>Checkout</b><span></span></div></div><div class="pad ground">`;
+  h += `<div class="sec">Order from ${esc(s.name)}</div><div class="group">`;
+  SKU_IDS.filter(k=>(cart[k]||0)>0).forEach(k => { h += `<div class="row">${skuThumb(k,'sm')}<div class="grow"><div class="t">${esc(SKUS[k].short)}</div><div class="s">${cart[k]} × ₱${unitCost(s,k,cart[k]).toFixed(2)}</div></div><div class="r peso">${peso(unitCost(s,k,cart[k])*cart[k])}</div></div>`; });
+  h += '</div><div class="sec">Payment</div><div class="group">';
+  const PAY = {
+    escrow: ['SupplyHub buyer protection (escrow)', `SupplyHub holds your payment and releases it to the supplier only after you receive the goods. Claims allowed for missing or defective items. Fee ${CFG.escrowFee*100}%.`],
+    bank: ['Direct bank transfer to supplier', 'Paid straight to the supplier’s business account. No fee, but no SupplyHub protection.'],
+    personal: ['Send to owner’s personal GCash', '“Pay 100% first to 0917 *** 8821 (personal), then send screenshot on Telegram.”']
+  };
+  s.pays.forEach(p => { h += `<button type="button" class="payopt ${S.view.pay===p?'on':''}" data-pay="${p}"><span class="radio"></span><span><b>${PAY[p][0]}</b><span>${PAY[p][1]}</span></span></button>`; });
+  h += `</div><div class="sec">Summary</div><div class="pl"><div class="kv2"><span>Subtotal</span><span class="peso">${peso(sub)}</span></div><div class="kv2"><span>Freight</span><span class="peso">${peso(CFG.freight)}</span></div>${fee?`<div class="kv2"><span>Buyer protection</span><span class="peso">${peso(fee)}</span></div>`:''}<div class="kv2"><span><b style="color:var(--ink)">Total</b></span><span class="peso"><b>${peso(total)}</b></span></div><div class="kv2"><span>Your cash</span><span class="peso ${S.cash<total?'bad':''}">${peso(S.cash)}</span></div></div>`;
+  h += `<div style="height:12px"></div><button type="button" class="btn acc" data-act="placepo" ${S.cash<total?'disabled':''}>${S.cash<total?'Not enough cash':'Place order · '+peso(total)}</button></div>`;
+  return h;
+}
+function viewPO(){
+  const sh = S.shipments.find(x=>x.id===S.view.po); if(!sh){ S.view.supView='list'; return viewSupply(); }
+  let h = `<div class="nav sep"><div class="navrow"><button type="button" class="back" data-act="polist">${BACK}Orders</button><b>${esc(sh.po)}</b><span></span></div></div><div class="pad ground">`;
+  h += `<div class="doc"><h3>Purchase Order</h3><div class="dm"><span>${esc(sh.po)}</span><span>Day ${sh.ordered}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><b style="font-size:11px;color:var(--muted)">SUPPLIER (SELLER)</b><br>${esc(sh.sup.name)}</div><div><b style="font-size:11px;color:var(--muted)">BUYER</b><br>Your online shop<br>Surigao City</div></div>
+    <table><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit</th><th class="n">Amount</th></tr>
+    ${sh.lines.map(l=>`<tr><td>${esc(SKUS[l.sku].name)}</td><td class="n">${l.qty}</td><td class="n">₱${l.unit.toFixed(2)}</td><td class="n">${peso(l.unit*l.qty)}</td></tr>`).join('')}
+    <tr><td colspan="3">Freight</td><td class="n">${peso(sh.freight)}</td></tr>${sh.fee?`<tr><td colspan="3">Buyer protection fee</td><td class="n">${peso(sh.fee)}</td></tr>`:''}
+    <tr class="tot"><td colspan="3">Total paid</td><td class="n">${peso(sh.total)}</td></tr></table>
+    <div class="terms"><b>Terms:</b> ${sh.pay==='escrow'?'Paid via SupplyHub escrow. Released to supplier on receipt. Claims within 3 days.':sh.pay==='bank'?'Paid by direct bank transfer. No platform protection.':'Paid to a personal e-wallet outside SupplyHub. Not protected.'}<br><b>Delivery:</b> Day ${sh.arrive} · <b>Status:</b> ${sh.status==='transit'?'In transit':sh.status==='delivered'?'Delivered':'Not delivered'}</div></div>`;
+  h += `<div style="height:12px"></div><p class="note">B2B purchases use purchase orders and invoices because businesses need records for taxes, accounting and claims.</p><button type="button" class="btn grey" data-act="suplist">Back to suppliers</button></div>`;
+  return h;
+}
+function viewPOList(){
+  let h = `<div class="nav sep"><h1>SupplyHub</h1><div class="seg"><button type="button" data-act="suplist">Suppliers</button><button type="button" class="on">Purchase orders</button></div></div><div class="pad">`;
+  if(!S.shipments.length) return h + '<div class="empty"><b>No purchase orders</b>Order from a supplier first.</div></div>';
+  h += '<div class="group">';
+  S.shipments.slice().reverse().forEach(sh => {
+    const st = sh.status==='transit' ? '<span class="chip b">In transit</span>' : sh.status==='delivered' ? '<span class="chip g">Delivered</span>' : '<span class="chip r">Not delivered</span>';
+    h += `<button type="button" class="row" data-po="${sh.id}"><span class="logo" style="flex-basis:36px;height:36px;font-size:13px;border-radius:9px;background:${sh.sup.type==='verified'?'#0A84FF':sh.sup.type==='trader'?'#FF9500':'#8E8E93'}">PO</span><div class="grow"><div class="t">${esc(sh.po)}</div><div class="s">${esc(sh.sup.name)} · Day ${sh.ordered}</div></div><div class="r peso">${peso(sh.total)}<small>${st}</small></div>${CHEV}</button>`;
+  });
+  return h + '</div></div>';
+}
+
+/* Seller Center (B2C) */
+function viewSeller(){
+  const v = S.view;
+  if(v.msg) return viewMsg();
+  const nOrd = S.orders.filter(o=>o.status==='new').length, nMsg = S.msgs.filter(m=>!m.done&&!m.hidden).length;
+  const T = [['orders','Orders',nOrd],['products','Products',0],['inbox','Inbox',nMsg],['crm','Customers',0],['finance','Finance',0]];
+  let h = `<div class="nav sep"><h1 style="font-size:26px">Seller Center</h1><div class="seg">${T.map(([k,l,n])=>`<button type="button" data-st="${k}" class="${v.seller===k?'on':''}">${l}${n?'<span class="dot"></span>':''}</button>`).join('')}</div></div>`;
+  if(v.seller==='orders') h += viewOrders();
+  else if(v.seller==='products') h += viewProducts();
+  else if(v.seller==='inbox') h += viewInbox();
+  else if(v.seller==='crm') h += viewCRM();
+  else h += viewFinance();
+  return h;
+}
+const PAYCHIP = { cod: '<span class="chip o">COD · collect on delivery</span>', ewallet: '<span class="chip g">Paid · e-wallet</span>', card: '<span class="chip g">Paid · card</span>', bank: '<span class="chip">Bank transfer · proof uploaded</span>' };
+function viewOrders(){
+  const list = S.orders.filter(o=>o.day===S.day || o.status==='new');
+  const todo = list.filter(o=>o.status==='new'), done = list.filter(o=>o.status!=='new');
+  let h = '<div class="pad">';
+  if(!list.length) return h + '<div class="empty"><b>No orders today</b>Check your stock in Products. Empty listings get no orders.</div></div>';
+  h += `<div class="sec" style="margin-top:0">To ship (${todo.length})</div>`;
+  if(!todo.length) h += '<p class="note" style="margin:0 4px 10px">All orders handled.</p>';
+  todo.forEach(o => h += orderCard(o));
+  const nSel = todo.filter(o=>S.sel[o.id]).length;
+  if(done.length){ h += `<div class="sec">Handled today (${done.length})</div>`; done.forEach(o => h += orderCard(o)); }
+  h += '</div>';
+  if(todo.length) h += `<div class="cartbar"><button type="button" class="btn grey sm" data-act="selall">${nSel===todo.length?'Clear':'Select all'}</button><div class="tot">${nSel} selected</div><button type="button" class="btn" data-act="shipsel" ${nSel?'':'disabled'}>Arrange shipment</button></div>`;
+  return h;
+}
+function orderCard(o){
+  const c = cust(o.cust), tag = custTag(c), total = orderTotal(o);
+  const st = o.status==='new' ? '' : o.status==='shipped' ? '<span class="chip g">Shipped</span>' : o.status==='rts' ? '<span class="chip r">Returned</span>' : '<span class="chip">Cancelled</span>';
+  return `<div class="ord ${o.status!=='new'?'done':''}"><div class="oh">${o.status==='new'?`<button type="button" class="check ${S.sel[o.id]?'on':''}" data-sel="${o.id}" aria-label="Select order">${S.sel[o.id]?TICK:''}</button>`:''}${av(c.name,c.color,'sm')}<div class="grow"><div class="oc">${esc(c.name)} <span class="chip ${tag.cls}">${tag.t}</span></div><div class="on">#${o.no} · ${o.time} · ${esc(o.city||c.city)}</div></div>${st}</div>
+    ${o.lines.map(l=>`<div class="ol">${skuThumb(l.sku,'sm')}<div class="grow">${esc(SKUS[l.sku].short)}</div><div>× ${l.qty}</div></div>`).join('')}
+    <div class="of"><div class="chips">${PAYCHIP[o.pay]}</div><div class="tt peso">${peso(total)}</div></div>
+    ${o.status==='new'?`<button type="button" class="row" data-ord="${o.id}" style="border-top:.5px solid var(--sep);padding:9px 12px;color:var(--blue);font-size:14px;font-weight:500"><span class="grow">Order details &amp; actions</span>${CHEV}</button>`:''}</div>`;
+}
+function viewOrderSheet(){
+  const o = S.orders.find(x=>x.id===S.view.order); if(!o) { S.view.order=null; return ''; }
+  const c = cust(o.cust), total = orderTotal(o);
+  const age = c.joined===0 ? '<span class="bad">Joined today</span>' : c.joined < 30 ? `${c.joined} days` : c.joined < 365 ? `${Math.round(c.joined/30)} months` : `${(c.joined/365).toFixed(1)} years`;
+  const hist = c.orders ? `${c.orders} completed · ${peso(c.spent)}` : (c.seeded ? '' : '<span class="'+(o.kind==='bogus'?'bad':'')+'">0 completed orders</span>');
+  let h = `<div class="sheet" data-act="closesheet"><div class="sbody" data-stop="1"><div class="grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:17px">Order #${o.no}</b><button type="button" class="btn grey sm" data-act="closesheet">Done</button></div>
+    <div class="group"><div class="kv2"><span>Buyer</span><span>${esc(c.name)} <span class="chip ${custTag(c).cls}">${custTag(c).t}</span></span></div>
+    <div class="kv2"><span>Account age</span><span>${age}</span></div><div class="kv2"><span>Order history</span><span>${hist||'—'}</span></div>
+    <div class="kv2"><span>Phone</span><span class="${c.phoneOk?'ok':'bad'}">${c.phoneOk?'Verified ✓':'Not verified'}</span></div>
+    <div class="kv2"><span>Ship to</span><span>${esc(o.addr ? o.addr+', '+c.city : (pick2(o.id)+', '+c.city))}</span></div>
+    <div class="kv2"><span>Payment</span><span>${o.pay==='cod'?'Cash on delivery':o.pay==='bank'?'Manual bank transfer':o.pay==='card'?'<span class="ok">Card · paid ✓</span>':'<span class="ok">E-wallet · paid ✓</span>'}</span></div>
+    <div class="kv2"><span>Total</span><span class="peso"><b>${peso(total)}</b></span></div></div>`;
+  if(o.note) h += `<div class="sec">Buyer note</div><div class="group"><div class="kv2" style="display:block;color:var(--ink)">“${esc(o.note)}”</div></div>`;
+  if(o.pay==='bank') h += `<div class="sec">Proof of payment (uploaded by buyer)</div><div style="display:flex">${cardHtml({ card:'receipt', amt: total })}</div>`;
+  if(o.verifyRes) h += `<div class="verify ${o.verifyRes.bad?'bad':'ok'}">${esc(o.verifyRes.t)}</div>`;
+  h += `<div style="height:12px"></div><div class="btnrow"><button type="button" class="btn grey" data-act="verify" ${o.verified?'disabled':''}>${o.pay==='bank'?'Check bank deposit':o.pay==='cod'?'Message & call buyer':'Check payment'}</button></div><div style="height:8px"></div>
+    <div class="btnrow"><button type="button" class="btn red" data-act="cancelord">Cancel order</button><button type="button" class="btn" data-act="shipone">Ship</button></div></div></div>`;
+  return h;
+}
+function pick2(id){ const n = [...id].reduce((a,ch)=>a+ch.charCodeAt(0),0); return ['Blk 4 Lot 12, Rizal St.','118 Mabini St.','Purok 5, P. Burgos Ave.','27 Narciso St.','Unit 3B, Borromeo Bldg.','45 Magsaysay Ave.'][n%6]; }
+
+function viewProducts(){
+  let h = '<div class="pad">';
+  const boosted = S.boostFor===S.day+1;
+  h += `<button type="button" class="toggle ${boosted?'on':''}" data-act="boost" ${boosted?'disabled':''}><div class="grow"><b>Sponsored listings for tomorrow</b><span>${peso(CFG.boostCost)} · about 40% more orders tomorrow</span></div><span class="sw"></span></button>`;
+  SKU_IDS.forEach(k => {
+    const s = SKUS[k], n = S.stock[k];
+    h += `<div class="prod"><div class="ptop">${skuThumb(k)}<div class="grow"><div class="pt">${esc(s.name)}</div><div class="ps">Cost about ${peso(s.cost)} · Usual retail ${peso(s.retail)}</div></div><div class="stockn ${n?'':'zero'}">${n}<small>in stock</small></div></div>
+      <div class="pricepick">${Object.keys(PRICE_LV).map(lv=>`<button type="button" class="pp ${S.prices[k]===lv?'on':''}" data-pl="${k}:${lv}"><b class="peso">${peso(Math.round(s.retail*PRICE_LV[lv].k))}</b>${PRICE_LV[lv].label}</button>`).join('')}</div></div>`;
+  });
+  const pend = S.shipments.filter(s=>s.status==='transit' && !s.scam);
+  h += `<p class="note">Prices apply to tomorrow’s orders. Lower prices sell more units; higher prices earn more per unit.${pend.length?` <b>Incoming tomorrow:</b> ${pend.map(s=>s.lines.map(l=>l.qty+' '+SKUS[l.sku].short.toLowerCase()).join(', ')).join('; ')}.`:''}</p>`;
+  h += `<button type="button" class="btn acc" data-act="gosupply">Restock in SupplyHub</button></div>`;
+  return h;
+}
+function msgTitle(m){
+  const c = m.cust ? cust(m.cust) : null;
+  if(m.kind==='phish') return ['ShopFront Seller Support', '⚠ Your store will be suspended in 24 hours', '#FF3B30'];
+  if(m.kind==='inspect') return [m.from, 'Inspection: defective units found', '#FF9500'];
+  if(m.kind==='supplier') return [m.from, 'Supplier unreachable', '#8E8E93'];
+  const pv = { question: 'Pwede ba yung USB-C charger sa phone ko?', defect: 'Sira po yung natanggap ko…', refundabuse: 'Hindi ko natanggap order ko!! Refund…' }[m.kind];
+  return [c?c.name:'Customer', pv, c?c.color:'#8E8E93'];
+}
+function viewInbox(){
+  const list = S.msgs.filter(m=>!m.hidden).slice().reverse();
+  if(!list.length) return '<div class="empty"><b>No messages</b>Customer chats, delivery checks and notices appear here.</div>';
+  let h = '<div class="group" style="margin:8px 0;border-radius:0">';
+  list.forEach(m => {
+    const [n, pv, col] = msgTitle(m);
+    h += `<button type="button" class="row" data-msg="${m.id}">${!m.done?'<span class="unread"></span>':'<span style="width:10px"></span>'}${av(n,col)}<div class="grow"><div class="t">${esc(n)}</div><div class="s" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.done&&m.lesson?(m.result?'Resolved ✓':'Resolved'):pv)}</div></div><div class="r"><small>Day ${m.day}</small></div>${CHEV}</button>`;
+  });
+  return h + '</div>';
+}
+function viewMsg(){
+  const m = S.msgs.find(x=>x.id===S.view.msg); if(!m){ S.view.msg=null; return viewSeller(); }
+  startMsg(m); m.read = true;
+  const [n,,col] = msgTitle(m);
+  const c = m.cust ? cust(m.cust) : null;
+  let h = `<div class="chathead"><button type="button" class="back" data-act="msgback">${BACK}</button>${av(n,col,'sm')}<div class="grow"><b>${esc(n)}</b><small>${c?`${custTag(c).t} customer · ${c.orders} order${c.orders===1?'':'s'} · ${esc(c.city)}`:esc(m.kind==='phish'?'Email':'SupplyHub')}</small></div></div>`;
+  h += `<div class="msgs"><div class="when">Day ${m.day}</div>${m.thread.map(bubble).join('')}</div>`;
+  if(m.opts && m.opts.length && !m.done) h += `<div class="replies"><div class="rl">Choose your response</div>${m.opts.map(o=>`<button type="button" class="reply" data-mreply="${o.k}">${esc(o.t)}</button>`).join('')}</div>`;
+  return h;
+}
+function viewCRM(){
+  const f = S.view.crm;
+  const all = S.customers.filter(c=>c.orders>0||c.flagged);
+  const list = all.filter(c => f==='all' || (f==='repeat' && c.orders>=2 && !c.flagged) || (f==='vip' && c.orders>=3 && !c.flagged) || (f==='flag' && c.flagged))
+                  .sort((a,b)=>b.spent-a.spent);
+  const reps = S.customers.filter(c=>c.orders>=1 && !c.flagged).length;
+  const promoted = S.promoFor===S.day+1;
+  let h = '<div class="pad">';
+  h += `<div class="kpis" style="margin-bottom:10px;grid-template-columns:repeat(3,1fr)"><div class="kpi"><b>${S.customers.filter(c=>c.orders>0).length}</b><span>Customers</span></div><div class="kpi"><b>${S.customers.filter(c=>c.orders>=2&&!c.flagged).length}</b><span>Repeat</span></div><div class="kpi"><b>${S.customers.filter(c=>c.flagged).length}</b><span>Flagged</span></div></div>`;
+  h += `<button type="button" class="toggle ${promoted?'on':''}" data-act="promo" ${promoted||!reps?'disabled':''}><div class="grow"><b>Text a promo to past customers</b><span>${peso(CFG.promoCost)} · ${reps} customer${reps===1?'':'s'} · brings repeat orders tomorrow</span></div><span class="sw"></span></button>`;
+  h += `<div class="seg" style="margin:6px 0 10px">${[['all','All'],['repeat','Repeat'],['vip','VIP'],['flag','Flagged']].map(([k,l])=>`<button type="button" data-crm="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</div>`;
+  if(!list.length) h += '<div class="empty" style="padding:24px"><b>No customers here yet</b>Every shipped order adds a customer record.</div>';
+  else { h += '<div class="group">'; list.slice(0,60).forEach(c => { const t=custTag(c); h += `<div class="row crmrow">${av(c.name,c.color,'sm')}<div class="grow"><div class="t">${esc(c.name)}</div><div class="s">${esc(c.city)} · <span class="chip ${t.cls}">${t.t}</span></div></div><div class="r peso">${peso(c.spent)}<small>${c.orders} order${c.orders===1?'':'s'}</small></div></div>`; }); h += '</div>'; }
+  h += '<p class="note" style="margin-top:10px">A CRM (customer relationship management) list tells you who your loyal customers are, who to reward and who to watch out for.</p></div>';
+  return h;
+}
+function viewFinance(){
+  const td = S.tx.filter(t=>t.day===S.day);
+  const sales = td.filter(t=>t.kind==='sale').reduce((a,t)=>a+t.amt,0);
+  const stock = td.filter(t=>t.kind==='stock').reduce((a,t)=>a+t.amt,0);
+  const loss = td.filter(t=>t.kind==='loss').reduce((a,t)=>a+t.amt,0);
+  const other = td.filter(t=>!['sale','stock','loss'].includes(t.kind)).reduce((a,t)=>a+t.amt,0);
+  let h = '<div class="pad">';
+  h += `<div class="pl" style="padding:14px"><div class="note">Business profit (cash − starting capital ${peso(S.capital)})</div><div class="big peso" style="color:${profit()>=0?'var(--green-ink)':'#C4261D'}">${peso(profit())}</div><div class="pbar" style="background:var(--fill);height:6px;margin-top:8px"><i style="background:var(--acc);width:${clamp(profit()/CFG.profitGoal*100,0,100)}%"></i></div><div class="note" style="margin-top:4px">Goal ${peso(CFG.profitGoal)}</div></div>`;
+  h += `<div class="sec">Today · Day ${S.day}</div><div class="pl"><div class="kv2"><span>Sales (after ${CFG.platformFee*100}% platform fee)</span><span class="peso">${peso(sales)}</span></div><div class="kv2"><span>Stock purchases</span><span class="peso">${peso(stock)}</span></div><div class="kv2"><span>Ads, promos, refunds</span><span class="peso">${peso(other)}</span></div><div class="kv2"><span>Losses</span><span class="peso ${loss?'bad':''}">${peso(loss)}</span></div><div class="kv2"><span><b style="color:var(--ink)">Cash change</b></span><span class="peso"><b>${peso(S.cash-S.dayStartCash)}</b></span></div></div>`;
+  h += `<p class="note" style="margin-top:10px">Stock you buy lowers cash today and earns it back when it sells. Unsold stock does not count as profit.</p></div>`;
+  return h;
+}
+
+/* ---------- Overlays ---------- */
+function showInfo(html, btns){
+  $('infoCard').innerHTML = html + `<div class="gorow">${(btns||[['Continue','info-ok']]).map(([l,a],i)=>`<button type="button" class="go ${i?'home':''}" data-act="${a}">${l}</button>`).join('')}</div>`;
+  $('infoScreen').hidden = false; $('infoCard').scrollTop = 0;
+}
+function hideInfo(){ $('infoScreen').hidden = true; }
+
+function phaseIntro(p){
+  if(p==='c2c') showInfo(`<div class="kicker">Phase 1 · Day 1</div><h1>C2C · <em>Consumer to Consumer</em></h1><p>You are not a business yet. You are one person selling your own used things to other people on an online marketplace. The platform only connects you; <b>you</b> handle the price, the chat, the payment and the hand-over.</p><ul><li>Goal: about <b>${peso(CFG.seedGoal)}</b> in your e-wallet by the end of Day 2. That is the capital for your shop.</li><li>Set your prices, publish, then answer buyers in the <b>Inbox</b>.</li><li>Check each buyer’s profile line: account age, ratings, ID verification.</li></ul>`, [['Open Marketplace','info-ok']]);
+  if(p==='b2b') showInfo(`<div class="kicker">Phase 2 · Day 3</div><h1>B2B · <em>Business to Business</em></h1><p>You now have <b>${peso(S.capital)}</b> of capital, and you are opening a small online shop. A shop does not buy one item at a time at retail price; it buys <b>in bulk from another business</b> (a supplier) at wholesale price.</p><ul><li>Pick a supplier in <b>SupplyHub</b>. Compare records, ratings and payment terms, not just price.</li><li>Buy at least ${MOQ} units per product. ${BULK_QTY}+ units are cheaper.</li><li>Your purchase becomes a <b>purchase order</b>. Delivery arrives tomorrow morning.</li><li>Keep some cash. You can restock any day later.</li></ul>`, [['Open SupplyHub','info-ok']]);
+  if(p==='b2c') showInfo(`<div class="kicker">Phase 3 · Day ${S.day}</div><h1>B2C · <em>Business to Consumer</em></h1><p>Your shop is open on the ShopFront marketplace. Customers buy from <b>your business</b>. Every day:</p><ul><li><b>Orders:</b> review and ship. Look at the payment status, account age, order history and address.</li><li><b>Inbox:</b> answer customers, delivery checks and notices.</li><li><b>Products:</b> set prices, buy ads. <b>Customers:</b> your CRM; text promos to past buyers.</li><li>Restock in <b>SupplyHub</b> before you run out. Deliveries arrive the next morning.</li></ul><p>Reach <b>${peso(CFG.profitGoal)}</b> business profit to finish. ${CFG.platformFee*100}% of each sale goes to the marketplace.</p>`, [['Open Seller Center','info-ok']]);
+}
+
+function daySummary(res){
+  const s = res.summary;
+  const rows = s.tx.slice().reverse().map(t=>`<tr><td>${esc(t.label)}</td><td class="n" style="color:${t.kind==='loss'?'#C4261D':t.amt>=0?'var(--green-ink)':'inherit'}">${t.amt>0?'+':''}${peso(t.amt)}</td></tr>`).join('') || '<tr><td colspan="2" class="note">No transactions.</td></tr>';
+  let extra = '';
+  if(res.arrivals && res.arrivals.length) extra = `<div class="lockline"><b>This morning:</b><br>${res.arrivals.map(a=>`${a.bad?'⚠️ ':'📦 '}${esc(a.t)}`).join('<br>')}</div>`;
+  showInfo(`<div class="kicker">End of Day ${s.day}</div><h1>${s.phase==='c2c'?'Marketplace day':s.phase==='b2b'?'Purchase orders placed':'Store day'} <em>closed</em></h1>
+    <div class="kpis"><div class="kpi"><b class="peso">${peso(s.end - s.start)}</b><span>Cash change</span></div><div class="kpi"><b class="peso">${peso(s.end)}</b><span>Cash</span></div>${s.phase==='b2c'?`<div class="kpi"><b class="peso">${peso(s.profit)}</b><span>Profit</span></div><div class="kpi"><b>${S.rating.toFixed(2)}★</b><span>Rating</span></div>`:''}</div>
+    <div class="tw"><table class="tbl"><tr><th>Day ${s.day} transactions</th><th class="n">Amount</th></tr>${rows}</table></div>${extra}`, [['Next day','info-next']]);
+  S._pendingIntro = res.next || null;
+}
+
+/* ---------- Actions ---------- */
+function act(a, el){
+  Snd.init();
+  const v = S.view;
+  switch(a){
+    case 'publish': S.listed = true; S.items.forEach(i=>{ if(i.status==='draft') i.status='listed'; }); v.market='inbox'; Snd.play('msg'); toast('Listings published. Buyers are messaging you.'); render(); break;
+    case 'chatback': v.chat = null; render(); break;
+    case 'msgback': v.msg = null; render(); break;
+    case 'suplist': v.supView='list'; v.sup=null; render(); break;
+    case 'supcat': v.supView='cat'; render(); break;
+    case 'polist': v.supView='orders'; render(); break;
+    case 'checkout': v.supView='checkout'; render(); break;
+    case 'placepo': {
+      const s = curSup(); const r = placePO(s, v.cart, v.pay);
+      if(r.err==='cash'){ toast('Not enough cash for this order.','bad'); return; }
+      if(r.err) return;
+      Snd.play('cash'); toast(`${r.ship.po} placed. Arrives tomorrow morning.`);
+      v.cart = {}; v.po = r.ship.id; v.supView = 'po'; render(); break; }
+    case 'gosupply': v.app='supply'; v.supView='list'; render(); break;
+    case 'selall': { const todo = S.orders.filter(o=>o.status==='new'); const all = todo.every(o=>S.sel[o.id]); todo.forEach(o=>{ S.sel[o.id] = !all; }); render(true); break; }
+    case 'shipsel': {
+      const ids = S.orders.filter(o=>o.status==='new' && S.sel[o.id]); let bad = 0, n = 0, stockErr = 0;
+      ids.forEach(o => { const r = shipOrder(o); if(r && r.err){ stockErr++; return; } n++; if(r && r.bad) bad++; delete S.sel[o.id]; });
+      if(stockErr) toast(`${stockErr} order${stockErr>1?'s':''} could not ship: not enough stock.`, 'bad');
+      else if(bad){ Snd.play('bad'); toast(`Shipped ${n}. ${bad} went wrong. See Wallet.`, 'bad'); }
+      else { Snd.play('cash'); toast(`Shipped ${n} order${n>1?'s':''}.`, 'good'); }
+      render(true); break; }
+    case 'closesheet': v.order = null; render(true); break;
+    case 'verify': { const o = S.orders.find(x=>x.id===v.order); o.verifyRes = verifyOrder(o); Snd.play(o.verifyRes.bad?'bad':'tap'); render(true); break; }
+    case 'shipone': { const o = S.orders.find(x=>x.id===v.order); const r = shipOrder(o);
+      if(r && r.err){ toast('Not enough stock for this order.','bad'); return; }
+      delete S.sel[o.id]; v.order = null;
+      if(r && r.bad){ Snd.play('bad'); toast(r.t,'bad'); } else { Snd.play('cash'); toast('Shipped.','good'); }
+      render(true); break; }
+    case 'cancelord': { const o = S.orders.find(x=>x.id===v.order); cancelOrder(o); delete S.sel[o.id]; v.order = null; Snd.play('tap'); toast('Order cancelled.'); render(true); break; }
+    case 'boost': if(S.cash < CFG.boostCost){ toast('Not enough cash.','bad'); return; } S.boostFor = S.day + 1; addTx('Sponsored listings (tomorrow)', -CFG.boostCost, 'ad'); Snd.play('tap'); toast('Sponsored listings on. More orders tomorrow.'); render(true); break;
+    case 'promo': if(S.cash < CFG.promoCost){ toast('Not enough cash.','bad'); return; } S.promoFor = S.day + 1; addTx('SMS promo to past customers', -CFG.promoCost, 'ad'); Snd.play('tap'); toast('Promo sent to past customers.'); render(true); break;
+    case 'info-ok': hideInfo(); break;
+    case 'info-next': hideInfo(); if(S._pendingIntro){ const p = S._pendingIntro; S._pendingIntro = null; phaseIntro(p); } break;
+    case 'restart': newRun(); hideInfo(); $('endScreen').hidden = true; render(); phaseIntro('c2c'); break;
+  }
+}
+
+
+function onEndDay(){
+  const w = pendingWork(); if(w){ toast(w,'bad'); return; }
+  const res = endDay();
+  S.view.chat = null; S.view.msg = null; S.view.order = null;
+  if(S.phase==='won'){ render(); finish(); return; }
+  if(S.phase==='bust'){ render(); bust(res.summary); return; }
+  Snd.play('msg');
+  render();
+  daySummary(res);
+}
+
+/* ---------- End / bust ---------- */
+function bust(s){
+  Snd.play('bad');
+  showInfo(`<div class="kicker">Day ${S.day}</div><h1>The business <em>closed</em></h1><p>${s.bust==='c2c'?`You ended the marketplace days with only ${peso(S.cash)}. That is not enough to buy even one minimum order of stock.`:`You have no stock, nothing on the way, and only ${peso(S.cash)} in cash. You cannot restock.`}</p><p>Look at the Wallet to see where the money went, then start again from Phase 1 (C2C). This attempt is not recorded.</p>`, [['Start again','restart']]);
+  try{ localStorage.removeItem(PROGRESS_KEY); }catch(e){}
+}
+
+async function finish(){
+  S.ended = true;
+  const sc = scoreRun();
+  Snd.play('win');
+  const prev = await loadResult();
+  let line;
+  if(prev){ line = `<b>Practice run: ${sc.pct}%</b> · Your recorded Activity 10 score stays <b>${prev.percentage}%</b>.`; }
+  else {
+    const rec = { score: sc.ok, maxScore: sc.tot, percentage: sc.pct, decisionPct: sc.decPct, speedPct: sc.speedPct, ratingPct: sc.ratingPct,
+      days: S.day, profit: Math.round(profit()), rating: Math.round(S.rating*100)/100, capital: Math.round(S.capital),
+      correct: S.dec.filter(d=>d.ok).length, mistakes: S.dec.filter(d=>!d.ok).length, locked: true, savedAt: new Date().toISOString() };
+    await writeAll(rec);
+    line = `<b>Activity 10 score recorded: ${sc.pct}%</b> · Locked. Later runs are practice.`;
+  }
+  try{ localStorage.removeItem(PROGRESS_KEY); }catch(e){}
+  const res = sc.pct>=85?['TOP SELLER','win']:sc.pct>=65?['GROWING SHOP','mid']:['NEEDS REVIEW','lose'];
+  const groups = [['c2c','C2C · Marketplace'],['b2b','B2B · Suppliers'],['b2c','B2C · Your store']];
+  const rv = groups.map(([p,l]) => { const d = S.dec.filter(x=>x.phase===p); if(!d.length) return ''; return `<h2>${l} · ${d.filter(x=>x.ok).length}/${d.length}</h2>` + d.map(x=>`<div class="rv ${x.ok?'ok':'no'}"><div class="rh">${x.ok?'✓':'✗'} ${esc(x.label)}<span class="chip" style="margin-left:auto">Day ${x.day}</span></div>${esc(x.lesson)}</div>`).join(''); }).join('');
+  $('endCard').innerHTML = `<div class="kicker">Day ${S.day} · Goal reached</div><div class="result ${res[1]}">${res[0]}</div>
+    <div class="bigscore"><b>${sc.pct}%</b><span>Decisions ${sc.decPct}% · Speed ${sc.speedPct}% · Rating ${sc.ratingPct}%</span></div>
+    <p class="scoreline">${line}</p>
+    <div class="kpis"><div class="kpi"><b class="peso">${peso(profit())}</b><span>Profit</span></div><div class="kpi"><b>${S.day}</b><span>Days</span></div><div class="kpi"><b>${S.rating.toFixed(2)}★</b><span>Rating</span></div><div class="kpi"><b>${sc.ok}/${sc.tot}</b><span>Right calls</span></div><div class="kpi"><b>${S.customers.filter(c=>c.orders>0).length}</b><span>Customers</span></div><div class="kpi"><b>${S.customers.filter(c=>c.orders>=2&&!c.flagged).length}</b><span>Repeat</span></div></div>
+    <h2>The models you went through</h2>
+    <div class="tw"><table class="tbl"><tr><th>Model</th><th>Who sells → who buys</th><th>Trust tools</th><th>Risks you met</th></tr>
+      <tr><td><b>C2C</b></td><td>A person → a person (your used items)</td><td>Profiles, ratings, ID checks, public meetups, COD</td><td>Fake receipts, OTP theft, overpayment, no-shows</td></tr>
+      <tr><td><b>B2B</b></td><td>A supplier business → your shop (bulk, MOQ, purchase orders)</td><td>Verified records, escrow, invoices, inspection claims</td><td>Fake suppliers, defective batches</td></tr>
+      <tr><td><b>B2C</b></td><td>Your shop → customers (retail)</td><td>Payment status, tracking, ratings, CRM</td><td>Bogus COD, fake payment proof, refund abuse, phishing</td></tr></table></div>
+    <p class="note">Other models you will see: <b>C2B</b> (a person sells to a business, e.g. a freelancer or a photographer selling to a company), <b>B2G</b> (a business sells to government through public bidding, e.g. PhilGEPS) and <b>G2C</b> (government services online, e.g. paying fees or getting documents through eGov PH).</p>
+    <div class="lockline"><b>Debrief:</b> Which phase had the most scams? Which trust tools (ratings, escrow, tracking, CRM) helped you most? How would a real clinic or radiology department use B2B suppliers and B2C patient services online?</div>
+    <h2>Decision review</h2><div class="review">${rv}</div>
+    <div class="gorow"><button type="button" class="go" id="againBtn">Practice again</button><a class="go home" href="index.html">‹ Activities</a></div>`;
+  $('endScreen').hidden = false;
+  $('againBtn').onclick = () => { $('endScreen').hidden = true; newRun(true); render(); phaseIntro('c2c'); };
+  showLock(await loadResult());
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const inStop = t.closest('[data-stop]');
+  let b = inStop ? t.closest('button') : t.closest('button,[data-act]');
+  if(inStop && b && !inStop.contains(b)) b = null;
+  if(!b || b.disabled) return;
+  if(!S) return;
+  const v = S.view, d = b.dataset;
+  if(d.tab){ v.app = d.tab; v.chat = null; v.msg = null; v.order = null; if(d.tab==='supply' && v.supView==='po') v.supView='list'; Snd.init(); Snd.play('tap'); render(); return; }
+  if(d.mk){ v.market = d.mk; render(); return; }
+  if(d.lv){ const [id,lv] = d.lv.split(':'); itemS(id).level = lv; Snd.init(); Snd.play('tap'); render(true); return; }
+  if(d.chat){ v.chat = d.chat; Snd.init(); render(); return; }
+  if(d.reply){ const c = S.chats.find(x=>x.id===v.chat); const r = c2cReply(c, d.reply); if(r){ Snd.play(r.ok?'good':r.ok===false?'bad':'msg'); }
+    const nu = S.chats.find(x=>x.after===c.id && x.day===S.day); if(nu) setTimeout(()=>{ toast(`New message from ${nu.who}`); Snd.play('msg'); render(true); }, 900);
+    render('bottom'); return; }
+  if(d.sup){ if(v.sup!==d.sup) v.cart = {}; v.sup = d.sup; v.supView = 'cat'; render(); return; }
+  if(d.qty){ const [k,dq] = d.qty.split(':'); let q = (v.cart[k]||0) + (+dq); if(q>0 && q<MOQ) q = (+dq>0?MOQ:0); v.cart[k] = Math.max(0, q); Snd.play('tap'); render(true); return; }
+  if(d.pay){ v.pay = d.pay; render(true); return; }
+  if(d.po){ v.po = d.po; v.supView = 'po'; render(); return; }
+  if(d.st){ v.seller = d.st; v.order = null; render(); return; }
+  if(d.sel){ S.sel[d.sel] = !S.sel[d.sel]; Snd.play('tap'); render(true); return; }
+  if(d.ord){ v.order = d.ord; render(true); return; }
+  if(d.pl){ const [k,lv] = d.pl.split(':'); S.prices[k] = lv; Snd.play('tap'); render(true); return; }
+  if(d.msg){ v.msg = d.msg; render(); return; }
+  if(d.mreply){ const m = S.msgs.find(x=>x.id===v.msg); msgReply(m, d.mreply); Snd.play(m.result?'good':m.result===false?'bad':'msg'); render('bottom'); return; }
+  if(d.crm){ v.crm = d.crm; render(true); return; }
+  if(d.act) act(d.act, b);
+});
+$('endDayBtn').addEventListener('click', () => { Snd.init(); onEndDay(); });
+
+/* ---------- Persistence: progress ---------- */
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(()=>{ try{ if(S && !S.ended && S.phase!=='bust') localStorage.setItem(PROGRESS_KEY, JSON.stringify(S)); }catch(e){} }, 150); }
+function loadProgress(){ try{ const s = localStorage.getItem(PROGRESS_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+
+/* ---------- Persistence: result (4 layers, first completion locked) ---------- */
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeAll(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null;
+  try{ const s=localStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(!r) try{ const m=document.cookie.match(new RegExp('(?:^|; )'+RESULT_KEY+'=([^;]*)')); if(m) r=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+  if(!r) r = await idbRead(RESULT_IDB);
+  if(!r) try{ const s=sessionStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(r){ // backfill every layer without re-triggering the cloud push unless a layer is missing
+    let missing = false; try{ missing = !localStorage.getItem(RESULT_KEY); }catch(e){}
+    if(missing) await writeAll(r); else { try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(JSON.stringify(r))+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){} await idbPut(RESULT_IDB, r); try{ sessionStorage.setItem(RESULT_KEY, JSON.stringify(r)); }catch(e){} }
+  }
+  return r;
+}
+function showLock(r){
+  const l = $('lockLine');
+  if(!r){ l.hidden = true; return; }
+  l.hidden = false;
+  l.innerHTML = `<b>Recorded score: ${r.percentage}%</b> (${r.days} days, ${peso(r.profit)} profit, ${(+r.rating).toFixed(2)}★). It is locked. New runs are practice only.`;
+  $('startBtn').textContent = 'Practice';
+}
+
+/* ---------- Browser gate ---------- */
+function gateCheck(){
+  const ua = navigator.userAgent || '';
+  const inApp = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua);
+  if(inApp){ $('gateMsg').textContent = 'This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X). Tap ⋮ or ⋯, choose "Open in browser" (Chrome, Safari, Edge or Firefox), then open this activity again.'; $('gate').hidden = false; $('startScreen').hidden = true; return false; }
+  return true;
+}
+
+/* ---------- Start / home / misc ---------- */
+async function boot(){
+  const prev = await loadResult(); showLock(prev);
+  const pr = loadProgress();
+  if(pr && pr.v===1 && pr.phase && !['won','bust'].includes(pr.phase)){
+    $('resumeBtn').hidden = false; $('resumeBtn').textContent = `Continue · Day ${pr.day}`;
+  }
+}
+$('startBtn').addEventListener('click', async () => {
+  Snd.init();
+  const prev = await loadResult();
+  newRun(!!prev); S.practiceNext = !!prev;
+  $('startScreen').hidden = true; render(); phaseIntro('c2c');
+});
+$('resumeBtn').addEventListener('click', () => {
+  Snd.init();
+  const pr = loadProgress(); if(!pr) return;
+  S = pr; seedRng();
+  $('startScreen').hidden = true; render();
+  toast(`Welcome back · Day ${S.day}`);
+});
+function goHub(){ save(); location.href = CFG.hubUrl; }
+let homeArmT;
+$('homeBtn').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if(!S || S.ended){ goHub(); return; }
+  if(b.classList.contains('armed')){ clearTimeout(homeArmT); goHub(); return; }
+  b.classList.add('armed'); b.textContent = 'Saved · tap to leave';
+  homeArmT = setTimeout(()=>{ b.classList.remove('armed'); b.textContent = 'Home'; }, 2500);
+});
+$('muteBtn').addEventListener('click', e => { const m = Snd.toggle(); e.currentTarget.textContent = 'Sound: ' + (m?'Off':'On'); });
+$('dlBtn').addEventListener('click', async () => {
+  let html;
+  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
+  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'ecommerce_week.html';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+
+if(gateCheck()) boot();
+</script>
+<script id="apple-fx">
+/* Mesh-gradient shader behind the HUD (presentation only). */
+(function(){
+function boot(){
+  var hud=document.querySelector('.hud'); if(!hud) return;
+  var cv=document.createElement('canvas'); cv.className='fx'; cv.setAttribute('aria-hidden','true'); hud.insertBefore(cv,hud.firstChild);
+  var gl; try{gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:false});}catch(e){}
+  if(!gl) return;
+  var FS='precision mediump float;uniform vec2 r;uniform float t;'+
+  'float b(vec2 p,vec2 c,float s){return exp(-dot(p-c,p-c)/s);}'+
+  'void main(){vec2 p=gl_FragCoord.xy/r.y;float a=r.x/r.y;'+
+  'vec2 q=p+.05*vec2(sin(p.y*6.+t*.7),cos(p.x*4.-t*.6));'+
+  'vec3 col=vec3(.07,.07,.18)'+
+  '+vec3(.95,.42,.11)*b(q,vec2(.15*a+.08*sin(t*.3),.8+.15*cos(t*.4)),.22)'+
+  '+vec3(1.,.216,.373)*b(q,vec2(.85*a+.08*cos(t*.25),.7+.15*sin(t*.35)),.18)'+
+  '+vec3(.039,.518,1.)*b(q,vec2(.5*a+.2*sin(t*.2),.05+.1*cos(t*.3)),.25)'+
+  '+vec3(.204,.78,.349)*b(q,vec2(.45*a+.25*cos(t*.33),.5+.1*sin(t*.27)),.10)'+
+  '+vec3(1.,.624,.039)*b(q,vec2(.97*a,.1+.05*sin(t*.4)),.06)*.8;'+
+  'col=col/(1.+col*.35);'+
+  'float g=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);'+
+  'gl_FragColor=vec4(col+(g-.5)*.035,1.);}';
+  function sh(ty,src){var s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+  var pr=gl.createProgram();
+  gl.attachShader(pr,sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));
+  gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS)); gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)) return;
+  gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(pr,'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  var ur=gl.getUniformLocation(pr,'r'), ut=gl.getUniformLocation(pr,'t');
+  var still=false; try{still=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  var last=0, t0=performance.now();
+  function frame(now){
+    if(!still && !document.hidden && now-last<33){requestAnimationFrame(frame);return;}
+    last=now;
+    var w=Math.max(1,cv.clientWidth|0), h=Math.max(1,cv.clientHeight|0);
+    if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+    gl.viewport(0,0,w,h); gl.uniform2f(ur,w,h);
+    gl.uniform1f(ut,still?4:(now-t0)/1000);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    if(!still) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function later(){ document.documentElement.classList.add('fx-ready'); (window.requestIdleCallback||function(f){setTimeout(f,200);})(boot,{timeout:1200}); }
+function go(){ requestAnimationFrame(function(){ setTimeout(later,250); }); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
+})();
+</script>
+</body>
+</html>

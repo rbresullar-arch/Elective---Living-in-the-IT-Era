@@ -262,7 +262,7 @@ def cmd_join(args):
 
 
 # ---------------- pasted Scores -> names ----------------
-SCORES_HEAD = ["Code", "Schedule"] + [f"A{n} %" for n in range(1, 10)] + ["Prelim", "Midterm", "Last sync", "Flags (review)"]
+SCORES_HEAD = ["Code", "Schedule"] + [f"A{n} %" for n in range(1, 11)] + ["Prelim", "Midterm", "Last sync", "Flags (review)"]
 
 
 def parse_scores(text, names):
