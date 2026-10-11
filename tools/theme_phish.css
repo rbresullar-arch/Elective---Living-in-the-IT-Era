@@ -1,0 +1,136 @@
+/* --- Activity 8: Phish or Legit (Mail, Messages, Safari) --- */
+.app{padding-block:12px 200px!important}
+.screen{background:#fff!important;gap:10px!important}
+.screen h2{font-size:32px!important;letter-spacing:-.03em!important;text-align:left!important;margin:0!important}
+.screen h3{display:none}
+.eyebrow{font-size:13px!important;color:var(--muted-ap);font-weight:500!important;text-transform:none;margin:0!important}
+.well{background:#fff!important;box-shadow:none!important;padding:0!important}
+.hint,.progress,.empty{color:var(--muted-ap)!important;font-weight:500!important}
+.sbar{display:flex;justify-content:space-between;font-size:13px;padding:0 4px 6px}
+.sbar b{font-weight:600}
+.sbar .sbi{width:44px;height:10px;background:linear-gradient(90deg,#1D1D1F 0 22px,transparent 22px 26px,#1D1D1F 26px 44px);border-radius:3px;opacity:.85}
+.search{background:var(--fill-ap);border-radius:10px;padding:7px 12px 7px 32px;font-size:16px;color:#8E8E93;margin:2px 0 6px;position:relative}
+.search::before{content:"";position:absolute;left:11px;top:50%;width:11px;height:11px;border:2px solid #8E8E93;border-radius:50%;transform:translateY(-62%)}
+.search::after{content:"";position:absolute;left:22px;top:60%;width:6px;height:2px;background:#8E8E93;transform:rotate(45deg)}
+
+/* app icons */
+.appic{width:18px;height:18px;border-radius:5px;display:inline-grid;place-items:center;flex:0 0 18px;box-shadow:inset 0 -1px 0 rgba(0,0,0,.15)}
+.appic svg{width:13px;height:13px;fill:#fff}
+.ap-sms{background:linear-gradient(180deg,#5BF675,#0CBD2A)}
+.ap-mail{background:linear-gradient(180deg,#1E9BFF,#1C6FF8)}
+.ap-chat{background:linear-gradient(180deg,#00B2FF,#006AFF 50%,#A033FF)}
+.mapp{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--muted-ap)}
+.mapp.danger{color:#D70015;font-weight:600}
+.mapp.safe{color:#248A3D;font-weight:600}
+
+/* inbox rows */
+.list{gap:0!important}
+.list li+li .mrow{border-top:.5px solid var(--hair)!important}
+.mrow{border:none!important;border-radius:0!important;background:#fff!important;padding:10px 4px 10px 18px!important;grid-template-columns:auto 1fr auto!important;gap:2px 10px!important;position:relative;box-shadow:none!important}
+.mrow.unread{background:#fff!important}
+.mrow .udot{position:absolute;left:4px;top:22px;width:9px;height:9px;border-radius:50%;background:transparent}
+.mrow.unread .udot{background:#007AFF}
+.mrow.unread .mfrom::before{display:none!important}
+.mrow .av{border:none!important;width:40px!important;height:40px!important;color:#fff;font-weight:600!important;font-size:16px!important;background:linear-gradient(180deg,#A5ABB8,#858994)!important}
+.mfrom{font-size:15.5px!important;font-weight:600!important}
+.mprev{font-size:14px!important;color:#6E6E73!important;white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+.mprev b{color:#1D1D1F;font-weight:500}
+.mrow .bar{border:none!important;height:3px!important;background:var(--fill-ap)!important;margin-top:6px}
+.mrow:active{background:#E5E5EA!important;transform:none!important}
+
+/* message: Mail */
+.stepnav .back{background:none!important;border:none!important;color:#007AFF!important;font-size:17px!important;padding:2px 0!important;font-weight:400!important;letter-spacing:-.01em!important}
+.mail-read{padding:4px 2px}
+.mr-from{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;padding-bottom:10px;border-bottom:.5px solid var(--hair)}
+.mr-from .av,.th-head .av{border:none!important;color:#fff;font-weight:600!important;background:linear-gradient(180deg,#A5ABB8,#858994)!important;width:40px;height:40px;font-size:16px}
+.mr-who{min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.mr-who b{font-size:16px}
+.mr-who .addr{font-size:13px;color:#007AFF;word-break:break-all}
+.mr-who small{font-size:13px;color:#8E8E93}
+.mr-time{font-size:13px;color:#8E8E93}
+.mail-read .subj{font-size:20px!important;font-weight:700!important;letter-spacing:-.02em;margin:12px 0 4px!important}
+.mail-read .body{font-size:16px!important;line-height:1.45!important}
+.mail-read .lnk{background:none!important;border:none!important;padding:0!important;margin-top:8px!important;color:#007AFF!important;font-size:16px;text-decoration:underline}
+
+/* message: Messages / Messenger */
+.thread{display:flex;flex-direction:column}
+.th-head{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0 10px;border-bottom:.5px solid var(--hair);text-align:center}
+.th-head b{font-size:13px;font-weight:500}
+.th-head .addr{font-size:11.5px;color:#8E8E93}
+.th-day{text-align:center;font-size:11px;color:#8E8E93;margin:10px 0 6px;line-height:1.35}
+.inb{align-self:flex-start;max-width:86%;background:#E9E9EB;color:#000;border-radius:19px;padding:9px 13px;font-size:15.5px;line-height:1.38;white-space:pre-line;word-break:break-word;position:relative}
+.chat-sms .inb::after{content:"";position:absolute;left:-5px;bottom:0;width:14px;height:16px;background:radial-gradient(circle at 100% 0,transparent 9px,#E9E9EB 9.5px);clip-path:polygon(100% 0,100% 100%,0 100%)}
+.chat-msgr .inb{background:#F0F0F0;border-radius:18px 18px 18px 4px}
+.inb .lnk{display:inline!important;background:none!important;border:none!important;padding:0!important;margin:0 0 0 4px!important;color:#007AFF!important;text-decoration:underline;font-size:inherit;width:auto!important}
+
+/* link preview (inspect) */
+.urlbox{background:#fff!important;color:#1D1D1F!important;border:none!important;border-radius:14px!important;box-shadow:0 0 0 .5px var(--hair),0 10px 30px rgba(0,0,0,.12)!important;padding:12px 14px!important;font-family:var(--sf)!important;display:flex;flex-direction:column;gap:3px}
+.urlbox .lab{color:#8E8E93!important;font-size:12px!important;font-weight:500}
+.urlbox .udom{font-size:17px;font-weight:600}
+.urlbox .ufull{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;color:#3C3C43;word-break:break-all}
+.urlbox .root{background:#FFE58A!important;color:#1D1D1F!important;border-radius:4px;padding:0 2px}
+.urlbox .unote{font-size:12px;color:#8E8E93}
+.urlbox.scan{background:#fff!important;animation:none!important;flex-direction:row;align-items:center;justify-content:space-between}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid #E5E5EA;border-top-color:#8E8E93;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* tools + verdicts */
+.tools{gap:10px!important}
+.tbtn{border:none!important;background:var(--fill-ap)!important;border-radius:14px!important;padding:11px 6px!important;color:#007AFF;font-size:15px!important;font-weight:600!important;letter-spacing:-.01em!important;box-shadow:none!important}
+.tbtn small{color:var(--muted-ap)!important;font-size:11.5px!important;font-weight:500}
+.tbtn.open{background:rgba(0,122,255,.1)!important}
+.verdicts{gap:12px!important}
+.vbtn{border:none!important;border-radius:16px!important;font-size:19px!important;font-weight:600!important;letter-spacing:-.01em!important;padding:14px 6px 12px!important;box-shadow:0 1px 2px rgba(0,0,0,.08),0 8px 18px rgba(0,0,0,.12)!important}
+.vbtn small{font-size:11.5px!important;font-weight:500!important;opacity:.88;letter-spacing:0!important}
+.vbtn.phish{background:#FF3B30!important}.vbtn.safe{background:#34C759!important}
+
+/* Safari */
+.s-browser,.s-browser.infected{background:#fff!important}
+.s-browser.infected{animation:none!important}
+.bchrome{border:none!important;border-radius:18px!important;background:#F2F2F7!important;box-shadow:0 0 0 .5px var(--hair)}
+.bpage{background:#fff!important;padding:20px 18px!important}
+.bpage h4{font-size:24px!important;letter-spacing:-.025em!important}
+.bpage .ok{border:none!important;background:#E9F9EE!important;border-radius:12px!important}
+.bpage.bad{background:#D0021B!important;color:#fff;text-align:left}
+.bpage.bad h4{color:#fff!important;font-size:26px!important;animation:none!important}
+.bpage.bad .skull{font-size:44px!important;color:#fff!important;line-height:1!important}
+.bpage .pen{color:#fff!important;font-weight:700;font-size:15px!important;background:rgba(0,0,0,.18);border-radius:10px;padding:6px 10px;align-self:flex-start}
+.bbar{border:none!important;background:rgba(242,242,247,.92)!important;padding:8px 10px 4px!important;gap:8px!important}
+.bbar .aa{font-size:13px;font-weight:600;color:#1D1D1F}
+.bbar .rl{color:#1D1D1F;font-size:16px}
+.burl{flex:1;border:none!important;background:#fff!important;border-radius:12px!important;padding:8px 10px!important;font-family:var(--sf)!important;font-size:15px!important;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:normal!important}
+.burl.warn{color:#D70015;font-weight:500}
+.burl .lk{display:inline-block;width:9px;height:11px;margin-right:6px;vertical-align:-1px;background:#1D1D1F;border-radius:2px;position:relative}
+.burl .lk::before{content:"";position:absolute;left:1.5px;top:-5px;width:6px;height:6px;border:1.6px solid #1D1D1F;border-bottom:none;border-radius:4px 4px 0 0}
+.btool{display:flex;justify-content:space-around;padding:6px 10px 10px;color:#007AFF;font-size:19px;background:rgba(242,242,247,.92)}
+
+/* iOS notification banners */
+.notes{gap:8px!important}
+.note{border:none!important;border-radius:20px!important;padding:10px 12px!important;background:rgba(245,245,247,.86)!important;color:#1D1D1F!important;-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);box-shadow:0 8px 30px rgba(0,0,0,.18)!important;grid-template-columns:auto 1fr auto!important;gap:10px!important;animation:drop .3s ease-out!important}
+@keyframes drop{0%{transform:translateY(12px);opacity:0}100%{transform:none;opacity:1}}
+.note .appic{width:34px;height:34px;flex-basis:34px;border-radius:8px}
+.note .appic svg{width:22px;height:22px}
+.note .nt{display:flex;flex-direction:column;min-width:0}
+.note .nh{display:flex;gap:6px;align-items:center;font-size:12.5px}
+.note .nh b{font-weight:600}
+.note .tg{border:none!important;background:none!important;color:#8E8E93!important;font-size:11px!important;padding:0!important;font-weight:500}
+.note .nb{font-size:14px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note .go2{font-size:12px!important;color:#8E8E93!important;align-self:flex-start;font-weight:500}
+.note.n-warn{background:rgba(255,244,214,.92)!important}
+.note.n-urgent{background:rgba(255,226,224,.94)!important;color:#1D1D1F!important}
+.note.n-urgent .go2{color:#D70015!important;font-weight:700}
+
+/* feed */
+.feed div{border:none!important;border-radius:12px!important;background:#fff!important;box-shadow:var(--sh-1);font-size:13px!important}
+.feed div.good{background:#E9F9EE!important}.feed div.bad{background:#FFECEB!important}
+
+/* cards */
+.cmp th,.cmp td{border:none!important;border-bottom:.5px solid var(--hair)!important}
+.cmp th{background:none!important;color:var(--muted-ap);font-size:11px!important}
+.cmp td.p.plus{color:#248A3D!important}.cmp td.p.minus{color:#D70015!important}
+.rv{border:none!important;border-radius:12px!important}
+.rv.ok{background:#E9F9EE!important}.rv.bad{background:#FFECEB!important}
+.tag{border:none!important;border-radius:6px!important}
+.hud .shields b{letter-spacing:2px}
+body.hit .app{animation:shake .35s 2!important}
+.note.n-new .tg{display:none}
