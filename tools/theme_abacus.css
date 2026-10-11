@@ -1,0 +1,35 @@
+/* --- Activity 2: realistic wooden abacus --- */
+.screen{background:#fff!important;gap:14px!important}
+.round-label{font-size:12px!important;color:var(--muted-ap);text-transform:uppercase;letter-spacing:.06em!important}
+.segment{border:none!important;height:5px!important;background:var(--fill-ap)!important;border-radius:3px!important}
+.segment.done{background:#FF9F0A!important}
+.stage-wrap{border:none!important;background:var(--ground)!important;border-radius:20px!important}
+.question{font-weight:700!important;letter-spacing:-.04em!important;font-variant-numeric:tabular-nums}
+.prompt-label,#freePlayBar .fp-label{font-size:12px!important;color:var(--muted-ap);text-transform:uppercase;letter-spacing:.06em!important}
+.answer-input{font-weight:700!important;border-bottom:none!important;background:#fff!important;border-radius:14px;box-shadow:inset 0 0 0 1px var(--hair);width:190px!important;padding:8px 0!important;letter-spacing:-.02em}
+.answer-input:focus{box-shadow:0 0 0 3px rgba(255,159,10,.25),inset 0 0 0 1px #FF9F0A}
+.result-text{font-weight:700!important;letter-spacing:-.03em!important;color:#248A3D!important}
+.result-text.incorrect{color:#D70015!important}
+#freePlayBar{border:none!important;background:var(--ground)!important;border-radius:20px!important}
+#freePlayBar .fp-value{font-weight:700!important;letter-spacing:-.04em}
+
+/* the abacus */
+.abacus{border:none!important;border-radius:16px!important;padding:16px 20px 12px!important;position:relative;
+  background:linear-gradient(180deg,#F7EBD3,#EFDDBA)!important;
+  box-shadow:0 0 0 12px #6B4426,0 0 0 13px #3E2512,inset 0 2px 8px rgba(90,55,20,.25),0 20px 40px rgba(60,35,10,.35)!important;
+  margin:14px 0}
+.abacus::before{content:"";position:absolute;inset:-12px;border-radius:24px;pointer-events:none;
+  background:repeating-linear-gradient(92deg,rgba(255,255,255,.07) 0 2px,transparent 2px 9px),repeating-linear-gradient(88deg,rgba(0,0,0,.06) 0 1px,transparent 1px 13px);
+  -webkit-mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);padding:12px}
+.rod-name{font-size:10.5px!important;color:#7A5230!important;font-weight:600!important;letter-spacing:.06em!important}
+.rod-line{width:4px!important;background:linear-gradient(90deg,#8C6A3C,#E8D3A2 45%,#8C6A3C)!important;box-shadow:0 0 2px rgba(0,0,0,.25)}
+.bar{height:8px!important;margin-top:-3px!important;border-radius:3px!important;background:linear-gradient(180deg,#8A5A32,#5C3A1E)!important;box-shadow:0 2px 3px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2)}
+.rod-group + .rod-group{border-left:none!important}
+.bead{border:none!important;
+  background:radial-gradient(ellipse 60% 45% at 50% 28%,rgba(255,255,255,.55),transparent 70%),radial-gradient(ellipse at 50% 60%,#5A3518,#2A160A 75%)!important;
+  box-shadow:0 3px 4px rgba(0,0,0,.35),inset 0 -3px 5px rgba(0,0,0,.35)!important}
+.bead.next{background:radial-gradient(ellipse 60% 45% at 50% 28%,rgba(255,255,255,.6),transparent 70%),radial-gradient(ellipse at 50% 60%,#3D8BFF,#0A4FC4 75%)!important}
+.bead.next.urgent{background:radial-gradient(ellipse 60% 45% at 50% 28%,rgba(255,255,255,.6),transparent 70%),radial-gradient(ellipse at 50% 60%,#FF8A3D,#C2410C 75%)!important}
+.zone:active{background:rgba(120,80,30,.08)!important}
+.value-hint{color:#7A5230!important}
+.value-hint i{border:none!important;box-shadow:inset 0 -2px 3px rgba(0,0,0,.3)}
