@@ -113,6 +113,14 @@ button:focus-visible,a:focus-visible{outline:3px solid rgba(10,132,255,.4);outli
 .budgetbar .meter i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .25s}
 .budgetbar .btn{width:auto;white-space:nowrap;padding:10px 16px}
 
+.navrow{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.ntime{flex:0 0 auto;font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;background:var(--fill);border-radius:12px;padding:4px 10px;line-height:1.2;text-align:center}
+.ntime small{display:block;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.ntime.crit{background:#FFE5E3;color:var(--red-ink)}
+body.harden .hud,body.harden .rail{display:none}
+body.harden .device{height:min(860px,calc(100dvh - 96px))}
+@media (max-width:400px){body.harden .device{height:calc(100dvh - 90px)}}
+
 /* Wave: console */
 .cia{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .cm{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:9px 10px}
@@ -689,6 +697,9 @@ function toast(msg, cls){ const t=$('toast'); t.textContent=msg; t.className='to
 /* ---------- HUD ---------- */
 function hud(){
   if(!S) return;
+  document.body.classList.toggle('harden', S.phase==='harden');
+  const nt = $('navTime');
+  if(nt && S.phase==='harden'){ $('navTimeV').textContent = fmt(S.hardenLeft); nt.className = 'ntime' + (S.hardenLeft<=15?' crit':''); }
   const m = S.meters;
   [['c','C'],['i','I'],['a','A']].forEach(([k,K]) => {
     $('h'+K).textContent = m[k]; $('b'+K).style.width = m[k] + '%';
@@ -717,7 +728,7 @@ function render(keep){
 }
 function viewHarden(){
   const L = left();
-  let h = `<div class="nav"><h1>Security Settings</h1><div class="sub">PayNest Admin · controls go live when you deploy</div></div><div class="pad">`;
+  let h = `<div class="nav"><div class="navrow"><div><h1>Security Settings</h1><div class="sub">PayNest Admin · controls go live when you deploy</div></div><div class="ntime${S.hardenLeft<=15?' crit':''}" id="navTime"><span id="navTimeV">${fmt(S.hardenLeft)}</span><small>Time left</small></div></div></div><div class="pad">`;
   Object.keys(CATS).forEach(ck => {
     const cat = CATS[ck];
     h += `<div class="sec">${esc(cat.name)}</div><div class="group">`;
