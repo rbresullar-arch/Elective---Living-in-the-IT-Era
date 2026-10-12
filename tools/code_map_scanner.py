@@ -9,12 +9,13 @@ Nothing here goes online.
 QR payload: Base64( JSON XOR "2026" )
   { v:1, t:"act", n:<full name>, k:<class code e.g. 12030-07>, c:<schedule>, a:"1:80,2:S", at:<unix> }
 
-Install:  pip install opencv-python pillow      (tkinter ships with Python on Windows/macOS)
+Install:  pip install opencv-python             (tkinter ships with Python on Windows/macOS)
+Sounds:   1 high beep = read OK · 2 beeps = conflict / duplicate name · low buzz = not a Score QR
 Usage:
   python code_map_scanner.py                    open the window (GUI):
         Scores    paste rows copied from the Sheet's Scores tab -> names are added automatically;
                   Copy result / Save CSV; red rows = code without a name (double-click to set it)
-        Scan QR   webcam or saved QR images -> code -> name map
+        Scan QR   webcam (own OpenCV window, Q = off) or saved QR images -> code -> name map
         Students  edit, add, remove, export the map
         Conflicts same code with two names / same name on two codes
 Command line (no window):
@@ -36,7 +37,9 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 
@@ -115,57 +118,122 @@ def record(con, payload):
     return "new", f"SAVED {code} {name}"
 
 
-# ---------------- scanning ----------------
-def decode_frame(cv2, detector, frame):
-    texts = []
-    try:
-        ok, decoded, _, _ = detector.detectAndDecodeMulti(frame)
-        if ok:
-            texts = [d for d in decoded if d]
-    except Exception:
-        pass
-    if not texts:
+# ---------------- sound ----------------
+SOUND_FOR = {"new": "ok", "same": "ok", "conflict": "warn", "dupname": "warn", "bad": "bad"}
+
+
+def play(kind):
+    """Confirmation sound without blocking the camera. kind: ok | warn | bad."""
+    def run():
         try:
-            d, _, _ = detector.detectAndDecode(frame)
-            if d:
-                texts = [d]
+            import winsound
+            if kind == "ok":
+                winsound.Beep(1760, 120)
+            elif kind == "warn":
+                winsound.Beep(880, 140); winsound.Beep(880, 140)
+            else:
+                winsound.Beep(330, 380)
+            return
         except Exception:
             pass
-    return texts
+        if sys.platform == "darwin":
+            snd = {"ok": "Glass", "warn": "Sosumi", "bad": "Basso"}[kind]
+            try:
+                subprocess.Popen(["afplay", f"/System/Library/Sounds/{snd}.aiff"])
+                return
+            except Exception:
+                pass
+        sys.stdout.write("\a" * {"ok": 1, "warn": 2, "bad": 3}[kind])
+        sys.stdout.flush()
+    threading.Thread(target=run, daemon=True).start()
+
+
+# ---------------- scanning ----------------
+COOLDOWN_S = 2.0   # same QR text is ignored for this long (as qr_scanner.py)
+TICK_MS = 15       # camera loop interval (as qr_scanner.py)
+CV_WIN = "GEEL 1 code map"
+
+
+def open_camera(cv2, idx):
+    cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW) if os.name == "nt" else cv2.VideoCapture(idx)
+    if not cap.isOpened():
+        cap.release()
+        return None
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    return cap
+
+
+def decode_live(det, frame):
+    """Fast path used on every camera frame: one detectAndDecode, no preprocessing.
+    Returns (text, pts)."""
+    try:
+        text, pts, _ = det.detectAndDecode(frame)
+    except Exception:
+        return "", None
+    return text or "", pts
+
+
+def decode_image(cv2, det, img):
+    """Thorough path for saved images: plain, enlarged, blurred, contrast-boosted, thresholded."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
+    soft = cv2.GaussianBlur(gray, (0, 0), 1.2)
+    for v in (img,
+              cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC),
+              soft,
+              cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8)).apply(gray),
+              cv2.adaptiveThreshold(soft, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 41, 7)):
+        try:
+            ok, decoded, _, _ = det.detectAndDecodeMulti(v)
+            if ok and any(decoded):
+                return [d for d in decoded if d]
+        except Exception:
+            pass
+        t, _ = decode_live(det, v)
+        if t:
+            return [t]
+    return []
+
+
+def cv_frame_overlay(cv2, frame, pts, banner, color):
+    if pts is not None and len(pts):
+        cv2.polylines(frame, [pts.astype(int).reshape(-1, 1, 2)], True, (0, 165, 255), 3)
+    cv2.rectangle(frame, (0, 0), (frame.shape[1], 44), (30, 30, 30), -1)
+    cv2.putText(frame, banner, (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
 
 
 def cmd_scan(args):
     import cv2
     con = db()
-    cap = cv2.VideoCapture(args.cam)
-    if not cap.isOpened():
+    cap = open_camera(cv2, args.cam)
+    if cap is None:
         sys.exit(f"Camera {args.cam} not available.")
     det = cv2.QRCodeDetector()
-    seen = {}
-    banner, color, until = "Show a Score QR", (255, 255, 255), 0
-    colors = {"new": (0, 200, 0), "same": (255, 200, 0), "conflict": (0, 0, 255), "dupname": (0, 165, 255), "bad": (0, 0, 255)}
+    last_t, last_text = 0.0, None
+    banner, color, until = "Show a Score QR   (q = quit)", (255, 255, 255), 0
+    colors = {"new": (0, 200, 0), "same": (0, 200, 255), "conflict": (0, 0, 255), "dupname": (0, 165, 255), "bad": (0, 0, 255)}
     print(f"Scanning (camera {args.cam}) -> {DB_PATH}   q = quit")
+    cv2.namedWindow(CV_WIN, cv2.WINDOW_NORMAL)
     while True:
         ok, frame = cap.read()
         if not ok:
             break
-        for text in decode_frame(cv2, det, frame):
-            if time.time() - seen.get(text, 0) < 4:
-                continue
-            seen[text] = time.time()
+        t = time.time()
+        text, pts = decode_live(det, frame)
+        if text and t - last_t >= COOLDOWN_S and text != last_text:
+            last_t, last_text = t, text
             p = decode_payload(text)
-            if not p:
-                status, msg = "bad", "Not a GEEL 1 Score QR"
-            else:
-                status, msg = record(con, p)
-            print(msg + ("\a" if status in ("conflict", "dupname") else ""))
-            banner, color, until = msg[:70], colors[status], time.time() + 3
-        if time.time() > until:
-            banner, color = "Show a Score QR", (255, 255, 255)
-        cv2.rectangle(frame, (0, 0), (frame.shape[1], 40), (0, 0, 0), -1)
-        cv2.putText(frame, banner, (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.imshow("GEEL 1 code map", frame)
-        if cv2.waitKey(1) & 0xFF in (ord("q"), 27):
+            status, msg = record(con, p) if p else ("bad", "Not a GEEL 1 Score QR")
+            print(msg)
+            play(SOUND_FOR[status])
+            banner, color, until = msg[:70], colors[status], t + 3
+        if not text and t - last_t >= COOLDOWN_S:
+            last_text = None
+        if t > until:
+            banner, color = "Show a Score QR   (q = quit)", (255, 255, 255)
+        cv_frame_overlay(cv2, frame, pts, banner, color)
+        cv2.imshow(CV_WIN, frame)
+        if cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q"), 27):
             break
     cap.release()
     cv2.destroyAllWindows()
@@ -180,15 +248,16 @@ def cmd_image(args):
         if img is None:
             print(f"{path}: cannot open")
             continue
-        texts = decode_frame(cv2, det, img)
-        if not texts:  # small or soft images: try enlarged
-            texts = decode_frame(cv2, det, cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST))
+        texts = decode_image(cv2, det, img)
         if not texts:
             print(f"{path}: no QR found")
+            play("bad")
             continue
         for t in texts:
             p = decode_payload(t)
-            print(f"{path}: " + (record(con, p)[1] if p else "not a GEEL 1 Score QR"))
+            st, msg = record(con, p) if p else ("bad", "not a GEEL 1 Score QR")
+            print(f"{path}: {msg}")
+            play(SOUND_FOR[st])
 
 
 # ---------------- records ----------------
@@ -319,11 +388,6 @@ def rows_to_tsv(head, rows):
 def run_gui():
     import tkinter as tk
     from tkinter import ttk, messagebox, simpledialog, filedialog
-
-    try:
-        from PIL import Image, ImageTk
-    except Exception:
-        Image = ImageTk = None
 
     con = db()
 
@@ -484,64 +548,69 @@ def run_gui():
     # ===== Tab 2: Scan QR =====
     t2 = ttk.Frame(nb, padding=8)
     nb.add(t2, text="  Scan QR  ")
-    left = ttk.Frame(t2)
-    left.pack(side="left", fill="both", expand=True)
-    right = ttk.Frame(t2, width=380)
-    right.pack(side="left", fill="both", padx=(10, 0))
-    bar2 = ttk.Frame(left)
+    bar2 = ttk.Frame(t2)
     bar2.pack(fill="x")
     cam_var = tk.IntVar(value=0)
     ttk.Label(bar2, text="Camera").pack(side="left")
     ttk.Spinbox(bar2, from_=0, to=9, width=4, textvariable=cam_var).pack(side="left", padx=4)
-    preview = ttk.Label(left, text="Camera off", anchor="center", relief="sunken")
-    preview.pack(fill="both", expand=True, pady=6)
-    banner = tk.Label(left, text="Show a Score QR", font=("Segoe UI", 13, "bold"), anchor="w")
-    banner.pack(fill="x")
-    ttk.Label(right, text="Scan log").pack(anchor="w")
-    log = tk.Listbox(right, font=("Consolas", 10), activestyle="none")
+    ttk.Label(t2, text="The camera opens in its own window. Q or Esc in that window = camera off. "
+                       "1 beep = read OK · 2 beeps = check Conflicts · low buzz = not a Score QR.").pack(anchor="w", pady=(6, 0))
+    banner = tk.Label(t2, text="Camera off", font=("Segoe UI", 13, "bold"), anchor="w")
+    banner.pack(fill="x", pady=6)
+    ttk.Label(t2, text="Scan log").pack(anchor="w")
+    log = tk.Listbox(t2, font=("Consolas", 10), activestyle="none")
     log.pack(fill="both", expand=True)
     COLORS = {"new": "#1b7f2a", "same": "#7a5b00", "conflict": "#c62828", "dupname": "#e65100", "bad": "#c62828"}
-    cam = {"cap": None, "det": None, "n": 0, "seen": {}, "img": None}
+    CVC = {"new": (0, 200, 0), "same": (0, 200, 255), "conflict": (0, 0, 230), "dupname": (0, 165, 255), "bad": (0, 0, 230)}
+    cam = {"cap": None, "det": None, "job": None, "last_t": 0.0, "last": None, "note": None}
 
     def handle_text(text, source=""):
         p = decode_payload(text)
-        if not p:
-            st, msg = "bad", "Not a GEEL 1 Score QR"
-        else:
-            st, msg = record(con, p)
+        st, msg = record(con, p) if p else ("bad", "Not a GEEL 1 Score QR")
+        play(SOUND_FOR[st])
         line = time.strftime("%H:%M:%S ") + (source + ": " if source else "") + msg
         log.insert(0, line)
         log.itemconfig(0, foreground=COLORS[st])
         banner.configure(text=msg, fg=COLORS[st])
-        if st in ("conflict", "dupname", "bad"):
-            root.bell()
+        cam["note"] = (msg[:70], CVC[st], time.time())
         refresh_students()
         refresh_conflicts()
         if result["rows"]:
             map_scores()
 
     def cam_tick():
+        cam["job"] = None
         cap = cam["cap"]
         if not cap:
             return
         import cv2
         ok, frame = cap.read()
+        t = time.time()
         if ok:
-            cam["n"] += 1
-            if cam["n"] % 3 == 0:
-                for t in decode_frame(cv2, cam["det"], frame):
-                    if time.time() - cam["seen"].get(t, 0) > 4:
-                        cam["seen"][t] = time.time()
-                        handle_text(t)
-            if Image is not None:
-                w = max(preview.winfo_width(), 320)
-                h = max(preview.winfo_height(), 240)
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                im = Image.fromarray(rgb)
-                im.thumbnail((w, h))
-                cam["img"] = ImageTk.PhotoImage(im)
-                preview.configure(image=cam["img"], text="")
-        root.after(30, cam_tick)
+            text, pts = decode_live(cam["det"], frame)
+            if text and t - cam["last_t"] >= COOLDOWN_S and text != cam["last"]:
+                cam["last_t"], cam["last"] = t, text
+                handle_text(text)
+            if not text and t - cam["last_t"] >= COOLDOWN_S:
+                cam["last"] = None
+            note = cam["note"]
+            if note and t - note[2] < 3:
+                cv_frame_overlay(cv2, frame, pts, note[0], note[1])
+            else:
+                cv_frame_overlay(cv2, frame, pts, "Show a Score QR   (Q = camera off)", (255, 255, 255))
+            cv2.imshow(CV_WIN, frame)
+        k = cv2.waitKey(1) & 0xFF
+        if k in (ord("q"), ord("Q"), 27):
+            cam_stop()
+            return
+        try:
+            if cv2.getWindowProperty(CV_WIN, cv2.WND_PROP_VISIBLE) < 1:
+                cam_stop()
+                return
+        except cv2.error:
+            cam_stop()
+            return
+        cam["job"] = root.after(TICK_MS, cam_tick)
 
     def cam_start():
         if cam["cap"]:
@@ -552,21 +621,37 @@ def run_gui():
             messagebox.showerror("OpenCV missing", "Install it first:\n\npip install opencv-python")
             return
         idx = cam_var.get()
-        cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW) if os.name == "nt" else cv2.VideoCapture(idx)
-        if not cap.isOpened():
-            messagebox.showerror("Camera", f"Camera {idx} is not available.")
+        banner.configure(text=f"Opening camera {idx}...", fg="#455a64")
+        root.update_idletasks()
+        cap = open_camera(cv2, idx)
+        if cap is None or not cap.read()[0]:
+            if cap is not None:
+                cap.release()
+            banner.configure(text=f"Camera {idx} not available", fg="#c62828")
             return
-        cam.update(cap=cap, det=cv2.QRCodeDetector(), n=0)
-        if Image is None:
-            preview.configure(text="Scanning (install Pillow for a live preview: pip install pillow)")
-        cam_tick()
+        cam.update(cap=cap, det=cv2.QRCodeDetector(), last_t=0.0, last=None, note=None)
+        cv2.namedWindow(CV_WIN, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(CV_WIN, 900, 520)
+        banner.configure(text=f"Camera {idx} ON — show a Score QR", fg="#1b7f2a")
+        cam["job"] = root.after(TICK_MS, cam_tick)
 
     def cam_stop():
+        if cam["job"]:
+            try:
+                root.after_cancel(cam["job"])
+            except Exception:
+                pass
+            cam["job"] = None
         if cam["cap"]:
             cam["cap"].release()
-        cam["cap"] = None
-        cam["img"] = None
-        preview.configure(image="", text="Camera off")
+            cam["cap"] = None
+            try:
+                import cv2
+                cv2.destroyWindow(CV_WIN)
+                cv2.waitKey(1)
+            except Exception:
+                pass
+        banner.configure(text="Camera off", fg="#455a64")
 
     def load_images():
         paths = filedialog.askopenfilenames(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.webp"), ("All", "*.*")])
@@ -584,10 +669,11 @@ def run_gui():
             if img is None:
                 log.insert(0, f"{name}: cannot open")
                 continue
-            texts = decode_frame(cv2, det, img) or decode_frame(cv2, det, cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_NEAREST))
+            texts = decode_image(cv2, det, img)
             if not texts:
                 log.insert(0, f"{name}: no QR found")
                 log.itemconfig(0, foreground=COLORS["bad"])
+                play("bad")
             for t in texts:
                 handle_text(t, name)
 
