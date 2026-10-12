@@ -19,6 +19,7 @@
  *               next log in with that code sets a new PIN. 3 wrong PINs lock the code for 24 h
  *               ("Locked until"); clear that cell to unlock early.
  *   Reset     — instructor-only score resets: type a code and A1–A11 or ALL; applied on the next request.
+ *               Faster: the master console (admin.html) resets at once — type the code, pick activities.
  *   Log       — one line per request (time, code, action, result)
  *   Schedules — valid class schedules: code (5 digits) + label. The site's schedule lists are read
  *               from here. Seeded on first run; edit freely.
@@ -32,6 +33,12 @@
  *        converts a version-1 account (name + 4-digit PIN) to a code; the name is deleted.
  *        oldId = name normalized (upper case, single spaces); oldPin = SHA-256 of 'itict|' + oldId + '|' + oldPIN.
  *        Returns { ok, code, data } or error 'sched' when no schedule is known (send sched and retry).
+ * Master console (admin.html). `pin` = SHA-256 of 'itict-admin|' + master password.
+ *   The password is the Script Property ADMIN_PASSWORD (Project Settings → Script properties).
+ *   5 wrong passwords lock the console for 15 minutes.
+ *   { action: 'adminLogin', pin }               → { ok }
+ *   { action: 'adminLookup', pin, id }          → { ok, id, activities: [{ n, pct, at }] }
+ *   { action: 'adminReset', pin, id, list }     → resets activities in `list` (numbers) at once
  * GET ?action=schedules → { ok, schedules: [{ code, label }] }
  *
  * Instructor tools (run from the editor):
@@ -102,6 +109,26 @@ function doPost(e) {
   if (action === 'save' || action === 'restore') {
     var rawId = String(req.id || '').trim();
     if (!CODE_RE.test(rawId)) return json_({ ok: false, error: LEGACY_RE.test(rawId.toUpperCase()) ? 'migrate' : 'bad' });
+  }
+
+  /* Master console */
+  if (action.indexOf('admin') === 0) {
+    var auth = adminCheck_(pin);
+    if (!auth.ok) return json_(auth);
+    try {
+      var as = SpreadsheetApp.openById(SHEET_ID);
+      ensureSheetsOnce_(as);
+      if (action === 'adminLogin') return json_({ ok: true });
+      if (action === 'adminLookup') return json_(adminLookup_(as, req));
+      if (action === 'adminReset') {
+        var al = LockService.getScriptLock();
+        try { al.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminReset_(as, req)); } finally { al.releaseLock(); }
+      }
+      return json_({ ok: false, error: 'bad' });
+    } catch (err) {
+      return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
+    }
   }
 
   /* Log in (restore) only reads: it skips the queue so a class signing in together is not serialized. */
@@ -519,7 +546,7 @@ function applyResets_(ss) {
   var rows = sh.getRange(2, 1, last - 1, 3).getDisplayValues();
   rows.forEach(function (r, i) {
     if (!r[0] || !r[1] || r[2]) return;
-    var id = String(r[0]).replace(/\s+/g, ' ').trim().toUpperCase();
+    var id = codeNorm_(r[0]) || String(r[0]).replace(/\s+/g, ' ').trim().toUpperCase();
     var what = String(r[1]).replace(/\s+/g, '').toUpperCase();
     var list = what === 'ALL' ? Array.apply(null, Array(ACTIVITY_COUNT)).map(function (_, j) { return j + 1; })
       : what.split(',').map(function (x) { return Number(x.replace(/^A(CTIVITY)?/, '')); })
@@ -529,17 +556,70 @@ function applyResets_(ss) {
     if (!doc) note = 'Not found: check the code';
     else if (!list.length) note = 'Not applied: use A1–A11 or ALL';
     else {
-      var now = new Date().toISOString();
-      doc.resets = doc.resets || {};
-      list.forEach(function (n) { doc.resets['activity' + n] = now; delete doc['activity' + n]; });
-      doc.updatedAt = now;
-      writeDoc_(ss, id, doc);
-      writeScores_(ss, id, doc);
-      log_(ss, id, 'reset', list.map(function (n) { return 'A' + n; }).join(','));
+      resetDoc_(ss, id, doc, list, 'reset');
       note = new Date();
     }
     sh.getRange(i + 2, 3).setValue(note);
   });
+}
+
+/* Erase activities `list` (numbers) from a student's record; later uploads of older records are refused. */
+function resetDoc_(ss, id, doc, list, how) {
+  var now = new Date().toISOString();
+  doc.resets = doc.resets || {};
+  list.forEach(function (n) { doc.resets['activity' + n] = now; delete doc['activity' + n]; });
+  doc.updatedAt = now;
+  writeDoc_(ss, id, doc);
+  writeScores_(ss, id, doc);
+  log_(ss, id, how, list.map(function (n) { return 'A' + n; }).join(','));
+  return now;
+}
+
+/* "12030-7", "12030 07", "1203007" -> "12030-07"; '' when not a code */
+function codeNorm_(v) {
+  var s = String(v || '').replace(/\s+/g, '').replace(/[\u2010-\u2015_.\/]/g, '-');
+  var m = /^(\d{5})-?(\d{1,3})$/.exec(s);
+  if (!m) return '';
+  var n = Number(m[2]);
+  return n ? m[1] + '-' + (n < 10 ? '0' + n : String(n)) : '';
+}
+
+/* ---------------- master console ---------------- */
+var ADMIN_MAX_FAILS = 5;
+var ADMIN_LOCK_S = 15 * 60;
+function adminCheck_(hash) {
+  var pw = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
+  if (!pw) return { ok: false, error: 'noadmin' };
+  var cache = CacheService.getScriptCache();
+  var fails = Number(cache.get('ADMIN_FAILS') || 0);
+  if (fails >= ADMIN_MAX_FAILS) return { ok: false, error: 'locked' };
+  if (sha_('itict-admin|' + pw) === hash) { cache.remove('ADMIN_FAILS'); return { ok: true }; }
+  cache.put('ADMIN_FAILS', String(fails + 1), ADMIN_LOCK_S);
+  try { log_(SpreadsheetApp.openById(SHEET_ID), 'ADMIN', 'admin', 'wrong password'); } catch (e) {}
+  return { ok: false, error: fails + 1 >= ADMIN_MAX_FAILS ? 'locked' : 'auth' };
+}
+function adminLookup_(ss, req) {
+  var id = codeNorm_(req.id);
+  if (!id) return { ok: false, error: 'code' };
+  var doc = readDoc_(ss, id);
+  if (!doc) return { ok: false, error: 'notfound', id: id };
+  var acts = [];
+  for (var n = 1; n <= ACTIVITY_COUNT; n++) {
+    var r = doc['activity' + n];
+    acts.push({ n: n, pct: r ? pct_(r) : null, at: r ? recTime_(r) : '', reset: (doc.resets || {})['activity' + n] || '' });
+  }
+  return { ok: true, id: id, activities: acts };
+}
+function adminReset_(ss, req) {
+  var id = codeNorm_(req.id);
+  if (!id) return { ok: false, error: 'code' };
+  var list = (Array.isArray(req.list) ? req.list : []).map(Number)
+    .filter(function (n, i, a) { return n >= 1 && n <= ACTIVITY_COUNT && a.indexOf(n) === i; });
+  if (!list.length) return { ok: false, error: 'list' };
+  var doc = readDoc_(ss, id);
+  if (!doc) return { ok: false, error: 'notfound', id: id };
+  resetDoc_(ss, id, doc, list, 'admin reset');
+  return adminLookup_(ss, { id: id });
 }
 
 /* Flags for the instructor to review; nothing is blocked. */

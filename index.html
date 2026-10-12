@@ -679,7 +679,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.12.2';
+const APP_VERSION = '2026.10.12.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1413,7 +1413,7 @@ document.getElementById('ulClose').addEventListener('click', ulCloseAll);
 document.getElementById('ulConfirm').addEventListener('click', ulApply);
 document.getElementById('ulRelock').addEventListener('click', ulRelock);
 ul.tabUnlock.addEventListener('click', () => ulShowPicker('unlock'));
-ul.tabReset.addEventListener('click', () => ulShowPicker('reset'));
+ul.tabReset.addEventListener('click', () => { if (CLOUD_URL) location.href = 'admin.html'; else ulShowPicker('reset'); });
 [ul.c1, ul.c2].forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ulSubmit(); } }));
 ul.panel.addEventListener('click', e => { if (e.target === ul.panel) ulCloseAll(); });
 
@@ -1620,6 +1620,7 @@ async function cloudCollect() {
 async function applyCloud(m) {
   if (!m || typeof m !== 'object') return;
   await applySyncData(m);
+  const prevResets = cloudResets();
   const resets = cloudResets();
   Object.keys(m.resets || {}).forEach(k => { if (!resets[k] || m.resets[k] > resets[k]) resets[k] = m.resets[k]; });
   try { localStorage.setItem(CLOUD_RESETS_KEY, JSON.stringify(resets)); } catch (e) {}
@@ -1628,6 +1629,13 @@ async function applyCloud(m) {
     if (!m[a.id] && r) {
       const local = await loadActivity(a);
       if (local && !(cloudRecTime(local) > r)) await clearActivity(a);
+      /* a reset made after this device last synced: also clear redo flags and attempt counters */
+      if (!prevResets[a.id] || r > prevResets[a.id]) {
+        if (!local || !(cloudRecTime(local) > r)) {
+          if (a.redo) { try { localStorage.removeItem(a.redo.flagKey); } catch (e) {} }
+          if (a.href === 'qrispy_queen.html') { try { localStorage.removeItem('itict_activity7_attempts'); } catch (e) {} }
+        }
+      }
     }
     if (a.redo && m.redoFlags && m.redoFlags[a.id] === false && r) {
       try { localStorage.removeItem(a.redo.flagKey); } catch (e) {}
@@ -2020,8 +2028,8 @@ cloudFillSched(cp.sched);
 cloudFillSched(auth.cvSched);
 knownRender();
 qrDefaultSched().then(v => { if (v) auth.caSched.value = v; });
-/* With cloud backup on, scores are reset only from the instructor's Sheet (Reset tab). */
-if (CLOUD_URL) document.getElementById('ulTabReset').hidden = true;
+/* With cloud backup on, scores are reset from the master console (admin.html), which edits the Sheet. */
+if (CLOUD_URL) document.getElementById('ulTabReset').textContent = 'Reset scores ↗';
 
 function authClean(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
 function authOpen(code) {

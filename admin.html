@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Master Console</title>
+<style>
+  /* Instructor master console: reset a student's activity scores in the Sheet. */
+  :root {
+    --bg:#F5F5F7; --surface:#FFFFFF; --sep:rgba(60,60,67,.18); --ink:#1D1D1F; --muted:#6E6E73;
+    --fill:rgba(118,118,128,.12); --field:rgba(118,118,128,.10);
+    --blue:#0071E3; --blue-soft:rgba(0,113,227,.10); --green:#248A3D; --red:#D70015; --red-soft:rgba(255,59,48,.10);
+    --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#000; --surface:#1C1C1E; --sep:rgba(84,84,88,.6); --ink:#F5F5F7; --muted:#98989D;
+    --fill:rgba(118,118,128,.24); --field:rgba(118,118,128,.24);
+    --blue:#0A84FF; --blue-soft:rgba(10,132,255,.2); --green:#30D158; --red:#FF453A; --red-soft:rgba(255,69,58,.18);
+    --sh-1:0 0 0 .5px rgba(255,255,255,.06),0 4px 14px rgba(0,0,0,.5); color-scheme:dark; } }
+  :root[data-theme="dark"] {
+    --bg:#000; --surface:#1C1C1E; --sep:rgba(84,84,88,.6); --ink:#F5F5F7; --muted:#98989D;
+    --fill:rgba(118,118,128,.24); --field:rgba(118,118,128,.24);
+    --blue:#0A84FF; --blue-soft:rgba(10,132,255,.2); --green:#30D158; --red:#FF453A; --red-soft:rgba(255,69,58,.18);
+    --sh-1:0 0 0 .5px rgba(255,255,255,.06),0 4px 14px rgba(0,0,0,.5); color-scheme:dark; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html, body { background:var(--bg); }
+  body { margin:0; color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.47; letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased; min-height:100vh; }
+  button, input { font-family:inherit; color:inherit; font-size:inherit; }
+  main { max-width:560px; margin:0 auto; padding:24px 16px 48px; display:grid; gap:20px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  h1 { font-size:28px; font-weight:700; letter-spacing:-.02em; margin:0; }
+  .link { background:none; border:none; color:var(--blue); cursor:pointer; padding:6px 0; font-size:15px; text-decoration:none; }
+  .card { background:var(--surface); border-radius:16px; box-shadow:var(--sh-1); padding:18px; display:grid; gap:12px; }
+  label { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.02em; }
+  input { width:100%; border:none; background:var(--field); border-radius:10px; padding:12px 14px; outline:none; }
+  input:focus { box-shadow:0 0 0 3px var(--blue-soft), 0 0 0 1px var(--blue); }
+  #code { font-family:var(--mono); font-size:20px; letter-spacing:.04em; }
+  .row { display:flex; gap:10px; }
+  .row input { flex:1; }
+  .btn { border:none; border-radius:10px; padding:12px 18px; font-weight:600; cursor:pointer; background:var(--blue); color:#fff; }
+  .btn.ghost { background:var(--fill); color:var(--ink); }
+  .btn.danger { background:var(--red); color:#fff; width:100%; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .msg { font-size:15px; min-height:1.4em; margin:0; color:var(--muted); }
+  .msg.err { color:var(--red); }
+  .msg.ok { color:var(--green); }
+  .list { display:grid; border-radius:12px; overflow:hidden; background:var(--fill); gap:1px; }
+  .item { display:flex; align-items:center; gap:12px; background:var(--surface); border:none; padding:13px 14px; text-align:left; cursor:pointer; width:100%; }
+  .item .chk { width:22px; height:22px; border-radius:50%; border:2px solid var(--sep); flex:none; display:grid; place-items:center; }
+  .item.sel .chk { background:var(--red); border-color:var(--red); }
+  .item.sel .chk::after { content:""; width:8px; height:8px; border-radius:50%; background:#fff; }
+  .item .name { flex:1; font-weight:500; }
+  .item .score { font-variant-numeric:tabular-nums; color:var(--muted); font-size:15px; }
+  .item .score.has { color:var(--ink); font-weight:600; }
+  .head { display:flex; align-items:baseline; justify-content:space-between; }
+  .head strong { font-family:var(--mono); font-size:20px; }
+  .tools { display:flex; gap:14px; }
+  .sheet { position:fixed; inset:0; background:rgba(0,0,0,.4); display:grid; place-items:end center; padding:16px; z-index:10; }
+  .sheet .card { width:100%; max-width:420px; }
+  .sheet p { margin:0; }
+  .version { text-align:center; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Master Console</h1>
+    <a class="link" href="index.html">Home</a>
+  </header>
+
+  <!-- Step 1: master password -->
+  <section class="card" id="loginCard">
+    <label for="pw">Master password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button class="btn" id="loginBtn" type="button">Sign in</button>
+    <p class="msg" id="loginMsg"></p>
+  </section>
+
+  <!-- Step 2: student lookup and reset -->
+  <section class="card" id="lookupCard" hidden>
+    <label for="code">Student ID</label>
+    <div class="row">
+      <input id="code" inputmode="numeric" autocomplete="off" placeholder="12030-07">
+      <button class="btn" id="findBtn" type="button">Find</button>
+    </div>
+    <p class="msg" id="findMsg"></p>
+  </section>
+
+  <section class="card" id="resultCard" hidden>
+    <div class="head"><strong id="who"></strong>
+      <div class="tools"><button class="link" id="selAll" type="button">Select all</button><button class="link" id="selNone" type="button">Clear</button></div>
+    </div>
+    <div class="list" id="list"></div>
+    <button class="btn danger" id="resetBtn" type="button" disabled>Reset</button>
+    <p class="msg" id="resetMsg"></p>
+  </section>
+
+  <button class="link" id="signOut" type="button" hidden>Sign out</button>
+  <p class="version" id="ver"></p>
+</main>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="card">
+    <p id="confirmText"></p>
+    <button class="btn danger" id="confirmYes" type="button">Reset</button>
+    <button class="btn ghost" id="confirmNo" type="button">Cancel</button>
+  </div>
+</div>
+
+<script>
+const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+const VERSION = '2026.10.12.3';
+const NAMES = ['Sentence Order', 'Abacus', 'Pascaline', 'Binary', 'Packet Relay', 'Packet Auto',
+  'QRispy Queen', 'Phish Flag', 'Netiquette Desk', 'E-commerce Week', 'Cyber Defense Ops'];
+const SS_KEY = 'itict_admin_h';
+const $ = id => document.getElementById(id);
+
+let adminHash = '';
+try { adminHash = sessionStorage.getItem(SS_KEY) || ''; } catch (e) {}
+let current = null;           // { id, activities }
+let sel = new Set();
+
+async function sha256hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function codeNorm(v) {
+  const s = String(v || '').replace(/\s+/g, '').replace(/[‐-―_.\/]/g, '-');
+  const m = /^(\d{5})-?(\d{1,3})$/.exec(s);
+  if (!m) return '';
+  const n = Number(m[2]);
+  return n ? m[1] + '-' + (n < 10 ? '0' + n : String(n)) : '';
+}
+async function call(body) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 30000);
+  try {
+    const r = await fetch(CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ pin: adminHash }, body)), signal: ctl.signal });
+    return await r.json();
+  } catch (e) { return { ok: false, error: 'offline' }; }
+  finally { clearTimeout(t); }
+}
+const ERR = {
+  auth: 'Wrong password.', locked: 'Too many wrong passwords. Locked for 15 minutes.',
+  noadmin: 'No master password set. Add ADMIN_PASSWORD in Apps Script → Project Settings → Script properties.',
+  code: 'Invalid ID. Format: 12030-07.', notfound: 'ID not found in the Sheet.', list: 'Select at least one activity.',
+  offline: 'No connection.', busy: 'Server busy. Try again.', server: 'Server error.', bad: 'Server rejected the request. Redeploy the Apps Script (new version).'
+};
+function setMsg(el, text, kind) { el.textContent = text || ''; el.className = 'msg' + (kind ? ' ' + kind : ''); }
+function authFail(r) {
+  if (r.error === 'auth' || r.error === 'locked' || r.error === 'noadmin') { signOut(); setMsg($('loginMsg'), ERR[r.error], 'err'); return true; }
+  return false;
+}
+
+function showSignedIn(on) {
+  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on;
+  if (!on) $('resultCard').hidden = true;
+  if (on) setTimeout(() => $('code').focus(), 30);
+}
+function signOut() {
+  adminHash = ''; current = null;
+  try { sessionStorage.removeItem(SS_KEY); } catch (e) {}
+  $('pw').value = ''; showSignedIn(false);
+}
+
+async function login() {
+  const pw = $('pw').value;
+  if (!pw) return;
+  $('loginBtn').disabled = true; setMsg($('loginMsg'), 'Checking…');
+  adminHash = await sha256hex('itict-admin|' + pw);
+  const r = await call({ action: 'adminLogin' });
+  $('loginBtn').disabled = false;
+  if (!r.ok) { adminHash = ''; setMsg($('loginMsg'), ERR[r.error] || 'Sign in failed.', 'err'); return; }
+  try { sessionStorage.setItem(SS_KEY, adminHash); } catch (e) {}
+  $('pw').value = ''; setMsg($('loginMsg'), '');
+  showSignedIn(true);
+}
+
+async function find() {
+  const id = codeNorm($('code').value);
+  if (!id) { setMsg($('findMsg'), ERR.code, 'err'); return; }
+  $('code').value = id;
+  $('findBtn').disabled = true; setMsg($('findMsg'), 'Looking up…'); $('resultCard').hidden = true;
+  const r = await call({ action: 'adminLookup', id });
+  $('findBtn').disabled = false;
+  if (!r.ok) { if (!authFail(r)) setMsg($('findMsg'), ERR[r.error] || 'Lookup failed.', 'err'); return; }
+  setMsg($('findMsg'), '');
+  render(r); setMsg($('resetMsg'), '');
+}
+
+function render(r) {
+  current = r; sel = new Set();
+  $('who').textContent = r.id;
+  const list = $('list'); list.innerHTML = '';
+  r.activities.forEach(a => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'item'; b.dataset.n = a.n;
+    const chk = document.createElement('span'); chk.className = 'chk';
+    const name = document.createElement('span'); name.className = 'name'; name.textContent = `A${a.n} · ${NAMES[a.n - 1] || ''}`;
+    const sc = document.createElement('span'); sc.className = 'score' + (a.pct != null ? ' has' : '');
+    sc.textContent = a.pct != null ? a.pct + '%' : 'No score';
+    b.append(chk, name, sc);
+    b.addEventListener('click', () => toggle(a.n, b));
+    list.append(b);
+  });
+  $('resultCard').hidden = false; updateBtn();
+}
+function toggle(n, b) { if (sel.has(n)) sel.delete(n); else sel.add(n); b.classList.toggle('sel', sel.has(n)); updateBtn(); }
+function updateBtn() {
+  const l = [...sel].sort((a, b) => a - b);
+  $('resetBtn').disabled = !l.length;
+  $('resetBtn').textContent = l.length ? `Reset ${l.map(n => 'A' + n).join(', ')}` : 'Reset';
+}
+function selectAll(on) {
+  sel = new Set(on ? current.activities.map(a => a.n) : []);
+  document.querySelectorAll('.item').forEach(b => b.classList.toggle('sel', sel.has(Number(b.dataset.n))));
+  updateBtn();
+}
+
+function askReset() {
+  const l = [...sel].sort((a, b) => a - b);
+  if (!l.length || !current) return;
+  $('confirmText').textContent = `Erase ${l.map(n => 'A' + n).join(', ')} for ${current.id}? The student can take ${l.length === 1 ? 'it' : 'them'} again. This cannot be undone.`;
+  $('confirm').hidden = false;
+}
+async function doReset() {
+  $('confirm').hidden = true;
+  const l = [...sel].sort((a, b) => a - b);
+  $('resetBtn').disabled = true; setMsg($('resetMsg'), 'Resetting…');
+  const r = await call({ action: 'adminReset', id: current.id, list: l });
+  if (!r.ok) { if (!authFail(r)) setMsg($('resetMsg'), ERR[r.error] || 'Reset failed.', 'err'); updateBtn(); return; }
+  render(r);
+  setMsg($('resetMsg'), `Done. ${l.map(n => 'A' + n).join(', ')} reset for ${r.id}. The student's device clears on its next sync.`, 'ok');
+}
+
+$('loginBtn').addEventListener('click', login);
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+$('findBtn').addEventListener('click', find);
+$('code').addEventListener('keydown', e => { if (e.key === 'Enter') find(); });
+$('resetBtn').addEventListener('click', askReset);
+$('confirmYes').addEventListener('click', doReset);
+$('confirmNo').addEventListener('click', () => { $('confirm').hidden = true; });
+$('selAll').addEventListener('click', () => selectAll(true));
+$('selNone').addEventListener('click', () => selectAll(false));
+$('signOut').addEventListener('click', signOut);
+$('ver').textContent = 'Version ' + VERSION;
+showSignedIn(!!adminHash);
+</script>
+</body>
+</html>
