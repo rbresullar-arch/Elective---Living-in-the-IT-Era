@@ -18,7 +18,7 @@
  *   Auth      — code + salted PIN hash. Clear the PIN hash cell to reset a PIN: the student's
  *               next log in with that code sets a new PIN. 3 wrong PINs lock the code for 24 h
  *               ("Locked until"); clear that cell to unlock early.
- *   Reset     — instructor-only score resets: type a code and A1–A10 or ALL; applied on the next request.
+ *   Reset     — instructor-only score resets: type a code and A1–A11 or ALL; applied on the next request.
  *   Log       — one line per request (time, code, action, result)
  *   Schedules — valid class schedules: code (5 digits) + label. The site's schedule lists are read
  *               from here. Seeded on first run; edit freely.
@@ -48,7 +48,7 @@ var SHEET = { scores: 'Scores', data: 'Data', auth: 'Auth', reset: 'Reset', log:
 var MAX_FAILS = 3;
 var LOCK_MS = 24 * 60 * 60 * 1000;
 var LOG_KEEP = 4000;
-var ACTIVITY_COUNT = 10;
+var ACTIVITY_COUNT = 11;
 var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' }];
 var CHUNK = 45000;          // chars per cell (cell limit is 50,000)
 var MAX_BODY = 600000;      // reject anything larger
@@ -409,7 +409,7 @@ function ensureSheets_(ss) {
   heads[SHEET.scores].push('Last sync', 'Flags (review)');
   heads[SHEET.data] = ['Code', 'Schedule', 'Updated', 'JSON (split across columns)'];
   heads[SHEET.auth] = ['Code', 'PIN hash (clear cell to reset PIN)', 'Registered', 'Wrong tries', 'Locked until (clear to unlock)'];
-  heads[SHEET.reset] = ['Code (as in Scores)', 'Activity: A1–A10 or ALL', 'Applied (filled by script)'];
+  heads[SHEET.reset] = ['Code (as in Scores)', 'Activity: A1–A11 or ALL', 'Applied (filled by script)'];
   heads[SHEET.log] = ['Time', 'Code', 'Action', 'Result'];
   heads[SHEET.sched] = ['Schedule code (5 digits)', 'Label'];
   var rebuild = false;
@@ -509,7 +509,7 @@ function log_(ss, id, action, result) {
   } catch (e) {}
 }
 
-/* Reset tab: each row with a code and an activity (A1–A10 or ALL) and an empty
+/* Reset tab: each row with a code and an activity (A1–A11 or ALL) and an empty
    "Applied" cell is applied once. The score is removed from Data/Scores and a
    reset time is stored, so phones delete their copy and older copies are refused. */
 function applyResets_(ss) {
@@ -527,7 +527,7 @@ function applyResets_(ss) {
     var note;
     var doc = readDoc_(ss, id);
     if (!doc) note = 'Not found: check the code';
-    else if (!list.length) note = 'Not applied: use A1–A10 or ALL';
+    else if (!list.length) note = 'Not applied: use A1–A11 or ALL';
     else {
       var now = new Date().toISOString();
       doc.resets = doc.resets || {};

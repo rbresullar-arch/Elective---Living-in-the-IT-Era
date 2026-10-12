@@ -626,7 +626,7 @@ const a7Pct = r => r.percentage != null ? r.percentage : Math.round((r.bestStars
 
 /* Tile colour and display name per activity (presentation only). */
 const TILE_COLORS = ['#0A84FF', '#FF9F0A', '#5E5CE6', '#30B0C7', '#34C759', '#FF375F', '#BF5AF2', '#FF453A', '#FFCC00'];
-const ACT_NAMES = ['IT & ICT in Our Lives', 'Abacus Addition', 'The Pascaline', 'Binary Decoder', 'Packet Route', 'Packet Auto-Route', 'Qrispy Queen', 'Phish or Legit', 'Netiquette Desk'];
+const ACT_NAMES = ['IT & ICT in Our Lives', 'Abacus Addition', 'The Pascaline', 'Binary Decoder', 'Packet Route', 'Packet Auto-Route', 'Qrispy Queen', 'Phish or Legit', 'Netiquette Desk', 'Seller Journey', 'Cyber Defense Ops'];
 const EXAM_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6'];
 const READ_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6'];
 const BOOK_ICON = '<svg viewBox="0 0 24 24"><path d="M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 6v13.5"/></svg>';
@@ -661,6 +661,8 @@ const ACTIVITIES = [
     note: r => `${r.score}/${r.maxScore || 60} pts · Reputation ${r.reputation != null ? r.reputation : '—'}% · Locked` },
   { label: 'Activity 10', href: 'ecommerce_week.html',
     note: r => `${r.days || '—'} days · ₱${(r.profit || 0).toLocaleString('en-PH')} profit · ${r.rating != null ? (+r.rating).toFixed(1) : '—'}★ · ${r.score}/${r.maxScore} right calls · Locked` },
+  { label: 'Activity 11', href: 'cyber_defense_ops.html',
+    note: r => `${r.blocked || 0} blocked · ${r.handled || 0} handled · ${(r.wrong || 0) + (r.missed || 0)} missed · CIA ${r.ciaPct != null ? r.ciaPct : '—'}% · Locked` },
 ];
 
 const EXAMS = [
@@ -677,7 +679,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.11.10';
+const APP_VERSION = '2026.10.12.1';
 
 /* ======================= END OF CONFIG ======================= */
 

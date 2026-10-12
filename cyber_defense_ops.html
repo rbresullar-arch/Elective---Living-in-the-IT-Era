@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cyber Defense Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap"></noscript>
+<style>
+:root{
+  color-scheme: light;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Inter","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ink:#1D1D1F; --muted:#6E6E73; --faint:#8E8E93; --ground:#F5F5F7; --paper:#FFFFFF;
+  --hair:rgba(60,60,67,.16); --sep:#E5E5EA; --fill:rgba(118,118,128,.12);
+  --acc:#0A84FF; --acc-ink:#FFFFFF; --acc-soft:#E8F2FF;
+  --blue:#007AFF; --green:#34C759; --green-ink:#1F8A3D; --red:#FF3B30; --red-ink:#C4261D; --orange:#FF9500; --purple:#AF52DE; --teal:#30B0C7; --indigo:#5856D6;
+  --cC:#AF52DE; --cI:#34C759; --cA:#0A84FF;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+  --sh-2:0 2px 4px rgba(0,0,0,.05),0 12px 32px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sf);font-size:15px;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html:not(.fx-ready) *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;padding:0}
+button:disabled{cursor:default}
+button:focus-visible,a:focus-visible{outline:3px solid rgba(10,132,255,.4);outline-offset:2px}
+.app{max-width:500px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:12px}
+.num{font-variant-numeric:tabular-nums}
+
+/* HUD */
+.hud{position:relative;overflow:hidden;isolation:isolate;background:#0B1026;color:#fff;border-radius:22px;box-shadow:var(--sh-2);padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:10px}
+.hud>canvas.fx{position:absolute;inset:0;width:100%;height:100%;z-index:-1;display:block;pointer-events:none}
+.brand{font-weight:700;font-size:22px;letter-spacing:-.025em;line-height:1.1;text-shadow:0 1px 12px rgba(0,0,0,.25)}
+.brand small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:rgba(255,255,255,.82);margin-top:3px;text-transform:uppercase}
+.hudbtns{display:flex;gap:6px;align-self:start}
+.hb{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.38);color:#fff;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.hb.armed{background:#FF453A;border-color:#FF453A}
+.stats{grid-column:1/-1;display:grid;grid-template-columns:.9fr 1fr 1fr 1fr;gap:6px}
+.stat{background:rgba(255,255,255,.14);border:.5px solid rgba(255,255,255,.3);border-radius:13px;padding:6px 9px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);min-width:0}
+.stat b{display:block;font-size:16px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat span{font-size:9.5px;color:rgba(255,255,255,.8);font-weight:500;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.stat.warn b{color:#FFD60A}
+.stat.crit b{color:#FF6961}
+.pbar{height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin-top:4px;overflow:hidden}
+.pbar i{display:block;height:100%;width:100%;background:#fff;border-radius:2px;transition:width .4s}
+
+/* Phase rail */
+.rail{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rstep{background:var(--paper);border-radius:14px;padding:8px 10px;box-shadow:var(--sh-1);opacity:.55;min-width:0}
+.rstep b{display:block;font-size:13px;font-weight:700;letter-spacing:-.01em}
+.rstep span{display:block;font-size:11px;color:var(--muted);line-height:1.25}
+.rstep.on{opacity:1;box-shadow:0 0 0 2px var(--acc),var(--sh-1)}
+.rstep.done{opacity:.9}
+.rstep.done b::after{content:" ✓";color:var(--green-ink)}
+
+/* Device */
+.device{background:#fff;border-radius:34px;box-shadow:0 0 0 .5px var(--hair),0 0 0 7px #fff,0 0 0 8px var(--hair),var(--sh-2);overflow:hidden;display:flex;flex-direction:column;height:min(760px,calc(100dvh - 290px));min-height:500px;position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:10px 22px 4px;font-size:14px;font-weight:600;flex:0 0 auto}
+.sbar svg{height:11px;width:auto;fill:currentColor}
+.sbi{display:flex;gap:5px;align-items:center}
+.screen{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;background:var(--ground)}
+
+/* App chrome */
+.nav{position:sticky;top:0;z-index:3;background:rgba(245,245,247,.92);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);padding:4px 16px 8px;border-bottom:.5px solid #D1D1D6}
+.nav h1{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:2px 0 2px;line-height:1.1}
+.nav .sub{font-size:13px;color:var(--muted)}
+.pad{padding:10px 16px 20px}
+.sec{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:16px 4px 6px;font-weight:500;display:flex;justify-content:space-between;align-items:baseline}
+.sec:first-child{margin-top:4px}
+.group{background:#fff;border-radius:12px;box-shadow:inset 0 0 0 .5px var(--hair);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;position:relative;width:100%;text-align:left}
+.row+.row::before{content:"";position:absolute;top:0;left:56px;right:0;border-top:.5px solid #D1D1D6}
+.row .grow{flex:1;min-width:0}
+.row .t{font-size:15px;font-weight:600;line-height:1.25}
+.row .s{font-size:12.5px;color:var(--muted);line-height:1.35;margin-top:1px}
+.ic{flex:0 0 30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff}
+.ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chip{display:inline-flex;align-items:center;gap:3px;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:600;background:var(--fill);color:var(--ink);white-space:nowrap}
+.chip.g{background:#E3F7E8;color:var(--green-ink)}
+.chip.r{background:#FFE5E3;color:var(--red-ink)}
+.chip.o{background:#FFF0DB;color:#B25E00}
+.chip.b{background:#E5F0FF;color:#0A5DC2}
+.chip.p{background:#F4E6FB;color:#8A3AB9}
+.chip.k{background:#1D1D1F;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:600;background:var(--blue);color:#fff;width:100%}
+.btn.grey{background:var(--fill);color:var(--ink)}
+.btn:disabled{opacity:.38}
+.note{font-size:13px;color:var(--muted);line-height:1.4}
+.empty{text-align:center;color:var(--faint);padding:22px 16px;font-size:14px}
+
+/* Harden: settings toggles */
+.tg{display:flex;align-items:center;gap:12px;padding:10px 14px;width:100%;text-align:left;position:relative}
+.tg+.tg::before{content:"";position:absolute;top:0;left:56px;right:0;border-top:.5px solid #D1D1D6}
+.tg .grow{flex:1;min-width:0}
+.tg b{display:block;font-size:15px;font-weight:600;line-height:1.25}
+.tg .d{display:block;font-size:12.5px;color:var(--muted);line-height:1.35;margin-top:1px}
+.cost{flex:0 0 auto;font-size:12px;font-weight:600;color:var(--muted);background:var(--fill);border-radius:999px;padding:2px 8px;font-variant-numeric:tabular-nums}
+.tg.on .cost{background:var(--acc-soft);color:#0A5DC2}
+.sw{flex:0 0 51px;height:31px;border-radius:16px;background:#E9E9EA;position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 3px 1px rgba(0,0,0,.06);transition:transform .2s}
+.tg.on .sw{background:var(--green)}
+.tg.on .sw::after{transform:translateX(20px)}
+.tg.cant{opacity:.45}
+.budgetbar{position:sticky;bottom:0;z-index:2;background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:.5px solid #D1D1D6;padding:10px 16px 12px;display:flex;align-items:center;gap:12px}
+.budgetbar .tot{flex:1;font-size:12px;color:var(--muted)}
+.budgetbar .tot b{display:block;font-size:19px;color:var(--ink);letter-spacing:-.02em}
+.budgetbar .meter{height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:4px}
+.budgetbar .meter i{display:block;height:100%;background:var(--acc);border-radius:3px;transition:width .25s}
+.budgetbar .btn{width:auto;white-space:nowrap;padding:10px 16px}
+
+/* Wave: console */
+.cia{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cm{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:9px 10px}
+.cm span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.cm b{display:block;font-size:22px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15}
+.cm small{display:block;font-size:11px;color:var(--faint)}
+.cm .bar{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:5px}
+.cm .bar i{display:block;height:100%;border-radius:3px;transition:width .4s}
+.cm.c .bar i{background:var(--cC)} .cm.i .bar i{background:var(--cI)} .cm.a .bar i{background:var(--cA)}
+.cm.hit{animation:hit .5s ease-out}
+.inc{display:block;width:100%;text-align:left;background:#fff;border-radius:14px;box-shadow:inset 0 0 0 1.5px rgba(255,59,48,.55),var(--sh-1);padding:10px 12px 0;margin-bottom:8px;overflow:hidden;animation:pop .25s ease-out both}
+.inc .ih{display:flex;gap:10px;align-items:center}
+.inc .ih .grow{flex:1;min-width:0}
+.inc .it{font-weight:700;font-size:15px;line-height:1.2}
+.inc .is{font-size:12.5px;color:var(--muted);line-height:1.35;margin-top:2px}
+.inc .secs{font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:var(--red-ink);min-width:34px;text-align:right}
+.inc .cd{height:4px;background:var(--fill);margin:9px -12px 0}
+.inc .cd i{display:block;height:100%;background:var(--red);width:100%}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,59,48,.6);animation:pulse 1.4s infinite;flex:0 0 auto}
+.waiting{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);padding:12px;font-size:13.5px;color:var(--muted)}
+.waiting .radar{width:26px;height:26px;border-radius:50%;border:2px solid var(--green);position:relative;flex:0 0 auto}
+.waiting .radar::after{content:"";position:absolute;inset:3px;border-radius:50%;background:conic-gradient(rgba(52,199,89,.6),transparent 40%);animation:spin 2s linear infinite}
+.logrow .t{font-size:14px}
+.logrow .s{font-size:12px}
+
+/* Sheet */
+.sheet{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.3);display:flex;align-items:flex-end;animation:fade .2s ease-out both}
+.sheet .sbody{background:var(--ground);width:100%;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:6px 16px 18px;animation:up .28s cubic-bezier(.2,.8,.2,1) both}
+.grab{width:36px;height:5px;border-radius:3px;background:#C7C7CC;margin:4px auto 8px}
+.shead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px}
+.shead h2{margin:0;font-size:20px;letter-spacing:-.02em;line-height:1.15}
+.shead .secs{font-weight:700;font-size:20px;color:var(--red-ink);font-variant-numeric:tabular-nums}
+.summary{font-size:14px;line-height:1.45;margin:6px 0 10px}
+.ev{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 .5px var(--hair);overflow:hidden;margin-bottom:10px;font-size:13px}
+.ev .evh{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:8px 12px 0}
+.logbox{margin:8px 12px 12px;background:#0D1117;color:#C9D1D9;border-radius:10px;padding:10px;font-family:var(--mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.logbox .bad{color:#FF7B72}.logbox .ok{color:#7EE787}.logbox .dim{color:#8B949E}
+.smsv{padding:8px 12px 12px}
+.smsv .sh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.smsv .avs{width:24px;height:24px;border-radius:50%;background:#8E8E93;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
+.smsv .bb{background:#E9E9EB;border-radius:16px;border-bottom-left-radius:5px;padding:8px 11px;line-height:1.38;color:#000;font-size:13.5px;max-width:92%}
+.smsv .bb+.bb{margin-top:4px}
+.smsv .lnk{color:var(--blue);text-decoration:underline;word-break:break-all}
+.webv .url{margin:8px 12px 0;background:var(--fill);border-radius:9px;padding:6px 10px;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;word-break:break-all}
+.webv .url .lk{color:var(--red-ink);font-weight:700}
+.webv .pg{padding:10px 12px 12px;line-height:1.42}
+.webv .pg .ph{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.webv .pg .lg{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;flex:0 0 auto}
+.metv{padding:8px 12px 12px}
+.metv .mg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.metv .mb{background:var(--ground);border-radius:10px;padding:6px 8px;font-size:11px;color:var(--muted)}
+.metv .mb b{display:block;font-size:16px;color:var(--ink)}
+.metv .mb.bad b{color:var(--red-ink)}
+.metv svg{width:100%;height:60px;display:block}
+.tktv{padding:8px 12px 12px;line-height:1.45}
+.tktv .tk{background:var(--ground);border-radius:10px;padding:8px 10px}
+.tktv .tk+.tk{margin-top:6px}
+.tktv .tk small{display:block;color:var(--muted);font-size:11.5px;margin-bottom:2px}
+.ransv{margin:8px 12px 12px;background:linear-gradient(160deg,#3B0000,#8B0000);color:#fff;border-radius:10px;padding:14px;text-align:center;font-family:var(--mono);font-size:12px;line-height:1.5}
+.ransv b{display:block;font-size:16px;letter-spacing:.04em;margin-bottom:6px}
+.qrv{display:flex;gap:12px;padding:8px 12px 12px;align-items:center}
+.qrv .q{position:relative;width:84px;height:84px;flex:0 0 auto;border-radius:8px;background:#fff;box-shadow:0 0 0 1px var(--hair)}
+.qrv .q svg{width:100%;height:100%}
+.qrv .stk{position:absolute;inset:8px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.35);transform:rotate(-4deg);background:#fff;overflow:hidden}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.act{display:flex;align-items:center;gap:9px;background:#fff;border-radius:12px;padding:10px 11px;box-shadow:inset 0 0 0 .5px var(--hair),var(--sh-1);text-align:left;font-size:13px;line-height:1.25}
+.act b{display:block;font-size:14.5px}
+.act span{color:var(--muted);font-size:11.5px}
+.act:active{transform:scale(.98)}
+.act.wide{grid-column:1/-1}
+.act .ic{flex-basis:32px;height:32px}
+.outcome{border-radius:14px;padding:12px;margin:4px 0 10px;line-height:1.45;font-size:13.5px}
+.outcome h3{margin:0 0 4px;font-size:17px;letter-spacing:-.01em}
+.outcome.ok{background:#EEFAF1;box-shadow:inset 0 0 0 .5px rgba(31,138,61,.3)}
+.outcome.ok h3{color:var(--green-ink)}
+.outcome.no{background:#FFF0EF;box-shadow:inset 0 0 0 .5px rgba(196,38,29,.3)}
+.outcome.no h3{color:var(--red-ink)}
+.outcome .kv{display:flex;gap:8px;margin-top:6px;font-size:12.5px}
+.outcome .kv span:first-child{color:var(--muted);flex:0 0 96px}
+
+/* Action bar under device */
+.actbar{display:flex;gap:10px;align-items:center}
+.actbar .hint{flex:1;font-size:13px;color:var(--muted);line-height:1.35}
+.actbar .btn{width:auto;padding:12px 20px;border-radius:999px}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);-webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.card>*{flex-shrink:0}
+.card{background:#fff;border-radius:24px;box-shadow:0 24px 64px rgba(0,0,0,.28);max-width:560px;width:100%;max-height:100%;overflow-y:auto;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.card h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1.08}
+.card h1 em{font-style:normal;color:var(--acc)}
+.card h2{margin:4px 0 0;font-size:18px;letter-spacing:-.02em}
+.card p{margin:0;line-height:1.5}
+.card ol,.card ul{margin:0;padding-left:20px;line-height:1.5}
+.card .kicker{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.triad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tri{border-radius:14px;padding:10px;font-size:12.5px;line-height:1.35;background:var(--ground)}
+.tri b{display:block;font-size:16px;letter-spacing:-.02em}
+.tri i{display:block;font-style:normal;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:3px}
+.tri.c i{color:var(--cC)} .tri.i i{color:var(--green-ink)} .tri.a i{color:var(--cA)}
+.tw{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:7px 8px;border-bottom:.5px solid var(--sep);vertical-align:top}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.tbl td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.go{border-radius:999px;background:var(--acc);color:var(--acc-ink);font-weight:600;font-size:17px;padding:12px 24px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(10,132,255,.32)}
+.go.home{background:var(--fill);color:var(--ink);box-shadow:none;text-decoration:none;display:inline-block}
+.gorow{display:flex;flex-wrap:wrap;gap:10px}
+.dl{color:var(--muted);font-size:12px;text-decoration:underline;align-self:flex-start}
+.lockline,.scoreline{background:var(--ground);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.4}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.kpi{background:var(--ground);border-radius:12px;padding:8px 10px}
+.kpi b{display:block;font-size:19px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.result{font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.result.win{color:var(--green-ink)}.result.mid{color:#B25E00}.result.lose{color:var(--red-ink)}
+.bigscore{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bigscore b{font-size:52px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.bigscore span{color:var(--muted);font-size:14px}
+.ciabars{display:flex;flex-direction:column;gap:8px}
+.cb{display:grid;grid-template-columns:118px 1fr 44px;gap:10px;align-items:center;font-size:13px}
+.cb .tr{height:10px;border-radius:5px;background:var(--fill);overflow:hidden}
+.cb .tr i{display:block;height:100%;border-radius:5px}
+.cb b{text-align:right;font-variant-numeric:tabular-nums}
+.rv{border-radius:12px;padding:9px 11px;font-size:13px;line-height:1.42;background:var(--ground)}
+.rv.ok{background:#EEFAF1}.rv.mid{background:#EEF5FF}.rv.no{background:#FFF0EF}
+.rv .rh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-weight:600;margin-bottom:3px}
+.rv .rl{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.review{display:flex;flex-direction:column;gap:6px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);background:rgba(29,29,31,.92);color:#fff;font-size:14px;font-weight:600;padding:10px 16px;border-radius:999px;z-index:80;pointer-events:none;max-width:92vw;text-align:center;box-shadow:var(--sh-2);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.toast.good{background:rgba(31,138,61,.95)}.toast.bad{background:rgba(196,38,29,.95)}
+@keyframes pop{0%{transform:scale(.94);opacity:0}100%{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,59,48,.6)}70%{box-shadow:0 0 0 9px rgba(255,59,48,0)}100%{box-shadow:0 0 0 0 rgba(255,59,48,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes hit{0%{box-shadow:inset 0 0 0 2px var(--red)}100%{box-shadow:inset 0 0 0 .5px var(--hair)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:400px){.stats{gap:5px}.stat{padding:6px 7px}.stat b{font-size:14.5px}.stat span{font-size:9px}.triad{grid-template-columns:1fr}.device{height:calc(100dvh - 240px)}.nav h1{font-size:25px}.cb{grid-template-columns:96px 1fr 40px}}
+</style>
+<script id="itictCloudPush">
+/* Cloud backup: sends a result to the instructor's Google Sheet the moment this
+   page saves it. Works only after the student created a PIN on the hub
+   (localStorage 'itict_cloud'). Never blocks or changes the page; failures are
+   silent and the hub uploads everything on the next visit. */
+(function(){
+  var URL_='https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var ACT={itict_essay_result:'activity1',itict_abacus_result:'activity2',itict_pascaline_result:'activity3',itict_binary_result:'activity4',
+    itict_activity5_result:'activity5',itict_activity6_result:'activity6',itict_activity7_result:'activity7',itict_activity8_result:'activity8',itict_activity9_result:'activity9',
+    itict_activity10_result:'activity10',itict_activity11_result:'activity11'};
+  var EXAM={itict_prelim:'examPrelim',itict_midterm:'exam1'};
+  var pending={}, timers={};
+  try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
+  function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
+  var RETRY=[10000,30000,90000];
+  function send(key,data,attempt){
+    if(!data){ data=pending[key]; delete pending[key]; clearTimeout(timers[key]); }
+    var a=acct(); if(!a||!data) return;
+    attempt=attempt||0;
+    var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
+    function again(){ if(RETRY[attempt]!=null) setTimeout(function(){ send(key,data,attempt+1); },RETRY[attempt]); }
+    try{
+      fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j&&!j.ok&&(j.error==='busy'||j.error==='server')) again(); })
+        .catch(again);
+    }catch(e){}
+  }
+  function route(k,v){
+    var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
+    if(!rec||typeof rec!=='object') return null;
+    if(ACT[k]){ var d={}; d[ACT[k]]=rec; return {wait:800,data:d}; }
+    var m=/^(itict_[a-z]+)_(result|session)$/.exec(k);
+    if(m&&EXAM[m[1]]){ var x={prefix:m[1]}; x[m[2]]=rec; var e={}; e[EXAM[m[1]]]=x; return {wait:m[2]==='session'?20000:800,data:{exams:e}}; }
+    return null;
+  }
+  var orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    var out=orig.apply(this,arguments);
+    try{
+      if(this===window.localStorage){
+        var key=String(k), r=route(key,String(v));
+        if(r){ pending[key]=r.data; clearTimeout(timers[key]); timers[key]=setTimeout(function(){ send(key); },r.wait); }
+      }
+    }catch(e){}
+    return out;
+  };
+  function flush(){ for(var k in pending) send(k); }
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') flush(); });
+})();
+</script>
+</head>
+<body>
+<div class="app">
+  <header class="hud">
+    <div class="brand">Cyber Defense Ops<small>PayNest · Security Officer</small></div>
+    <div class="hudbtns"><button class="hb" id="homeBtn" type="button">Home</button><button class="hb" id="muteBtn" type="button">Sound: On</button></div>
+    <div class="stats">
+      <div class="stat" id="sTime"><b id="hTime">1:30</b><span id="hTimeL">Harden</span></div>
+      <div class="stat" id="sC"><b id="hC">100</b><span>Data · C</span><div class="pbar"><i id="bC"></i></div></div>
+      <div class="stat" id="sI"><b id="hI">100</b><span>Funds · I</span><div class="pbar"><i id="bI"></i></div></div>
+      <div class="stat" id="sA"><b id="hA">100</b><span>Uptime · A</span><div class="pbar"><i id="bA"></i></div></div>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Phases">
+    <div class="rstep" id="r1"><b>1 · Harden</b><span>Choose security controls</span></div>
+    <div class="rstep" id="r2"><b>2 · Attack wave</b><span>Defend PayNest live</span></div>
+    <div class="rstep" id="r3"><b>3 · Report</b><span>What stopped what</span></div>
+  </nav>
+
+  <section class="device" aria-label="Phone">
+    <div class="sbar"><span id="clock">9:41</span><span class="sbi"><svg viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx=".7"/><rect x="5" y="5" width="3" height="6" rx=".7"/><rect x="10" y="2.5" width="3" height="8.5" rx=".7"/><rect x="15" y="0" width="3" height="11" rx=".7"/></svg><svg viewBox="0 0 16 11"><path d="M8 2.2c2.3 0 4.4.9 6 2.4l1.1-1.1C13.2 1.6 10.7.6 8 .6S2.8 1.6.9 3.5L2 4.6c1.6-1.5 3.7-2.4 6-2.4zm0 3.2c1.4 0 2.7.5 3.7 1.4l1.1-1.1C11.5 4.5 9.8 3.8 8 3.8s-3.5.7-4.8 1.9l1.1 1.1c1-.9 2.3-1.4 3.7-1.4zm0 3.2c.6 0 1.1.2 1.5.6L8 10.7 6.5 9.2c.4-.4.9-.6 1.5-.6z"/></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="1.6"/><rect x="24.5" y="4" width="1.6" height="4" rx=".8" opacity=".4"/></svg></span></div>
+    <div class="screen" id="screen"></div>
+    <div id="sheetHost"></div>
+  </section>
+
+  <div class="actbar">
+    <div class="hint" id="actHint"></div>
+    <button class="btn" id="mainBtn" type="button">Deploy controls</button>
+  </div>
+</div>
+
+<!-- Start -->
+<div class="overlay" id="startScreen">
+  <div class="card">
+    <div class="kicker">Activity 11 · Cybersecurity &amp; e-wallets</div>
+    <h1>You are the <em>security officer</em> of an e-wallet.</h1>
+    <p><b>PayNest</b> (a fictional e-wallet) has 2 million users in the Philippines. Tonight it will be attacked. Your job: protect the three goals of security, called the <b>CIA triad</b>.</p>
+    <div class="triad">
+      <div class="tri c"><i>Confidentiality</i><b>Data</b>Only the right people can see customer data.</div>
+      <div class="tri i"><i>Integrity</i><b>Funds</b>Balances and transfers are not changed by attackers.</div>
+      <div class="tri a"><i>Availability</i><b>Uptime</b>Users can pay whenever they need to.</div>
+    </div>
+    <ol>
+      <li><b>Harden (1:30).</b> Turn on security controls. You have <b>80 points</b>; all controls cost about twice that. Choose wisely.</li>
+      <li><b>Attack wave (3:00).</b> 16 threats arrive. A threat is <b>blocked automatically</b> if you turned on a control that stops it. Otherwise it becomes an incident: read the evidence and pick the best response within <b>20 seconds</b>.</li>
+      <li><b>Report.</b> See which control stops which threat, and the Philippine laws involved.</li>
+    </ol>
+    <div class="tw"><table class="tbl">
+      <tr><th>Each threat</th><th class="n">Points</th><th>Damage</th></tr>
+      <tr><td>Blocked by a control</td><td class="n">100</td><td>None</td></tr>
+      <tr><td>Correct manual response</td><td class="n">70</td><td>30%</td></tr>
+      <tr><td>Wrong response or time runs out</td><td class="n">0</td><td>Full</td></tr>
+    </table></div>
+    <p class="note">Final score = 70% defense points + 30% average CIA health (Data, Funds, Uptime). Your first completed run is recorded and locked; later runs are practice.</p>
+    <p class="lockline" id="lockLine" hidden></p>
+    <div class="gorow">
+      <button class="go" id="startBtn" type="button">Start</button>
+      <a class="go home" href="index.html">‹ Activities</a>
+    </div>
+    <button class="dl" id="dlBtn" type="button">Save offline copy</button>
+  </div>
+</div>
+
+<div class="overlay" id="infoScreen" hidden>
+  <div class="card" id="infoCard"></div>
+</div>
+
+<div class="overlay" id="endScreen" hidden>
+  <div class="card" id="endCard"></div>
+</div>
+
+<div class="overlay" id="gate" hidden>
+  <div class="card"><h1>Open in a <em>real browser</em></h1><p id="gateMsg"></p></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* =====================================================================
+   CONFIG
+   ===================================================================== */
+const CFG = {
+  hubUrl: 'index.html',
+  budget: 80,
+  hardenSec: 90,
+  waveSec: 180,
+  firstSpawn: 4,
+  spawnGap: 11,
+  respondSec: 20,
+  partialDamage: 0.3,          // damage share after a correct manual response
+  pts: { blocked: 100, ok: 70, wrong: 0, timeout: 0 },
+  weights: { defense: 0.70, cia: 0.30 }
+};
+const RESULT_KEY = 'itict_activity11_result', RESULT_IDB = 'activity11_result';
+
+const CATS = {
+  acct: { name: 'Account protection', color: '#0A84FF', icon: 'lock' },
+  dev:  { name: 'Device & software',  color: '#5856D6', icon: 'phone' },
+  net:  { name: 'Network',            color: '#30B0C7', icon: 'globe' },
+  data: { name: 'Data protection',    color: '#AF52DE', icon: 'db' },
+  ppl:  { name: 'People',             color: '#FF9500', icon: 'people' }
+};
+
+const CTRL = [
+  { id: 'mfa',    cat: 'acct', cost: 12, name: 'Two-factor authentication',        desc: 'Login needs the password plus a one-time code sent to the registered phone.' },
+  { id: 'bio',    cat: 'acct', cost: 8,  name: 'Biometric login',                  desc: 'Fingerprint or face check before the wallet opens.' },
+  { id: 'mpin',   cat: 'acct', cost: 6,  name: 'Strong MPIN rules',                desc: 'Rejects easy MPINs such as 1234, 0000 or birthdays.' },
+  { id: 'bind',   cat: 'acct', cost: 12, name: 'Device binding',                   desc: 'An account works only on its one registered phone.' },
+  { id: 'limits', cat: 'acct', cost: 8,  name: 'Transfer limits + cooling period', desc: 'Transfers to new recipients have a lower limit and a 1-hour delay.' },
+  { id: 'update', cat: 'dev',  cost: 8,  name: 'Automatic security updates',       desc: 'Servers and the app install security patches as soon as they are released.' },
+  { id: 'av',     cat: 'dev',  cost: 8,  name: 'Malware scanning',                 desc: 'Scans phones and servers for known malicious apps and files.' },
+  { id: 'store',  cat: 'dev',  cost: 6,  name: 'Official app store only',          desc: 'The app refuses to run if it was installed from outside the official stores.' },
+  { id: 'fw',     cat: 'net',  cost: 10, name: 'Firewall + intrusion detection',   desc: 'Filters network traffic and blocks known attack patterns.' },
+  { id: 'tls',    cat: 'net',  cost: 10, name: 'Encrypted connection (TLS pinning)', desc: 'App traffic stays encrypted and rejects fake security certificates.' },
+  { id: 'rate',   cat: 'net',  cost: 8,  name: 'Rate limiting + lockout',          desc: 'Stops too many attempts from one source or on one account.' },
+  { id: 'ddos',   cat: 'net',  cost: 14, name: 'DDoS protection service',          desc: 'Absorbs and filters huge floods of fake traffic.' },
+  { id: 'enc',    cat: 'data', cost: 10, name: 'Database encryption',              desc: 'Stored customer data is unreadable without the keys.' },
+  { id: 'backup', cat: 'data', cost: 8,  name: 'Offline backups',                  desc: 'Daily copies kept disconnected from the network.' },
+  { id: 'least',  cat: 'data', cost: 8,  name: 'Least-privilege access',           desc: 'Staff see only the records their job needs. No bulk exports.' },
+  { id: 'irp',    cat: 'data', cost: 6,  name: 'Breach response plan',             desc: 'Ready steps and templates for the 72-hour breach notice (RA 10173).' },
+  { id: 'aware',  cat: 'ppl',  cost: 10, name: 'In-app scam warnings',             desc: 'Pop-up reminders: never share OTP or MPIN; check the recipient name.' },
+  { id: 'verify', cat: 'ppl',  cost: 6,  name: 'Verified support channels',        desc: 'Official badge on real PayNest pages; support never asks for OTP.' }
+];
+const CTRL_BY = Object.fromEntries(CTRL.map(c => [c.id, c]));
+
+const ACTIONS = {
+  block:   { name: 'Block source',     desc: 'Block the IP, number, domain or sender', color: '#FF3B30', icon: 'block' },
+  isolate: { name: 'Isolate / freeze', desc: 'Freeze the account or cut off the system', color: '#5856D6', icon: 'isolate' },
+  alert:   { name: 'Alert users',      desc: 'Warn users in the app and by SMS',        color: '#FF9500', icon: 'alert' },
+  patch:   { name: 'Patch system',     desc: 'Install the security fix',                color: '#34C759', icon: 'patch' },
+  report:  { name: 'Report',           desc: 'Takedown request, NPC, CICC 1326, PNP-ACG', color: '#0A84FF', icon: 'report', wide: true }
+};
+const ACT_IDS = Object.keys(ACTIONS);
+
+/* Threats. counters: controls that block it automatically. best: correct manual responses.
+   dmg: full damage to { c: Data, i: Funds, a: Uptime }. */
+const THREATS = [
+  { id: 'stuff', name: 'Credential stuffing', cat: 'Account attack', counters: ['mfa','rate'], best: ['block'], dmg: { c: 12, i: 8 },
+    sum: 'Thousands of logins are coming from one address, using email and password pairs leaked from another website.',
+    ev: { t: 'log', h: 'Login server log', lines: [
+      ['dim','03:12:04'],[' LOGIN FAIL  user=09*****8812  ip=185.220.101.4'],
+      ['dim','\n03:12:04'],[' LOGIN FAIL  user=09*****1307  ip=185.220.101.4'],
+      ['dim','\n03:12:05'],['bad',' LOGIN OK    user=09*****5521  ip=185.220.101.4'],
+      ['dim','\n03:12:05'],[' LOGIN FAIL  user=09*****0046  ip=185.220.101.4'],
+      ['bad','\n41,280 attempts in 6 minutes · 12 successful logins']] },
+    lesson: 'People reuse passwords, so passwords leaked from one site unlock accounts on another. Two-factor authentication makes a correct password not enough; rate limiting stops the flood. Without them, block the attacking source.',
+    law: 'RA 10175 · illegal access' },
+
+  { id: 'vish', name: 'Fake “PayNest agent” calls', cat: 'Social engineering', counters: ['aware','verify'], best: ['alert'], dmg: { c: 4, i: 14 },
+    sum: 'Many users report phone calls from people claiming to be PayNest staff, asking for the 6-digit code.',
+    ev: { t: 'ticket', h: 'Support tickets · last 30 minutes', items: [
+      ['Ticket #88412 · Marites D., Surigao City', 'A man from “PayNest Security” called. He said my account will be closed today and asked for the code sent to my phone. After I gave it, ₱8,400 was sent out.'],
+      ['Ticket #88419 · Jun P., Butuan City', 'Same call. Caller knew my full name. I almost gave the OTP.'],
+      ['+ 37 similar tickets', '']] },
+    lesson: 'This is vishing (voice phishing). The fix is to warn every user right away: PayNest never asks for an OTP or MPIN. In-app scam warnings and a verified support channel prevent it.',
+    law: 'RA 12010 (AFASA) · social engineering scheme' },
+
+  { id: 'simswap', name: 'SIM swap takeover', cat: 'Account attack', counters: ['bind'], best: ['isolate'], dmg: { i: 20 },
+    sum: 'A customer’s SIM was replaced at a store by someone else. Minutes later, the account logs in from a new phone.',
+    ev: { t: 'log', h: 'Account activity · 0917***2290', lines: [
+      ['dim','10:02'],[' Telco notice: SIM replaced for 0917***2290'],
+      ['dim','\n10:05'],['bad',' New login · new device (Android, Caloocan)'],
+      ['dim','\n10:05'],[' OTP sent to 0917***2290 · entered correctly'],
+      ['dim','\n10:06'],['bad',' Cash-out request ₱15,000 · PENDING']] },
+    lesson: 'In a SIM swap, the attacker gets a new SIM for the victim’s number and receives the OTPs. Device binding requires the registered phone, not just the number. Freeze (isolate) the account before money leaves.',
+    law: 'RA 11934 (SIM Registration) · RA 12010 (AFASA)' },
+
+  { id: 'apk', name: 'Fake update app (malware)', cat: 'Malware', counters: ['store','av'], best: ['alert','block'], dmg: { c: 8, i: 12 },
+    sum: 'Users are receiving a text with a link to download a “PayNest update” file.',
+    ev: { t: 'sms', h: 'Text message forwarded by a user', from: '+63 961 220 4417', who: 'PN', items: [
+      'PayNest: Your app version will EXPIRE today. Install the new version to keep your balance safe: <span class="lnk">bit.ly/paynest-v9-apk</span>',
+      'File: PayNest_v9.2.apk (outside Google Play)'] },
+    lesson: 'Fake update files carry malware that can read OTP texts and record your MPIN. Install apps only from official stores. Malware scanning detects known bad files. Warn users and block the download link.',
+    law: 'RA 10175 · misuse of devices' },
+
+  { id: 'clone', name: 'Cloned app on a fake store', cat: 'Malware', counters: ['store','bind'], best: ['report'], dmg: { c: 10, i: 6 },
+    sum: 'A copy of the PayNest app, with the real logo, is offered on an unofficial download site.',
+    ev: { t: 'web', h: 'Unofficial download site', url: 'apk-free-mirror.net/paynest-pro', bad: true,
+      logo: 'PN', color: '#0A84FF', title: 'PayNest PRO – Unlimited Cashback!', meta: 'Developer: PayNest Global Ltd · 50K downloads · ★ 4.9',
+      body: 'Get 20% cashback on every payment. Log in with your PayNest number and MPIN. Free download, no Play Store needed!' },
+    lesson: 'Cloned apps copy a brand to steal logins. Send a takedown report to the site host and authorities. Running only from official stores and device binding make stolen logins useless.',
+    law: 'RA 10175 · computer-related identity theft' },
+
+  { id: 'wifi', name: 'Rogue public Wi-Fi', cat: 'Network attack', counters: ['tls'], best: ['alert'], dmg: { c: 14 },
+    sum: 'A fake free Wi-Fi hotspot in a mall is reading the traffic of everyone who connects.',
+    ev: { t: 'metric', h: 'Network monitor · SM City area', stats: [['FREE_MALL_WiFi','Hotspot',0],['Untrusted','Certificate',1],['214','PayNest sessions',1]],
+      note: 'Security certificate issued by “NetFilter CA” (not a real authority). Traffic passes through an unknown laptop.' },
+    lesson: 'This is a man-in-the-middle attack. Encrypted connections with certificate pinning keep data secret even on a fake hotspot. Without that control, warn users not to pay over unknown public Wi-Fi.',
+    law: 'RA 10175 · illegal interception' },
+
+  { id: 'fakepage', name: 'Fake support page', cat: 'Social engineering', counters: ['verify','aware'], best: ['report'], dmg: { c: 12, i: 6 },
+    sum: 'A social media page pretending to be PayNest support is collecting customers’ numbers and MPINs.',
+    ev: { t: 'web', h: 'Social media page', url: 'facebook.com/PayNest.HelpCenter.Official2', bad: false,
+      logo: 'PN', color: '#1877F2', title: 'PayNest Help Center Official', meta: 'Page created 2 days ago · 1.2K followers · not verified',
+      body: 'Problem with your account? 😟 Send us a message with your mobile number and MPIN so our agents can fix it in 5 minutes!' },
+    lesson: 'Impostor pages pretend to be support. Report the page for takedown and to the CICC (hotline 1326). A verified support channel tells users where the real help is.',
+    law: 'RA 10175 · computer-related identity theft' },
+
+  { id: 'ddos', name: 'DDoS attack', cat: 'Network attack', counters: ['ddos'], best: ['block'], dmg: { a: 30 },
+    sum: 'The payment servers are flooded with fake traffic. Real users cannot pay.',
+    ev: { t: 'metric', h: 'Traffic dashboard', spike: true, stats: [['2.4 Gbps','Inbound (normal 0.2)',1],['38,000','Attacking IPs',1],['9.8 s','App response',1]],
+      note: 'Payments are timing out across the country.' },
+    lesson: 'A distributed denial-of-service (DDoS) attack uses thousands of hijacked devices to flood a server. A DDoS protection service filters it automatically. Without one, block the attacking sources with your provider.',
+    law: 'RA 10175 · system interference' },
+
+  { id: 'brute', name: 'MPIN guessing on a stolen phone', cat: 'Account attack', counters: ['mpin','rate','bio'], best: ['isolate'], dmg: { i: 16 },
+    sum: 'A phone was stolen. Someone is trying MPIN after MPIN on the owner’s account.',
+    ev: { t: 'log', h: 'MPIN attempts · 09*****4417', lines: [
+      ['bad','0000 ✗  1234 ✗  1111 ✗  2004 ✗  0315 ✗'],['\n'],['bad','1997 ✗  2580 ✗  1212 ✗  0911 ✗  ...'],
+      ['dim','\n37 attempts in 4 minutes'],['\nOwner reported: “Phone snatched in a jeepney.”']] },
+    lesson: 'Short, easy MPINs can be guessed. Strong MPIN rules, attempt limits and biometrics stop guessing. Lock (isolate) the account until the owner verifies.',
+    law: 'RA 10175 · illegal access' },
+
+  { id: 'cve', name: 'Unpatched server exploited', cat: 'Software flaw', counters: ['update','fw'], best: ['patch'], dmg: { c: 16, i: 6 },
+    sum: 'An attacker is using a known weakness in an old version of the web server software.',
+    ev: { t: 'log', h: 'Intrusion alert · web server', lines: [
+      ['dim','14:20:11'],['bad',' EXPLOIT ATTEMPT  path traversal  /cgi-bin/.%2e/.%2e/etc/passwd'],
+      ['dim','\n14:20:12'],[' Server software: version 2.4.49'],
+      ['dim','\n'],['ok','Security patch available since 3 months ago (version 2.4.51)'],
+      ['dim','\n14:20:15'],['bad',' 200 OK  — file read succeeded']] },
+    lesson: 'Attackers scan the internet for software that was never updated. Automatic updates close known holes; a firewall blocks known attack patterns. Without them, patch now.',
+    law: 'RA 10175 · illegal access' },
+
+  { id: 'ransom', name: 'Ransomware', cat: 'Malware', counters: ['backup','av'], best: ['isolate'], dmg: { a: 25, i: 10 },
+    sum: 'The settlement server’s files were encrypted. A ransom note appeared.',
+    ev: { t: 'ransom' },
+    lesson: 'Ransomware locks files and demands payment. Isolate infected machines to stop it spreading, then restore from offline backups instead of paying. Malware scanning can catch it early.',
+    law: 'RA 10175 · data and system interference' },
+
+  { id: 'insider', name: 'Insider data theft', cat: 'Insider threat', counters: ['least'], best: ['isolate','report'], dmg: { c: 22 },
+    sum: 'A support employee’s account is exporting the whole customer list late at night.',
+    ev: { t: 'log', h: 'Data access audit', lines: [
+      ['dim','23:48'],[' user=j.delacruz (Customer Support)'],
+      ['dim','\n23:48'],['bad',' EXPORT customers.csv  rows=58,912'],
+      ['dim','\n23:51'],['bad',' UPLOAD → personal cloud drive'],
+      ['dim','\n'],['Fields: name, mobile, address, balance']] },
+    lesson: 'Insider threats come from people who already have access. Least-privilege access means a support agent cannot export everyone’s data. Revoke access (isolate) and report. Personal data must be protected under RA 10173.',
+    law: 'RA 10173 (Data Privacy Act) · unauthorized processing' },
+
+  { id: 'qr', name: 'Tampered store QR code', cat: 'Payment fraud', counters: ['aware'], best: ['alert'], dmg: { i: 10 },
+    sum: 'A sari-sari store says customer payments are not arriving. Someone stuck a printed QR over the store’s real one.',
+    ev: { t: 'qr', h: 'Merchant report · Aling Nena Store', note: 'Customers scanning the sticker see recipient “J*N M.”, not the store name. 23 payments went to the wrong account this week.' },
+    lesson: 'QR tampering sends payments to a criminal’s account. Users must check the recipient name before paying. In-app warnings remind them every time.',
+    law: 'RA 12010 (AFASA) · RA 10175 · computer-related fraud' },
+
+  { id: 'wrongsend', name: '“Wrong send” refund scam', cat: 'Payment fraud', counters: ['aware','limits'], best: ['alert'], dmg: { i: 10 },
+    sum: 'Users get a fake “you received money” text, then a request to send it back to another number.',
+    ev: { t: 'sms', h: 'Text messages forwarded by a user', from: '+63 918 552 7710', who: '63', items: [
+      'You have received P3,000.00 from MARK T. Ref No. 0012. -PayNest',
+      'Hi po!! Na-wrong send ko yung ₱3,000 sa inyo 😭 Pa-return na lang sa 0918 552 7710 please, pambayad ko sa ospital'] },
+    lesson: 'The “received” text came from a regular number, not PayNest. Users should check the real balance in the app. Transfer limits and a cooling period slow down rushed transfers to strangers.',
+    law: 'RA 12010 (AFASA) · RA 10175 · computer-related fraud' },
+
+  { id: 'leak', name: 'Customer data for sale', cat: 'Data breach', counters: ['enc','irp'], best: ['report'], dmg: { c: 20 },
+    sum: 'A hacker forum is selling what looks like PayNest customer records.',
+    ev: { t: 'web', h: 'Threat intelligence report', url: 'leakbase-forum.onion/thread/88231', bad: true,
+      logo: '!', color: '#1D1D1F', title: '[SELLING] PayNest users 2026 — 1.2M rows', meta: 'Posted 6 hours ago · Price: $500',
+      body: 'Sample: name, mobile number, email, birthday, wallet balance. Fresh dump. Escrow accepted.' },
+    lesson: 'Under RA 10173, a breach of sensitive personal data must be reported to the National Privacy Commission and affected users within 72 hours. Encryption makes stolen data unreadable; a response plan makes the notice fast.',
+    law: 'RA 10173 (Data Privacy Act) · breach notification' },
+
+  { id: 'smish', name: 'Account-locked smishing', cat: 'Phishing', counters: ['mfa','aware'], best: ['block','alert'], dmg: { c: 10, i: 8 },
+    sum: 'A mass text says accounts are locked and links to a fake login page.',
+    ev: { t: 'sms', h: 'Text message forwarded by a user', from: 'PayNest-Alert', who: 'PN', items: [
+      'PayNest: Your account is LOCKED due to suspicious activity. Verify within 1 hour or lose your balance: <span class="lnk">payn3st-verify.co/login</span>'] },
+    lesson: 'Smishing (SMS phishing) creates panic and sends victims to a look-alike site (“payn3st” with a 3). Block the domain and sender, and warn users. With two-factor authentication, a stolen password alone cannot log in.',
+    law: 'RA 12010 (AFASA) · RA 10175' }
+];
+const T_BY = Object.fromEntries(THREATS.map(t => [t.id, t]));
+
+/* =====================================================================
+   ENGINE
+   ===================================================================== */
+let S = null;
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+function newRun(practice){
+  S = { practice: !!practice, phase: 'harden', sel: {}, hardenLeft: CFG.hardenSec, t: 0, running: false,
+        meters: { c: 100, i: 100, a: 100 }, events: [], open: null, ended: false };
+}
+function spent(){ return CTRL.reduce((s,c)=>s+(S.sel[c.id]?c.cost:0),0); }
+function left(){ return CFG.budget - spent(); }
+function toggleCtrl(id){
+  if(S.phase!=='harden') return { err: 'locked' };
+  if(S.sel[id]){ delete S.sel[id]; return { ok: true, on: false }; }
+  if(CTRL_BY[id].cost > left()) return { err: 'budget' };
+  S.sel[id] = true; return { ok: true, on: true };
+}
+function deploy(){
+  if(S.phase!=='harden') return;
+  S.phase = 'wave'; S.running = false; S.t = 0; S.startTime = new Date().toISOString();
+  S.events = shuffle(THREATS.map(t=>t.id)).map((id,i) => ({ id, at: CFG.firstSpawn + i*CFG.spawnGap, state: 'pending', by: null, action: null, due: 0 }));
+}
+function blockerFor(id){ return T_BY[id].counters.find(c => S.sel[c]) || null; }
+function applyDamage(id, share){
+  const d = T_BY[id].dmg, hit = {};
+  ['c','i','a'].forEach(k => { if(d[k]){ const v = Math.round(d[k]*share); if(v){ S.meters[k] = clamp(S.meters[k]-v, 0, 100); hit[k] = v; } } });
+  return hit;
+}
+/* Advance wave time; returns list of changes for the view. */
+function step(dt){
+  const out = [];
+  if(S.phase!=='wave' || !S.running) return out;
+  S.t += dt;
+  S.events.forEach(e => {
+    if(e.state==='pending' && S.t >= e.at){
+      const by = blockerFor(e.id);
+      if(by){ e.state = 'blocked'; e.by = by; e.doneAt = S.t; out.push({ k: 'blocked', e }); }
+      else { e.state = 'open'; e.due = e.at + CFG.respondSec; out.push({ k: 'open', e }); }
+    } else if(e.state==='open' && S.t >= e.due){
+      e.state = 'timeout'; e.doneAt = S.t; e.hit = applyDamage(e.id, 1); out.push({ k: 'timeout', e });
+    }
+  });
+  if(S.t >= CFG.waveSec && S.events.every(e => e.state!=='pending' && e.state!=='open')){ S.phase = 'done'; out.push({ k: 'done' }); }
+  return out;
+}
+function respond(evId, act){
+  const e = S.events.find(x=>x.id===evId);
+  if(!e || e.state!=='open') return null;
+  const ok = T_BY[e.id].best.includes(act);
+  e.action = act; e.doneAt = S.t;
+  e.state = ok ? 'ok' : 'wrong';
+  e.hit = applyDamage(e.id, ok ? CFG.partialDamage : 1);
+  return e;
+}
+function scoreRun(){
+  const n = S.events.length;
+  const pts = S.events.reduce((s,e)=>s+(CFG.pts[e.state]||0),0);
+  const defensePct = Math.round(pts/(n*100)*100);
+  const ciaPct = Math.round((S.meters.c + S.meters.i + S.meters.a)/3);
+  const pct = Math.round(defensePct*CFG.weights.defense + ciaPct*CFG.weights.cia);
+  const cnt = k => S.events.filter(e=>e.state===k).length;
+  return { pct, defensePct, ciaPct, blocked: cnt('blocked'), handled: cnt('ok'), wrong: cnt('wrong'), timeout: cnt('timeout'), n };
+}
+</script>
+<script>
+/* =====================================================================
+   VIEW
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+const ICONS = {
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>',
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  db: '<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>',
+  people: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.3 5 2.6 5 5.8"/>',
+  block: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+  isolate: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/>',
+  alert: '<path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+  patch: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  report: '<path d="M5 21V4h11l-1.5 4L16 12H5"/>',
+  shield: '<path d="M12 3 4.5 6v6c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  bug: '<rect x="7" y="8" width="10" height="12" rx="5"/><path d="M12 8V5M9 5.5 7.5 3.5M15 5.5l1.5-2M4 12h3M17 12h3M4 17h3M17 17h3"/>'
+};
+function svgI(n){ return `<svg viewBox="0 0 24 24">${ICONS[n]||''}</svg>`; }
+function ic(n, color){ return `<span class="ic" style="background:${color}">${svgI(n)}</span>`; }
+
+/* ---------- Sound ---------- */
+const Snd = (()=>{
+  let ctx, out, muted = false;
+  function init(){ if(ctx) return; const AC = window.AudioContext||window.webkitAudioContext; if(!AC) return; try{ ctx = new AC(); out = ctx.createGain(); out.gain.value = .5; out.connect(ctx.destination); }catch(e){ ctx = null; } }
+  function tone(f,t,d,g,type){ const o=ctx.createOscillator(), a=ctx.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(f,t); a.gain.setValueAtTime(.0001,t); a.gain.linearRampToValueAtTime(g,t+.01); a.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(a); a.connect(out); o.start(t); o.stop(t+d+.05); }
+  const fx = {
+    tap(){ tone(880,ctx.currentTime,.05,.08,'triangle'); },
+    on(){ const t=ctx.currentTime; tone(988,t,.07,.12,'triangle'); tone(1318,t+.05,.1,.1,'triangle'); },
+    alarm(){ const t=ctx.currentTime; [0,.18].forEach(d=>{ tone(880,t+d,.12,.18,'square'); tone(660,t+d+.09,.12,.14,'square'); }); },
+    shield(){ const t=ctx.currentTime; tone(523,t,.08,.12,'triangle'); tone(1046,t+.06,.2,.14,'sine'); },
+    good(){ const t=ctx.currentTime; [784,988,1318].forEach((f,i)=>tone(f,t+i*.07,.18,.18,'triangle')); },
+    bad(){ const t=ctx.currentTime; tone(311,t,.22,.25,'sawtooth'); tone(233,t+.12,.3,.2,'sawtooth'); },
+    win(){ const t=ctx.currentTime; [523,659,784,1046,1318].forEach((f,i)=>tone(f,t+i*.11,.3,.2,'triangle')); }
+  };
+  return { init, play(n){ if(!ctx||muted) return; if(ctx.state==='suspended') ctx.resume(); try{ fx[n](); }catch(e){} }, toggle(){ muted=!muted; return muted; } };
+})();
+
+let toastT;
+function toast(msg, cls){ const t=$('toast'); t.textContent=msg; t.className='toast'+(cls?' '+cls:''); t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, 2200); }
+
+/* ---------- HUD ---------- */
+function hud(){
+  if(!S) return;
+  const m = S.meters;
+  [['c','C'],['i','I'],['a','A']].forEach(([k,K]) => {
+    $('h'+K).textContent = m[k]; $('b'+K).style.width = m[k] + '%';
+    $('s'+K).className = 'stat' + (m[k] < 40 ? ' crit' : m[k] < 70 ? ' warn' : '');
+  });
+  if(S.phase==='harden'){ $('hTime').textContent = fmt(S.hardenLeft); $('hTimeL').textContent = 'Harden'; $('sTime').className = 'stat' + (S.hardenLeft<=15?' crit':''); }
+  else if(S.phase==='wave'){ $('hTime').textContent = fmt(CFG.waveSec - S.t); $('hTimeL').textContent = 'Attack wave'; $('sTime').className = 'stat'; }
+  else { $('hTime').textContent = '0:00'; $('hTimeL').textContent = 'Done'; $('sTime').className = 'stat'; }
+  const ph = S.phase==='harden' ? 0 : S.phase==='wave' ? 1 : 2;
+  ['r1','r2','r3'].forEach((id,i) => $(id).className = 'rstep' + (i===ph?' on':'') + (i<ph?' done':''));
+  const b = $('mainBtn'), h = $('actHint');
+  if(S.phase==='harden'){ b.hidden = false; b.disabled = false; b.textContent = 'Deploy controls'; h.textContent = `${left()} of ${CFG.budget} points left. Controls lock when you deploy or when time runs out.`; }
+  else if(S.phase==='wave'){ b.hidden = true; const o = S.events.filter(e=>e.state==='open').length, seen = S.events.filter(e=>e.state!=='pending').length;
+    h.textContent = o ? `${o} incident${o>1?'s':''} need${o>1?'':'s'} a response. Tap to open.` : `${seen} of ${S.events.length} threats detected. Watching…`; }
+  else { b.hidden = true; h.textContent = 'Wave over. See your report.'; }
+}
+
+/* ---------- Screens ---------- */
+function render(keep){
+  if(!S) return;
+  const sc = $('screen'), top = sc.scrollTop;
+  sc.innerHTML = S.phase==='harden' ? viewHarden() : viewConsole();
+  sc.scrollTop = keep ? top : 0;
+  renderSheet();
+  hud();
+}
+function viewHarden(){
+  const L = left();
+  let h = `<div class="nav"><h1>Security Settings</h1><div class="sub">PayNest Admin · controls go live when you deploy</div></div><div class="pad">`;
+  Object.keys(CATS).forEach(ck => {
+    const cat = CATS[ck];
+    h += `<div class="sec">${esc(cat.name)}</div><div class="group">`;
+    CTRL.filter(c=>c.cat===ck).forEach(c => {
+      const on = !!S.sel[c.id], cant = !on && c.cost > L;
+      h += `<button type="button" class="tg${on?' on':''}${cant?' cant':''}" data-ctrl="${c.id}" role="switch" aria-checked="${on}">${ic(cat.icon, cat.color)}<span class="grow"><b>${esc(c.name)}</b><span class="d">${esc(c.desc)}</span></span><span class="cost">${c.cost} pts</span><span class="sw"></span></button>`;
+    });
+    h += '</div>';
+  });
+  h += `<p class="note" style="margin-top:12px">Think about which attacks are most likely against an e-wallet and which controls protect the most. Some threats can be stopped by more than one control.</p></div>`;
+  h += `<div class="budgetbar"><div class="tot">Budget left<b class="num">${L} / ${CFG.budget} pts</b><div class="meter"><i style="width:${L/CFG.budget*100}%"></i></div></div><button type="button" class="btn" data-act="deploy">Deploy</button></div>`;
+  return h;
+}
+const STATE_CHIP = {
+  blocked: e => `<span class="chip g">Blocked · ${esc(CTRL_BY[e.by].name)}</span>`,
+  ok: e => `<span class="chip b">Handled · ${esc(ACTIONS[e.action].name)}</span>`,
+  wrong: e => `<span class="chip r">Wrong response · ${esc(ACTIONS[e.action].name)}</span>`,
+  timeout: () => `<span class="chip r">No response</span>`
+};
+function hitText(hit){
+  if(!hit) return '';
+  const n = { c: 'Data', i: 'Funds', a: 'Uptime' };
+  return Object.keys(hit).map(k=>`${n[k]} −${hit[k]}`).join(' · ');
+}
+function viewConsole(){
+  const m = S.meters;
+  let h = `<div class="nav"><h1>Security Console</h1><div class="sub">${S.phase==='done'?'Wave ended':'Live · '+Object.keys(S.sel).length+' controls active'}</div></div><div class="pad">`;
+  h += `<div class="cia">${[['c','Confidentiality','Data'],['i','Integrity','Funds'],['a','Availability','Uptime']].map(([k,l,s])=>`<div class="cm ${k}" id="cm-${k}"><span>${s}</span><b class="num">${m[k]}</b><small>${l}</small><div class="bar"><i style="width:${m[k]}%"></i></div></div>`).join('')}</div>`;
+  const open = S.events.filter(e=>e.state==='open').sort((a,b)=>a.due-b.due);
+  h += `<div class="sec">Needs action <span>${open.length}</span></div>`;
+  if(!open.length) h += `<div class="waiting"><span class="radar"></span>${S.phase==='done'?'All threats resolved.':'No open incidents. Monitoring for new threats…'}</div>`;
+  open.forEach(e => {
+    const T = T_BY[e.id], rem = e.due - S.t;
+    h += `<button type="button" class="inc" data-ev="${e.id}"><div class="ih"><span class="pulse"></span><div class="grow"><div class="it">${esc(T.name)}</div><div class="is">${esc(T.cat)} · tap to respond</div></div><span class="secs" data-secs="${e.id}">${Math.ceil(rem)}s</span></div><div class="cd"><i data-cd="${e.id}" style="width:${clamp(rem/CFG.respondSec*100,0,100)}%"></i></div></button>`;
+  });
+  const log = S.events.filter(e=>['blocked','ok','wrong','timeout'].includes(e.state)).sort((a,b)=>b.doneAt-a.doneAt);
+  h += `<div class="sec">Activity log <span>${log.length}</span></div>`;
+  if(!log.length) h += `<div class="empty">Blocked and handled threats appear here.</div>`;
+  else {
+    h += '<div class="group">';
+    log.forEach(e => {
+      const T = T_BY[e.id], good = e.state==='blocked' || e.state==='ok';
+      h += `<button type="button" class="row logrow" data-log="${e.id}">${ic(e.state==='blocked'?'shield':good?'patch':'bug', e.state==='blocked'?'#34C759':good?'#0A84FF':'#FF3B30')}<div class="grow"><div class="t">${esc(T.name)}</div><div class="s">${STATE_CHIP[e.state](e)}${e.hit&&Object.keys(e.hit).length?` <span style="color:var(--red-ink)">${hitText(e.hit)}</span>`:''}</div></div></button>`;
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+/* Light per-tick update: countdowns only (avoid re-rendering while reading). */
+function tickView(){
+  S.events.forEach(e => {
+    if(e.state!=='open') return;
+    const rem = e.due - S.t;
+    document.querySelectorAll(`[data-secs="${e.id}"]`).forEach(s => s.textContent = Math.ceil(Math.max(0,rem)) + 's');
+    const b = document.querySelector(`[data-cd="${e.id}"]`); if(b) b.style.width = clamp(rem/CFG.respondSec*100,0,100) + '%';
+  });
+  hud();
+}
+
+/* ---------- Evidence ---------- */
+function qrSvg(seed, color){
+  let x = seed, cells = '';
+  const r = () => { x = (x*1103515245+12345) & 0x7fffffff; return x/0x7fffffff; };
+  for(let i=0;i<21;i++) for(let j=0;j<21;j++){
+    const inF = (a,b) => (i>=a&&i<a+7&&j>=b&&j<b+7);
+    if(inF(0,0)||inF(0,14)||inF(14,0)) continue;
+    if(r()<.48) cells += `<rect x="${j}" y="${i}" width="1" height="1"/>`;
+  }
+  const fp = (a,b) => `<rect x="${b}" y="${a}" width="7" height="7"/><rect x="${b+1}" y="${a+1}" width="5" height="5" fill="#fff"/><rect x="${b+2}" y="${a+2}" width="3" height="3"/>`;
+  return `<svg viewBox="-1 -1 23 23" fill="${color}">${cells}${fp(0,0)}${fp(0,14)}${fp(14,0)}</svg>`;
+}
+function evidence(T){
+  const v = T.ev;
+  switch(v.t){
+    case 'log': return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="logbox">${v.lines.map(l=>l.length===2?`<span class="${l[0]}">${esc(l[1])}</span>`:esc(l[0])).join('')}</div></div>`;
+    case 'sms': return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="smsv"><div class="sh"><span class="avs">${esc(v.who)}</span><b style="color:var(--ink)">${esc(v.from)}</b> · Text Message</div>${v.items.map(t=>`<div class="bb">${t}</div>`).join('')}</div></div>`;
+    case 'web': return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="webv"><div class="url">${v.bad?'<span class="lk">⚠ Not secure</span>':'🔒'} ${esc(v.url)}</div><div class="pg"><div class="ph"><span class="lg" style="background:${v.color}">${esc(v.logo)}</span><div><b>${esc(v.title)}</b><div class="note" style="font-size:12px">${esc(v.meta)}</div></div></div>${esc(v.body)}</div></div></div>`;
+    case 'metric': {
+      const pts = v.spike ? [8,9,8,10,9,8,9,12,30,64,88,92,95,90,96] : [20,22,21,23,22,24,22,23,22,24,23,22,23,24,22];
+      const path = pts.map((p,i)=>`${i?'L':'M'}${(i/(pts.length-1)*300).toFixed(1)} ${(58-p*.55).toFixed(1)}`).join(' ');
+      return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="metv"><div class="mg">${v.stats.map(s=>`<div class="mb ${s[2]?'bad':''}"><b>${esc(s[0])}</b>${esc(s[1])}</div>`).join('')}</div>${v.spike?`<svg viewBox="0 0 300 60" preserveAspectRatio="none"><path d="${path} L300 60 L0 60Z" fill="rgba(255,59,48,.12)"/><path d="${path}" fill="none" stroke="#FF3B30" stroke-width="2"/></svg>`:''}<div class="note">${esc(v.note)}</div></div></div>`; }
+    case 'ticket': return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="tktv">${v.items.map(t=>`<div class="tk"><small>${esc(t[0])}</small>${esc(t[1])}</div>`).join('')}</div></div>`;
+    case 'ransom': return `<div class="ev"><div class="evh">Settlement server screen</div><div class="ransv"><b>🔒 YOUR FILES ARE ENCRYPTED</b>All transaction files on SETTLE-01 have been locked.<br>Send 2 BTC within 48 hours to get the key.<br>Do not turn off the computer.<br><br>settle_2026_10.db.locked · ledger.xlsx.locked · 41,882 more</div></div>`;
+    case 'qr': return `<div class="ev"><div class="evh">${esc(v.h)}</div><div class="qrv"><div class="q">${qrSvg(77,'#0A84FF')}<div class="stk">${qrSvg(1234,'#1D1D1F')}</div></div><div class="note" style="color:var(--ink)">${esc(v.note)}</div></div></div>`;
+  }
+  return '';
+}
+
+/* ---------- Incident sheet ---------- */
+function renderSheet(){
+  const host = $('sheetHost');
+  if(!S || !S.open){ host.innerHTML = ''; return; }
+  const e = S.events.find(x=>x.id===S.open); if(!e){ S.open = null; host.innerHTML=''; return; }
+  const T = T_BY[e.id];
+  const sb = host.querySelector('.sbody'), st = sb ? sb.scrollTop : 0;
+  let h = `<div class="sheet" data-act="closesheet"><div class="sbody" data-stop="1"><div class="grab"></div>`;
+  h += `<div class="shead"><div><div class="chips" style="margin-bottom:5px"><span class="chip">${esc(T.cat)}</span>${['c','i','a'].filter(k=>T.dmg[k]).map(k=>`<span class="chip ${k==='c'?'p':k==='i'?'g':'b'}">${k==='c'?'Data':k==='i'?'Funds':'Uptime'}</span>`).join('')}</div><h2>${esc(T.name)}</h2></div>${e.state==='open'?`<span class="secs" data-secs="${e.id}">${Math.ceil(e.due-S.t)}s</span>`:`<button type="button" class="btn grey" style="width:auto;padding:7px 14px;font-size:14px;border-radius:999px" data-act="closesheet">Close</button>`}</div>`;
+  h += `<p class="summary">${esc(T.sum)}</p>${evidence(T)}`;
+  if(e.state==='open'){
+    h += `<div class="sec" style="margin-top:6px">Choose the best response</div><div class="acts">${ACT_IDS.map(a=>{ const A=ACTIONS[a]; return `<button type="button" class="act${A.wide?' wide':''}" data-resp="${a}">${ic(A.icon,A.color)}<span><b>${A.name}</b><span>${A.desc}</span></span></button>`; }).join('')}</div>`;
+  } else h += outcomeHtml(e);
+  h += '</div></div>';
+  host.innerHTML = h;
+  const nb = host.querySelector('.sbody'); if(nb) nb.scrollTop = st;
+}
+function outcomeHtml(e){
+  const T = T_BY[e.id];
+  const ctrls = T.counters.map(c=>CTRL_BY[c].name).join(' or ');
+  const best = T.best.map(a=>ACTIONS[a].name).join(' or ');
+  const good = e.state==='blocked' || e.state==='ok';
+  const title = e.state==='blocked' ? `Blocked automatically` : e.state==='ok' ? 'Correct response' : e.state==='wrong' ? 'Not the best response' : 'No response in time';
+  const line = e.state==='blocked' ? `${esc(CTRL_BY[e.by].name)} stopped this before it reached users.`
+    : e.state==='ok' ? `Damage reduced to ${Math.round(CFG.partialDamage*100)}%. ${hitText(e.hit)?'('+hitText(e.hit)+')':''}`
+    : `Full damage. ${hitText(e.hit)?'('+hitText(e.hit)+')':''}`;
+  return `<div class="outcome ${good?'ok':'no'}"><h3>${title}</h3>${line}
+    <div class="kv"><span>Best response</span><span>${esc(best)}</span></div>
+    <div class="kv"><span>Stopped by</span><span>${esc(ctrls)}</span></div>
+    <div class="kv"><span>Law</span><span>${esc(T.law)}</span></div></div>
+    <div class="outcome" style="background:#fff;box-shadow:inset 0 0 0 .5px var(--hair)"><b style="display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Lesson</b>${esc(T.lesson)}</div>`;
+}
+
+/* ---------- Overlays ---------- */
+function showInfo(html, btns){
+  $('infoCard').innerHTML = html + `<div class="gorow">${(btns||[['Continue','info-ok']]).map(([l,a],i)=>`<button type="button" class="go ${i?'home':''}" data-act="${a}">${l}</button>`).join('')}</div>`;
+  $('infoScreen').hidden = false; $('infoCard').scrollTop = 0;
+}
+function hideInfo(){ $('infoScreen').hidden = true; }
+function introHarden(){
+  showInfo(`<div class="kicker">Phase 1 · Harden</div><h1>Prepare the <em>defenses</em></h1><p>Turn on security controls in PayNest’s settings. You have <b>${CFG.budget} points</b> and <b>${fmt(CFG.hardenSec)}</b>.</p><ul><li><b>Account</b> controls protect logins and transfers.</li><li><b>Device &amp; software</b> controls stop malware and old, unpatched software.</li><li><b>Network</b> controls protect traffic and keep servers online.</li><li><b>Data</b> controls protect stored customer information.</li><li><b>People</b> controls stop tricks that target users.</li></ul><p>A control works automatically: every threat it stops is blocked with no damage. Anything you leave out, you must handle by hand.</p>`, [['Open settings','start-harden']]);
+}
+function introWave(){
+  const n = Object.keys(S.sel).length;
+  showInfo(`<div class="kicker">Phase 2 · Attack wave</div><h1>${n} control${n===1?'':'s'} <em>deployed</em></h1><p>For the next <b>${fmt(CFG.waveSec)}</b>, threats will hit PayNest one after another.</p><ul><li>Threats your controls stop appear in the <b>Activity log</b> as blocked.</li><li>Other threats appear under <b>Needs action</b> with a <b>${CFG.respondSec}-second</b> timer. Tap one, read the evidence, and choose the best response.</li><li>Wrong responses and missed timers cause full damage to Data, Funds or Uptime.</li></ul>`, [['Start the attack wave','start-wave']]);
+}
+
+/* ---------- Loop ---------- */
+let loopT = null, lastNow = 0;
+function startLoop(){
+  stopLoop(); lastNow = performance.now();
+  loopT = setInterval(() => {
+    const now = performance.now(), dt = Math.min(0.5, (now - lastNow)/1000); lastNow = now;
+    if(document.hidden || !S) return;
+    if(S.phase==='harden' && S.running){
+      S.hardenLeft -= dt;
+      if(S.hardenLeft <= 0){ S.hardenLeft = 0; doDeploy(true); return; }
+      hud(); return;
+    }
+    if(S.phase==='wave' && S.running){
+      const ch = step(dt);
+      if(ch.length){
+        let snd = null;
+        ch.forEach(c => {
+          if(c.k==='open'){ snd = 'alarm'; toast('New incident: ' + T_BY[c.e.id].name, 'bad'); }
+          if(c.k==='blocked'){ snd = snd || 'shield'; toast('Blocked: ' + T_BY[c.e.id].name, 'good'); }
+          if(c.k==='timeout'){ snd = 'bad'; toast('No response: ' + T_BY[c.e.id].name, 'bad'); flashHit(c.e.hit); }
+        });
+        if(snd) Snd.play(snd);
+        render(true);
+        if(ch.some(c=>c.k==='done')){ stopLoop(); setTimeout(finish, 900); }
+      } else tickView();
+    }
+  }, 100);
+}
+function stopLoop(){ if(loopT){ clearInterval(loopT); loopT = null; } }
+function flashHit(hit){ if(!hit) return; Object.keys(hit).forEach(k => { const el = document.getElementById('cm-'+k); if(el){ el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); } }); }
+
+function doDeploy(auto){
+  if(S.phase!=='harden') return;
+  S.running = false; deploy();
+  if(auto) toast('Time is up. Controls deployed.');
+  Snd.play('on'); render(); introWave();
+}
+
+/* ---------- Results ---------- */
+async function finish(){
+  if(S.ended) return;
+  S.ended = true; S.open = null; render();
+  const sc = scoreRun();
+  Snd.play(sc.pct>=60?'win':'bad');
+  const prev = await loadResult();
+  let line;
+  if(prev) line = `<b>Practice run: ${sc.pct}%</b> · Your recorded Activity 11 score stays <b>${prev.percentage}%</b>.`;
+  else {
+    const rec = { score: sc.blocked + sc.handled, maxScore: sc.n, percentage: sc.pct, defensePct: sc.defensePct, ciaPct: sc.ciaPct,
+      data: S.meters.c, funds: S.meters.i, uptime: S.meters.a, blocked: sc.blocked, handled: sc.handled, wrong: sc.wrong, missed: sc.timeout,
+      controls: Object.keys(S.sel), spent: spent(), startTime: S.startTime || null, endTime: new Date().toISOString(), locked: true, savedAt: new Date().toISOString() };
+    await writeAll(rec);
+    line = `<b>Activity 11 score recorded: ${sc.pct}%</b> · Locked. Later runs are practice.`;
+  }
+  const res = sc.pct>=85?['FORTRESS','win']:sc.pct>=65?['HOLDING THE LINE','mid']:['BREACHED','lose'];
+  const order = { blocked: 0, ok: 1, wrong: 2, timeout: 3 };
+  const evs = S.events.slice().sort((a,b)=>order[a.state]-order[b.state]);
+  const rv = evs.map(e => {
+    const T = T_BY[e.id];
+    const cls = e.state==='blocked' ? 'ok' : e.state==='ok' ? 'mid' : 'no';
+    const mark = e.state==='blocked' ? '🛡' : e.state==='ok' ? '✓' : '✗';
+    return `<div class="rv ${cls}"><div class="rh">${mark} ${esc(T.name)} ${STATE_CHIP[e.state](e)}</div>
+      <span><b>Stopped by:</b> ${esc(T.counters.map(c=>CTRL_BY[c].name).join(' or '))} · <b>Best response:</b> ${esc(T.best.map(a=>ACTIONS[a].name).join(' or '))}</span>
+      <span class="rl">${esc(T.lesson)}</span><span class="rl"><b>Law:</b> ${esc(T.law)}</span></div>`;
+  }).join('');
+  const unused = Object.keys(S.sel).filter(id => !S.events.some(e => e.by===id));
+  const chosen = Object.keys(S.sel).map(id => CTRL_BY[id].name);
+  const cb = (k,l,c) => `<div class="cb"><span>${l}</span><div class="tr"><i style="width:${S.meters[k]}%;background:${c}"></i></div><b>${S.meters[k]}</b></div>`;
+  $('endCard').innerHTML = `<div class="kicker">Attack wave complete</div><div class="result ${res[1]}">${res[0]}</div>
+    <div class="bigscore"><b>${sc.pct}%</b><span>Defense ${sc.defensePct}% · CIA health ${sc.ciaPct}%</span></div>
+    <p class="scoreline">${line}</p>
+    <div class="kpis"><div class="kpi"><b>${sc.blocked}</b><span>Auto-blocked</span></div><div class="kpi"><b>${sc.handled}</b><span>Handled</span></div><div class="kpi"><b>${sc.wrong}</b><span>Wrong call</span></div><div class="kpi"><b>${sc.timeout}</b><span>Missed</span></div><div class="kpi"><b>${spent()}/${CFG.budget}</b><span>Points used</span></div></div>
+    <h2>CIA triad</h2><div class="ciabars">${cb('c','Confidentiality · Data','var(--cC)')}${cb('i','Integrity · Funds','var(--cI)')}${cb('a','Availability · Uptime','var(--cA)')}</div>
+    <h2>Your controls</h2><p class="note" style="color:var(--ink)">${chosen.length?esc(chosen.join(', ')):'None'}.${unused.length?` <span style="color:var(--muted)">Did not block anything this time: ${esc(unused.map(id=>CTRL_BY[id].name).join(', '))}.</span>`:''}</p>
+    <h2>Threat → control map</h2><div class="review">${rv}</div>
+    <h2>Laws to know</h2>
+    <div class="tw"><table class="tbl">
+      <tr><th>Law</th><th>What it covers</th></tr>
+      <tr><td><b>RA 10175</b><br>Cybercrime Prevention Act (2012)</td><td>Illegal access, interception, data and system interference, misuse of devices, computer-related fraud and identity theft.</td></tr>
+      <tr><td><b>RA 10173</b><br>Data Privacy Act (2012)</td><td>Protection of personal data; breach notice to the National Privacy Commission (NPC) and affected people within 72 hours.</td></tr>
+      <tr><td><b>RA 12010</b><br>Anti-Financial Account Scamming Act (2024)</td><td>Money muling, social engineering schemes and account takeovers in bank and e-wallet accounts.</td></tr>
+      <tr><td><b>RA 11934</b><br>SIM Registration Act (2022)</td><td>Registered SIMs, to trace numbers used in scams and SIM swaps.</td></tr>
+    </table></div>
+    <p class="note">Where to report: CICC hotline <b>1326</b>, PNP Anti-Cybercrime Group, NBI Cybercrime Division, and the NPC for data breaches.</p>
+    <div class="lockline"><b>Debrief:</b> Which single control blocked the most threats? Which threats needed people, not technology? How would a hospital radiology department protect patient images and records (Confidentiality) and keep its systems running (Availability)?</div>
+    <div class="gorow"><button type="button" class="go" id="againBtn">Practice again</button><a class="go home" href="index.html">‹ Activities</a></div>`;
+  $('endScreen').hidden = false; $('endCard').scrollTop = 0;
+  $('againBtn').onclick = () => { $('endScreen').hidden = true; newRun(true); render(); introHarden(); };
+  showLock(await loadResult());
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const inStop = t.closest('[data-stop]');
+  let b = inStop ? t.closest('button') : t.closest('button,[data-act]');
+  if(inStop && b && !inStop.contains(b)) b = null;
+  if(!b || b.disabled || !S) return;
+  const d = b.dataset;
+  Snd.init();
+  if(d.ctrl){
+    const r = toggleCtrl(d.ctrl);
+    if(r.err==='budget'){ toast(`Not enough points. ${left()} left.`, 'bad'); Snd.play('bad'); return; }
+    if(r.err) return;
+    Snd.play(r.on ? 'on' : 'tap'); render(true); return;
+  }
+  if(d.ev){ S.open = d.ev; Snd.play('tap'); renderSheet(); return; }
+  if(d.log){ S.open = d.log; renderSheet(); return; }
+  if(d.resp){
+    const ev = respond(S.open, d.resp); if(!ev) return;
+    Snd.play(ev.state==='ok' ? 'good' : 'bad');
+    if(ev.state!=='ok') flashHit(ev.hit);
+    render(true); return;
+  }
+  switch(d.act){
+    case 'deploy': doDeploy(false); break;
+    case 'closesheet': S.open = null; renderSheet(); break;
+    case 'info-ok': hideInfo(); break;
+    case 'start-harden': hideInfo(); S.running = true; startLoop(); render(); break;
+    case 'start-wave': hideInfo(); S.running = true; startLoop(); render(); break;
+  }
+});
+$('mainBtn').addEventListener('click', () => { Snd.init(); if(S && S.phase==='harden') doDeploy(false); });
+
+/* ---------- Persistence: result (4 layers, first completion locked) ---------- */
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeAll(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null;
+  try{ const s=localStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(!r) try{ const m=document.cookie.match(new RegExp('(?:^|; )'+RESULT_KEY+'=([^;]*)')); if(m) r=JSON.parse(decodeURIComponent(m[1])); }catch(e){}
+  if(!r) r = await idbRead(RESULT_IDB);
+  if(!r) try{ const s=sessionStorage.getItem(RESULT_KEY); if(s) r=JSON.parse(s); }catch(e){}
+  if(r){ // backfill every layer without re-triggering the cloud push unless a layer is missing
+    let missing = false; try{ missing = !localStorage.getItem(RESULT_KEY); }catch(e){}
+    if(missing) await writeAll(r); else { try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(JSON.stringify(r))+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){} await idbPut(RESULT_IDB, r); try{ sessionStorage.setItem(RESULT_KEY, JSON.stringify(r)); }catch(e){} }
+  }
+  return r;
+}
+function showLock(r){
+  const l = $('lockLine');
+  if(!r){ l.hidden = true; return; }
+  l.hidden = false;
+  l.innerHTML = `<b>Recorded score: ${r.percentage}%</b> (${r.blocked} blocked, ${r.handled} handled, ${(r.wrong||0)+(r.missed||0)} missed). It is locked. New runs are practice only.`;
+  $('startBtn').textContent = 'Practice';
+}
+
+/* ---------- Browser gate ---------- */
+function gateCheck(){
+  const ua = navigator.userAgent || '';
+  const inApp = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua);
+  if(inApp){ $('gateMsg').textContent = 'This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X). Tap ⋮ or ⋯, choose "Open in browser" (Chrome, Safari, Edge or Firefox), then open this activity again.'; $('gate').hidden = false; $('startScreen').hidden = true; return false; }
+  return true;
+}
+
+/* ---------- Start / home / misc ---------- */
+async function boot(){ showLock(await loadResult()); }
+$('startBtn').addEventListener('click', async () => {
+  Snd.init();
+  const prev = await loadResult();
+  newRun(!!prev);
+  $('startScreen').hidden = true; render(); introHarden();
+});
+function goHub(){ location.href = CFG.hubUrl; }
+let homeArmT;
+$('homeBtn').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if(!S || S.ended){ goHub(); return; }
+  if(b.classList.contains('armed')){ clearTimeout(homeArmT); goHub(); return; }
+  b.classList.add('armed'); b.textContent = 'Run will be lost · tap';
+  homeArmT = setTimeout(()=>{ b.classList.remove('armed'); b.textContent = 'Home'; }, 2500);
+});
+$('muteBtn').addEventListener('click', e => { const m = Snd.toggle(); e.currentTarget.textContent = 'Sound: ' + (m?'Off':'On'); });
+$('dlBtn').addEventListener('click', async () => {
+  let html;
+  try{ const r = await fetch(location.href); if(r.ok) html = await r.text(); }catch(e){}
+  if(!html) html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html],{type:'text/html'})); a.download = 'cyber_defense_ops.html';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+
+if(gateCheck()) boot();
+</script>
+<script id="apple-fx">
+/* Mesh-gradient shader behind the HUD (presentation only). */
+(function(){
+function boot(){
+  var hud=document.querySelector('.hud'); if(!hud) return;
+  var cv=document.createElement('canvas'); cv.className='fx'; cv.setAttribute('aria-hidden','true'); hud.insertBefore(cv,hud.firstChild);
+  var gl; try{gl=cv.getContext('webgl',{antialias:false,preserveDrawingBuffer:false});}catch(e){}
+  if(!gl) return;
+  var FS='precision mediump float;uniform vec2 r;uniform float t;'+
+  'float b(vec2 p,vec2 c,float s){return exp(-dot(p-c,p-c)/s);}'+
+  'void main(){vec2 p=gl_FragCoord.xy/r.y;float a=r.x/r.y;'+
+  'vec2 q=p+.05*vec2(sin(p.y*6.+t*.7),cos(p.x*4.-t*.6));'+
+  'vec3 col=vec3(.03,.05,.13)'+
+  '+vec3(.039,.518,1.)*b(q,vec2(.15*a+.08*sin(t*.3),.8+.15*cos(t*.4)),.22)'+
+  '+vec3(.345,.337,.839)*b(q,vec2(.85*a+.08*cos(t*.25),.7+.15*sin(t*.35)),.2)'+
+  '+vec3(.188,.69,.78)*b(q,vec2(.5*a+.2*sin(t*.2),.05+.1*cos(t*.3)),.22)'+
+  '+vec3(1.,.231,.188)*b(q,vec2(.45*a+.25*cos(t*.33),.5+.1*sin(t*.27)),.06)*.7'+
+  '+vec3(.204,.78,.349)*b(q,vec2(.97*a,.1+.05*sin(t*.4)),.06)*.6;'+
+  'col=col/(1.+col*.35);'+
+  'float g=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);'+
+  'gl_FragColor=vec4(col+(g-.5)*.035,1.);}';
+  function sh(ty,src){var s=gl.createShader(ty);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+  var pr=gl.createProgram();
+  gl.attachShader(pr,sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));
+  gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS)); gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)) return;
+  gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  var loc=gl.getAttribLocation(pr,'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  var ur=gl.getUniformLocation(pr,'r'), ut=gl.getUniformLocation(pr,'t');
+  var still=false; try{still=matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  var last=0, t0=performance.now();
+  function frame(now){
+    if(!still && !document.hidden && now-last<33){requestAnimationFrame(frame);return;}
+    last=now;
+    var w=Math.max(1,cv.clientWidth|0), h=Math.max(1,cv.clientHeight|0);
+    if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+    gl.viewport(0,0,w,h); gl.uniform2f(ur,w,h);
+    gl.uniform1f(ut,still?4:(now-t0)/1000);
+    gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    if(!still) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function later(){ document.documentElement.classList.add('fx-ready'); (window.requestIdleCallback||function(f){setTimeout(f,200);})(boot,{timeout:1200}); }
+function go(){ requestAnimationFrame(function(){ setTimeout(later,250); }); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
+})();
+</script>
+</body>
+</html>
