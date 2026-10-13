@@ -56,7 +56,8 @@ var MAX_FAILS = 3;
 var LOCK_MS = 24 * 60 * 60 * 1000;
 var LOG_KEEP = 4000;
 var ACTIVITY_COUNT = 11;
-var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' }];
+var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' },
+  { id: 'examPrefinal', label: 'Prefinal', paper: true }];   // paper: bubble-sheet exam → Set, Start, End, Flags columns
 var CHUNK = 45000;          // chars per cell (cell limit is 50,000)
 var MAX_BODY = 600000;      // reject anything larger
 var CODE_RE = /^\d{5}-\d{2,3}$/;
@@ -246,7 +247,7 @@ function migrate_(ss, req, pin) {
    Header check: once per version of this file (HEAD_SIG), not on every request.
    Reset tab: read at most once a minute.  Schedules: cached 10 minutes.
    setup() clears all three. */
-function headSig_() { return 'v2|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
+function headSig_() { return 'v3|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
 function ensureSheetsOnce_(ss) {
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('HEAD_SIG') === headSig_() && ss.getSheetByName(SHEET.sched)) return;
@@ -432,7 +433,10 @@ function ensureSheets_(ss) {
   var heads = {};
   heads[SHEET.scores] = ['Code', 'Schedule'];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) heads[SHEET.scores].push('A' + n + ' %');
-  EXAMS.forEach(function (x) { heads[SHEET.scores].push(x.label); });
+  EXAMS.forEach(function (x) {
+    if (x.paper) heads[SHEET.scores].push(x.label + ' set', x.label + ' start', x.label + ' end', x.label + ' flags');
+    else heads[SHEET.scores].push(x.label);
+  });
   heads[SHEET.scores].push('Last sync', 'Flags (review)');
   heads[SHEET.data] = ['Code', 'Schedule', 'Updated', 'JSON (split across columns)'];
   heads[SHEET.auth] = ['Code', 'PIN hash (clear cell to reset PIN)', 'Registered', 'Wrong tries', 'Locked until (clear to unlock)'];
@@ -507,12 +511,24 @@ function writeScores_(ss, id, doc) {
   EXAMS.forEach(function (x) {
     var e = doc.exams && doc.exams[x.id];
     var res = e && e.result;
+    if (x.paper) {
+      var ses = e && e.session;
+      if (res) vals.push(res.set || '', tsText_(res.startAt), tsText_(res.endAt), res.flags != null ? Number(res.flags) : '');
+      else vals.push(ses && ses.set ? ses.set : '', ses ? tsText_(ses.startAt) : '', ses ? 'In progress' : '', '');
+      return;
+    }
     vals.push(res && res.total ? res.score + '/' + res.total : (e && e.session && e.session.submitted ? 'Submitted' : (e && e.session ? 'In progress' : '')));
   });
   vals.push(new Date(), flags_(doc));
   sh.getRange(row, 1, 1, 2).setNumberFormat('@');
   sh.getRange(row, 1, 1, vals.length).setValues([vals]);
 }
+/* Epoch ms → "2026-10-15 13:52:07" in Philippine time (text, so Sheets does not reformat it). */
+function tsText_(ms) {
+  var n = Number(ms);
+  return n > 0 ? Utilities.formatDate(new Date(n), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss') : '';
+}
+
 /* Rewrite every Scores row from Data (used when the column layout changes). */
 function rebuildScores_(ss) {
   var sc = ss.getSheetByName(SHEET.scores), data = ss.getSheetByName(SHEET.data);

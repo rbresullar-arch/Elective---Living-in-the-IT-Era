@@ -616,7 +616,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
    EXAMS: minimum { label, href, prefix }
      prefix must match the exam page's CFG.prefix (reads prefix_session /
      prefix_result from IndexedDB 'itict_exam' / 'kv').
-     Optional: paper: true      questionnaire only (bubble sheet); no score, QR or backup.
+     Optional: paper: true      questionnaire only (bubble sheet); the page saves { set, startAt, endAt, flags }
+                                as <prefix>_result and uploads it; no score or QR.
                opensAt: ISO time  shown on the row until it opens (the page enforces it).
      Optional: offline: true    adds a Download square at the right of the exam row,
                so students can take it online (main row) or offline (file).
@@ -699,7 +700,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.13.3';
+const APP_VERSION = '2026.10.13.4';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1101,6 +1102,10 @@ async function loadExamRecord(key) {
 
 async function refreshExam(e) {
   if (e.paper) {
+    const r = await loadExamRecord(e.prefix + '_result');
+    if (r) { setRow(e, { score: '✓', note: `Finished · Set ${r.set} · ${r.flags || 0} flag${r.flags === 1 ? '' : 's'}`, done: true }); return; }
+    const s = await loadExamRecord(e.prefix + '_session');
+    if (s && !s.submitted) { setRow(e, { score: `Set ${s.set}`, note: 'In progress — tap to resume' }); return; }
     const at = e.opensAt ? Date.parse(e.opensAt) : 0;
     const when = at ? new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at) : '';
     setRow(e, { score: '', note: at && Date.now() < at ? `Opens ${when} · Bubble sheet` : 'Open · Answer on your bubble sheet' });
@@ -1177,7 +1182,7 @@ async function collectSyncData_base() {
     if (a.redo) data.redoFlags[a.id] = localStorage.getItem(a.redo.flagKey) === '1';
   }
   data.exams = {};
-  for (const e of EXAMS.filter(x => !x.paper)) {
+  for (const e of EXAMS) {
     data.exams[e.id] = {
       prefix: e.prefix,
       result: await loadExamRecord(e.prefix + '_result'),
@@ -1205,7 +1210,7 @@ async function applySyncData_base(data) {
     }
   }
   if (data.exams) {
-    for (const e of EXAMS.filter(x => !x.paper)) {
+    for (const e of EXAMS) {
       const x = data.exams[e.id];
       if (!x || x.prefix !== e.prefix) continue;
       await applyExamRecord(e.prefix + '_session', x.session);
