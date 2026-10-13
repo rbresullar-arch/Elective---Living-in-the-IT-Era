@@ -3,7 +3,7 @@
    Fonts: cache, refresh in background.
    Google Apps Script (scores): never touched — always goes to the network.
    Bump VERSION when this file's PRECACHE list changes. */
-const VERSION = 'itera-v2';
+const VERSION = 'itera-v3';
 const PAGES = VERSION + '-pages';
 const FONTS = 'itera-fonts';
 const PRECACHE = [
@@ -22,6 +22,7 @@ const PRECACHE = [
     './packet_relay.html',
     './pascaline.html',
     './phish_flag.html',
+    './prefinal_exam_ITEra.html',
     './prefinals_ITEra.html',
     './prelim_ITEra.html',
     './prelim_exam_ITEra.html',
@@ -43,6 +44,7 @@ self.addEventListener('install', e => {
     await Promise.all(PRECACHE.map(u =>
       fetch(new Request(u, { cache: 'reload' })).then(r => r.ok && c.put(u, r)).catch(() => {})));
     await self.skipWaiting();
+    notify();
   })());
 });
 
@@ -52,8 +54,14 @@ self.addEventListener('activate', e => {
     for (const k of await caches.keys()) if (!keep.includes(k)) await caches.delete(k);
     if (self.registration.navigationPreload) await self.registration.navigationPreload.enable();
     await self.clients.claim();
+    notify();
   })());
 });
+
+/* Tell open pages the offline copies changed (the hub refreshes its "Available offline" chips). */
+async function notify() {
+  for (const c of await self.clients.matchAll({ includeUncontrolled: true, type: 'window' })) c.postMessage({ type: 'cached' });
+}
 
 function fromNetwork(e, req) {
   return (e.preloadResponse ? e.preloadResponse.catch(() => null) : Promise.resolve(null))
@@ -66,7 +74,7 @@ async function pageFirstNetwork(e) {
   const key = url.origin + url.pathname;            /* ignore ?query / #hash */
   const cache = await caches.open(PAGES);
   const net = fromNetwork(e, req).then(r => {
-    if (r && r.ok && r.type === 'basic') cache.put(key, r.clone());
+    if (r && r.ok && r.type === 'basic') cache.put(key, r.clone()).then(notify);
     return r;
   });
   e.waitUntil(net.catch(() => {}));
