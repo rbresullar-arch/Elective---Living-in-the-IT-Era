@@ -20,9 +20,10 @@
   if (inApp || standalone) return;
 
   var KEY = 'itera_install_dismissed';
+  var snoozed = false;                       /* "Not now" only stops the automatic bar */
   try {
     var t = +localStorage.getItem(KEY);
-    if (t && Date.now() - t < 14 * 864e5) return;
+    snoozed = !!(t && Date.now() - t < 14 * 864e5);
   } catch (e) {}
 
   var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -82,10 +83,11 @@
       '<img src="icons/apple-touch-icon.png" alt="">' +
       '<div class="pwa-tx"><b>Install IT Era</b><small>' +
       (mode === 'ios' ? 'Tap ' + SHARE + ' Share, then <b style="display:inline">Add to Home Screen</b>.'
-                      : 'Opens like an app. Works offline.') +
+        : mode === 'menu' ? 'Open the browser menu (&#8942;), then <b style="display:inline">Install app</b> or <b style="display:inline">Add to Home screen</b>.'
+        : 'Opens like an app. Works offline.') +
       '</small></div>' +
-      (mode === 'ios' ? '' : '<button type="button" class="pwa-go">Install</button>') +
-      '<button type="button" class="pwa-x">' + (mode === 'ios' ? 'OK' : 'Not now') + '</button>';
+      (mode === 'prompt' ? '<button type="button" class="pwa-go">Install</button>' : '') +
+      '<button type="button" class="pwa-x">' + (mode === 'prompt' ? 'Not now' : 'OK') + '</button>';
     document.body.appendChild(bar);
     requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('on'); }); });
 
@@ -110,11 +112,23 @@
     setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, 500);
   }
 
+  /* Manual "Install app" link on the hub footer — always available, ignores "Not now". */
+  function link() { return document.getElementById('installLink'); }
+  function wireLink() {
+    var a = link(); if (!a) return;
+    a.hidden = false;
+    a.addEventListener('click', function () {
+      hide();
+      render(deferred ? 'prompt' : iosSafari ? 'ios' : 'menu');
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireLink); else wireLink();
+
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferred = e;
-    setTimeout(function () { show('prompt'); }, 1500);
+    if (!snoozed) setTimeout(function () { show('prompt'); }, 1500);
   });
-  window.addEventListener('appinstalled', hide);
-  if (iosSafari) window.addEventListener('load', function () { setTimeout(function () { show('ios'); }, 2500); });
+  window.addEventListener('appinstalled', function () { hide(); var a = link(); if (a) a.hidden = true; });
+  if (iosSafari && !snoozed) window.addEventListener('load', function () { setTimeout(function () { show('ios'); }, 2500); });
 })();

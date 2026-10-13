@@ -3,7 +3,7 @@
    Fonts: cache, refresh in background.
    Google Apps Script (scores): never touched — always goes to the network.
    Bump VERSION when this file's PRECACHE list changes. */
-const VERSION = 'itera-v1';
+const VERSION = 'itera-v2';
 const PAGES = VERSION + '-pages';
 const FONTS = 'itera-fonts';
 const PRECACHE = [
