@@ -418,6 +418,17 @@ body.hit .app{animation:shake .35s 2!important}
 .note.n-new .tg{display:none}
 
 </style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
 </head>
 <body id="artifacts-component-root-html">
 <div class="app">

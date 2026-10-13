@@ -65,6 +65,17 @@
   .sheet p { margin:0; }
   .version { text-align:center; font-size:12px; color:var(--muted); }
 </style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
 </head>
 <body>
 <main>
@@ -114,7 +125,7 @@
 
 <script>
 const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
-const VERSION = '2026.10.12.3';
+const VERSION = '2026.10.13.1';
 const NAMES = ['Sentence Order', 'Abacus', 'Pascaline', 'Binary', 'Packet Relay', 'Packet Auto',
   'QRispy Queen', 'Phish Flag', 'Netiquette Desk', 'E-commerce Week', 'Cyber Defense Ops'];
 const SS_KEY = 'itict_admin_h';

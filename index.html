@@ -245,6 +245,17 @@
   @media (max-width:420px) { .stage { border-radius:22px; min-height:220px; } .s4 { display:none; } }
   @media (prefers-reduced-motion: reduce) { .shape { animation:none; } .chipbar .rfill, .sumbar .rfill { transition:none; } }
 </style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer data-install="hub"></script>
 </head>
 <body>
 
@@ -679,7 +690,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.12.3';
+const APP_VERSION = '2026.10.13.1';
 
 /* ======================= END OF CONFIG ======================= */
 

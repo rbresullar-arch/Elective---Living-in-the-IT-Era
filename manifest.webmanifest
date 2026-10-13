@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "Living in the IT Era",
+  "short_name": "IT Era",
+  "description": "GEEL 1 lessons, activities and examinations. Works offline after the first visit.",
+  "lang": "en",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F5F7",
+  "theme_color": "#0071E3",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
