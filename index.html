@@ -246,6 +246,20 @@
   .pv-check input { width:22px; height:22px; flex:0 0 22px; margin:0; accent-color:var(--blue); }
   .pv-foot .small-btn { width:100%; padding:13px; }
 
+
+  /* Exam announcement (front page) */
+  .exam-notice { background:var(--surface); border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0; border-left:4px solid var(--red); }
+  .exam-notice .en-h { font-size:15px; font-weight:700; letter-spacing:.02em; color:var(--red); margin:0 0 4px; }
+  .exam-notice p { margin:0; font-size:15px; line-height:1.45; }
+  .exam-notice .en-mine { margin-top:10px; padding:10px 12px; background:var(--fill); border-radius:10px; font-size:15px; }
+  .exam-notice details { margin-top:10px; font-size:14px; }
+  .exam-notice summary { cursor:pointer; color:var(--blue); font-weight:500; }
+  .exam-notice table { width:100%; border-collapse:collapse; margin-top:6px; }
+  .exam-notice td { padding:5px 0; border-bottom:.5px solid var(--sep); vertical-align:top; }
+  .exam-notice td:first-child { font-family:var(--mono); width:4.5em; }
+  .exam-notice td:last-child { text-align:right; white-space:nowrap; }
+  .exam-notice tr.me td { font-weight:700; }
+
   @media (max-width:420px) { .stage { border-radius:22px; min-height:220px; } .s4 { display:none; } }
   @media (prefers-reduced-motion: reduce) { .shape { animation:none; } .chipbar .rfill, .sumbar .rfill { transition:none; } }
 </style>
@@ -275,6 +289,7 @@
     <div class="stage"><canvas class="fx" aria-hidden="true"></canvas><span class="shape s1"></span><span class="shape s2"></span><span class="shape s3"></span><span class="shape s4"></span>
       <div class="hero"><span class="mark">IT</span><h1>Living in the IT Era.</h1><p>GEEL 1 · Activities, examinations and reads</p></div>
     </div>
+    <div class="exam-notice" data-exam-notice></div>
     <div class="auth-tabs" role="tablist">
       <button type="button" class="box auth-tab on" id="tabLogin" role="tab" aria-selected="true">Log in</button>
       <button type="button" class="box auth-tab" id="tabCreate" role="tab" aria-selected="false">Create account</button>
@@ -337,6 +352,7 @@
       <div class="hero"><h1>Living in the IT Era.</h1><p class="greeting" id="greeting"></p>
         <span class="chipbar" id="homeProg"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><span class="ptext">Activities</span></span></div>
     </div>
+    <div class="exam-notice" data-exam-notice></div>
     <div id="cloudStatus" role="status"></div>
 
     <div class="group menu">
@@ -688,7 +704,7 @@ const EXAMS = [
   { id: 'examPrelim', label: 'Prelim',  href: 'prelim_exam_ITEra.html',  prefix: 'itict_prelim', offline: true },
   { id: 'exam1',      label: 'Midterm', href: 'midterm_exam_ITEra.html', prefix: 'itict_midterm', offline: true },  // id kept: existing sync files store the Midterm under 'exam1'
   { id: 'examPrefinal', label: 'Prefinal', href: 'prefinal_exam_ITEra.html', prefix: 'itict_prefinal',
-    paper: true, opensAt: '2026-10-15T13:50:00+08:00' },   // questionnaire only: answers go on the bubble sheet
+    paper: true, opensBySched: () => PREFINAL_OPENS },   // questionnaire only: answers go on the bubble sheet; unlock per schedule
   // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
 ];
 
@@ -866,7 +882,35 @@ function showScreen(id) {
   const color = SCREEN_COLORS[id] || 'blue';
   panel.className = 'panel ' + color;
   if (id !== 'name') { try { sessionStorage.setItem(SCREEN_KEY, id); } catch (e) {} }
+  try { renderExamNotice(); } catch (e) {}
 }
+
+/* ---- Prefinal reschedule notice (front page) ----
+   Each schedule unlocks at its first class meeting of 19–24 Oct 2026. Must match OPENS in prefinal_exam_ITEra.html. */
+const PREFINAL_OPENS = {"07008": "2026-10-20T09:00:00+08:00", "25007": "2026-10-19T14:00:00+08:00", "21508": "2026-10-19T11:00:00+08:00", "12021": "2026-10-19T09:00:00+08:00", "12030": "2026-10-22T08:00:00+08:00", "02018": "2026-10-19T08:00:00+08:00", "50021": "2026-10-19T10:00:00+08:00", "06095": "2026-10-22T13:00:00+08:00", "06131": "2026-10-20T17:30:00+08:00", "06143": "2026-10-19T15:00:00+08:00", "06107": "2026-10-20T14:00:00+08:00", "06119": "2026-10-19T17:00:00+08:00", "22012": "2026-10-19T13:00:00+08:00"};
+function myExamSched() {
+  try { const a = JSON.parse(localStorage.getItem('itict_cloud') || 'null'); if (a && a.id) return String(a.id).slice(0, 5); } catch (e) {}
+  return '';
+}
+function fmtUnlock(iso) {
+  return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
+}
+function renderExamNotice() {
+  const last = Math.max(...Object.values(PREFINAL_OPENS).map(Date.parse)) + 7 * 86400000;
+  const me = myExamSched();
+  document.querySelectorAll('[data-exam-notice]').forEach(box => {
+    if (Date.now() > last) { box.hidden = true; return; }
+    const labels = {};
+    document.querySelectorAll('#qrSched option').forEach(o => { if (o.value) labels[o.value] = o.textContent.split(' · ').slice(1).join(' · '); });
+    const rows = Object.keys(PREFINAL_OPENS).sort((a, b) => Date.parse(PREFINAL_OPENS[a]) - Date.parse(PREFINAL_OPENS[b]))
+      .map(k => `<tr${k === me ? ' class="me"' : ''}><td>${k}</td><td>${labels[k] || ''}</td><td>${fmtUnlock(PREFINAL_OPENS[k])}</td></tr>`).join('');
+    box.innerHTML = '<p class="en-h">EXAMINATION IS SCHEDULED FOR NEXT WEEK</p>'
+      + '<p>The Prefinal Examination is locked until next week. It unlocks at your class schedule\u2019s first meeting, and only students of that schedule can open it, with the examination code for their schedule. I apologize for the sudden change of schedule. Thank you and God bless!</p>'
+      + (me && PREFINAL_OPENS[me] ? `<div class="en-mine">Your schedule <b>${me}</b> unlocks <b>${fmtUnlock(PREFINAL_OPENS[me])}</b>.</div>` : '')
+      + `<details${me && PREFINAL_OPENS[me] ? '' : ' open'}><summary>Unlock times by schedule</summary><table>${rows}</table></details>`;
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderExamNotice); else renderExamNotice();
 
 document.querySelectorAll('[data-go]').forEach(x => {
   x.addEventListener('click', () => showScreen(x.dataset.go));
@@ -1106,9 +1150,11 @@ async function refreshExam(e) {
     if (r) { setRow(e, { score: '✓', note: `Finished · Set ${r.set} · ${r.flags || 0} flag${r.flags === 1 ? '' : 's'}`, done: true }); return; }
     const s = await loadExamRecord(e.prefix + '_session');
     if (s && !s.submitted) { setRow(e, { score: `Set ${s.set}`, note: 'In progress — tap to resume' }); return; }
-    const at = e.opensAt ? Date.parse(e.opensAt) : 0;
+    const sch = myExamSched();
+    const at = e.opensBySched ? (e.opensBySched()[sch] ? Date.parse(e.opensBySched()[sch]) : Infinity) : e.opensAt ? Date.parse(e.opensAt) : 0;
+    if (at === Infinity) { setRow(e, { score: '', note: 'Locked · next week, on your class schedule' }); return; }
     const when = at ? new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at) : '';
-    setRow(e, { score: '', note: at && Date.now() < at ? `Opens ${when} · Bubble sheet` : 'Open · Answer on your bubble sheet' });
+    setRow(e, { score: '', note: at && Date.now() < at ? `Unlocks ${when} · Bubble sheet` : 'Open · Answer on your bubble sheet' });
     return;
   }
   const result = await loadExamRecord(e.prefix + '_result');

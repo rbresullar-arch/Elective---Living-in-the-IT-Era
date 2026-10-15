@@ -232,5 +232,19 @@
   .pv-check input { width:22px; height:22px; flex:0 0 22px; margin:0; accent-color:var(--blue); }
   .pv-foot .small-btn { width:100%; padding:13px; }
 
+
+  /* Exam announcement (front page) */
+  .exam-notice { background:var(--surface); border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0; border-left:4px solid var(--red); }
+  .exam-notice .en-h { font-size:15px; font-weight:700; letter-spacing:.02em; color:var(--red); margin:0 0 4px; }
+  .exam-notice p { margin:0; font-size:15px; line-height:1.45; }
+  .exam-notice .en-mine { margin-top:10px; padding:10px 12px; background:var(--fill); border-radius:10px; font-size:15px; }
+  .exam-notice details { margin-top:10px; font-size:14px; }
+  .exam-notice summary { cursor:pointer; color:var(--blue); font-weight:500; }
+  .exam-notice table { width:100%; border-collapse:collapse; margin-top:6px; }
+  .exam-notice td { padding:5px 0; border-bottom:.5px solid var(--sep); vertical-align:top; }
+  .exam-notice td:first-child { font-family:var(--mono); width:4.5em; }
+  .exam-notice td:last-child { text-align:right; white-space:nowrap; }
+  .exam-notice tr.me td { font-weight:700; }
+
   @media (max-width:420px) { .stage { border-radius:22px; min-height:220px; } .s4 { display:none; } }
   @media (prefers-reduced-motion: reduce) { .shape { animation:none; } .chipbar .rfill, .sumbar .rfill { transition:none; } }
