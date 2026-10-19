@@ -39,7 +39,12 @@
  *   { action: 'adminLogin', pin }               → { ok }
  *   { action: 'adminLookup', pin, id }          → { ok, id, activities: [{ n, pct, at }] }
  *   { action: 'adminReset', pin, id, list }     → resets activities in `list` (numbers) at once
+ *   { action: 'adminExamGate', pin }            → { ok, gate, now }  (read)
+ *   { action: 'adminExamGate', pin, gate }      → saves which examinations are open; returns { ok, gate, now }
+ *        gate = { <exam id>: { open: true|false, from: ISO or '', until: ISO or '' } }
  * GET ?action=schedules → { ok, schedules: [{ code, label }] }
+ * GET ?action=examGate  → { ok, gate, now }. Read by exam_gate.js on the site.
+ *   Stored in the Script Property EXAM_GATE. No property (or an exam missing from it) = CLOSED.
  *
  * Instructor tools (run from the editor):
  *   setup()        — create tabs, seed Schedules, approve permissions. Run it again after editing the
@@ -82,6 +87,7 @@ var SCHEDULE_SEED = [
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
+  if (action === 'examGate') return json_({ ok: true, gate: gate_(), now: Date.now() });
   if (action === 'schedules') {
     try {
       var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -121,6 +127,12 @@ function doPost(e) {
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
+      if (action === 'adminExamGate') {
+        if (!req.gate) return json_({ ok: true, gate: gate_(), now: Date.now() });
+        var g = setGate_(req.gate);
+        log_(as, 'ADMIN', 'examGate', EXAMS.map(function (x) { return x.label + ':' + (g[x.id].open ? 'open' : 'closed'); }).join(' '));
+        return json_({ ok: true, gate: g, now: Date.now() });
+      }
       if (action === 'adminReset') {
         var al = LockService.getScriptLock();
         try { al.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
@@ -656,6 +668,31 @@ function flags_(doc) {
   }
   return f.join('; ');
 }
+/* ---- Exam gate (master console → Examinations) ---- */
+function gateIso_(v) {
+  var t = Date.parse(String(v || ''));
+  return isNaN(t) ? '' : new Date(t).toISOString();
+}
+function gate_() {
+  var raw = {};
+  try { raw = JSON.parse(PropertiesService.getScriptProperties().getProperty('EXAM_GATE') || '{}') || {}; } catch (e) { raw = {}; }
+  var out = {};
+  EXAMS.forEach(function (x) {
+    var v = raw[x.id] || {};
+    out[x.id] = { open: v.open === true, from: gateIso_(v.from), until: gateIso_(v.until) };
+  });
+  return out;
+}
+function setGate_(inc) {
+  var cur = gate_();
+  EXAMS.forEach(function (x) {
+    var v = inc && inc[x.id];
+    if (v) cur[x.id] = { open: v.open === true, from: gateIso_(v.from), until: gateIso_(v.until) };
+  });
+  PropertiesService.getScriptProperties().setProperty('EXAM_GATE', JSON.stringify(cur));
+  return cur;
+}
+
 function json_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }

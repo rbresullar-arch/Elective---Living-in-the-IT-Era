@@ -113,9 +113,10 @@
   .small-btn { border:none; border-radius:999px; padding:11px 22px; font-size:17px; font-weight:500; cursor:pointer; background:var(--fill); color:var(--blue); }
   .small-btn:active, .cell:active, .pill:not(.locked):active { opacity:.7; }
   .small-btn:disabled { opacity:.4; cursor:default; }
-  .small-btn.primary, .name-box .small-btn, #qrMake, .pv-foot .small-btn, .qr-open {
+  .small-btn.primary, .name-box .small-btn, #qrMake, #attMake, .pv-foot .small-btn, .qr-open, .att-open {
     background:var(--blue); color:var(--blue-ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px var(--blue-soft); }
   .name-box .small-btn { display:block; width:100%; margin-top:18px; padding:13px; }
+  .att-open { display:block; width:100%; margin:14px 0 0; padding:15px 16px; font-size:17px; font-weight:700; letter-spacing:.04em; border:none; border-radius:16px; cursor:pointer; }
   .qr-open { display:block; width:auto; min-width:140px; margin:0 auto; padding:13px 32px; font-size:17px; border:none; border-radius:999px; cursor:pointer; }
   .logout-row { display:flex; justify-content:center; }
   .logout-row .small-btn { background:var(--surface); color:var(--red); box-shadow:var(--sh-1); }
@@ -197,12 +198,12 @@
   #blockOverlay strong { display:block; font-size:20px; margin-bottom:10px; }
 
   /* ===== Sheets (modals) ===== */
-  #privacyPanel, #qrPanel, #unlockPanel, #cloudPanel, #logoutPanel, #codePanel {
+  #privacyPanel, #qrPanel, #attPanel, #unlockPanel, #cloudPanel, #logoutPanel, #codePanel {
     position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:50;
     background:rgba(0,0,0,.3); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); }
   #privacyPanel, #codePanel { z-index:60; }
   #logoutPanel { z-index:55; }
-  #privacyPanel.show, #qrPanel.show, #unlockPanel.show, #cloudPanel.show, #logoutPanel.show, #codePanel.show { display:flex; }
+  #privacyPanel.show, #qrPanel.show, #attPanel.show, #unlockPanel.show, #cloudPanel.show, #logoutPanel.show, #codePanel.show { display:flex; }
   .ul-card, .qr-card, .pv-card { background:var(--surface); width:100%; max-width:400px; border-radius:22px; box-shadow:0 24px 64px rgba(0,0,0,.3); }
   .ul-card, .qr-card { padding:22px 18px 18px; max-height:90vh; overflow-y:auto; }
   .qr-card { text-align:center; }
@@ -274,6 +275,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <script src="pwa.js" defer data-install="hub"></script>
+<script src="exam_gate.js"></script>
 </head>
 <body>
 
@@ -290,6 +292,7 @@
       <div class="hero"><span class="mark">IT</span><h1>Living in the IT Era.</h1><p>GEEL 1 · Activities, examinations and reads</p></div>
     </div>
     <div class="exam-notice" data-exam-notice></div>
+    <button type="button" class="att-open" data-att-open>ATTENDANCE QR</button>
     <div class="auth-tabs" role="tablist">
       <button type="button" class="box auth-tab on" id="tabLogin" role="tab" aria-selected="true">Log in</button>
       <button type="button" class="box auth-tab" id="tabCreate" role="tab" aria-selected="false">Create account</button>
@@ -353,6 +356,7 @@
         <span class="chipbar" id="homeProg"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><span class="ptext">Activities</span></span></div>
     </div>
     <div class="exam-notice" data-exam-notice></div>
+    <button type="button" class="att-open" data-att-open>ATTENDANCE QR</button>
     <div id="cloudStatus" role="status"></div>
 
     <div class="group menu">
@@ -528,6 +532,27 @@
     <div class="ul-row">
       <button type="button" class="box small-btn" id="qrDl" disabled>Save image</button>
       <button type="button" class="box small-btn primary" id="qrClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance QR panel -->
+<div id="attPanel" role="dialog" aria-modal="true" aria-labelledby="attTitle">
+  <div class="box qr-card">
+    <strong id="attTitle">Attendance QR</strong>
+    <label for="attName">Your full name</label>
+    <input type="text" id="attName" autocomplete="name" autocapitalize="words">
+    <div class="qr-note">Saved on this device only, so you do not retype it next time. It is not sent online.</div>
+    <label for="attSched">Class schedule</label>
+    <select id="attSched"></select>
+    <button type="button" class="box small-btn" id="attMake">Make Attendance QR</button>
+    <div class="qr-msg" id="attMsg"></div>
+    <div class="qr-box" id="attBox"></div>
+    <div class="qr-cap" id="attCap"></div>
+    <div class="qr-sum" id="attSum"></div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn" id="attDl" disabled>Save image</button>
+      <button type="button" class="box small-btn primary" id="attClose">Close</button>
     </div>
   </div>
 </div>
@@ -716,7 +741,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.13.4';
+const APP_VERSION = '2026.10.19.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -885,7 +910,8 @@ function showScreen(id) {
   try { renderExamNotice(); } catch (e) {}
 }
 
-/* ---- Prefinal reschedule notice (front page) ----
+/* ---- Front-page examination notice ----
+   PREFINAL_OPENS still drives the Prefinal unlock times in EXAMS.
    Each schedule unlocks at its first class meeting of 19–24 Oct 2026. Must match OPENS in prefinal_exam_ITEra.html. */
 const PREFINAL_OPENS = {"07008": "2026-10-20T09:00:00+08:00", "25007": "2026-10-19T14:00:00+08:00", "21508": "2026-10-19T11:00:00+08:00", "12021": "2026-10-19T09:00:00+08:00", "12030": "2026-10-22T08:00:00+08:00", "02018": "2026-10-19T08:00:00+08:00", "50021": "2026-10-19T10:00:00+08:00", "06095": "2026-10-22T13:00:00+08:00", "06131": "2026-10-20T17:30:00+08:00", "06143": "2026-10-19T15:00:00+08:00", "06107": "2026-10-20T14:00:00+08:00", "06119": "2026-10-19T17:00:00+08:00", "22012": "2026-10-19T13:00:00+08:00"};
 function myExamSched() {
@@ -895,22 +921,17 @@ function myExamSched() {
 function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
+/* Shown while no examination is open (the gate is set in admin.html → Examinations). */
 function renderExamNotice() {
-  const last = Math.max(...Object.values(PREFINAL_OPENS).map(Date.parse)) + 7 * 86400000;
-  const me = myExamSched();
+  const g = window.ExamGate ? ExamGate.read() : null;
+  const anyOpen = !!window.ExamGate && EXAMS.some(e => ExamGate.isOpen(g, e.id));
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
-    if (Date.now() > last) { box.hidden = true; return; }
-    const labels = {};
-    document.querySelectorAll('#qrSched option').forEach(o => { if (o.value) labels[o.value] = o.textContent.split(' · ').slice(1).join(' · '); });
-    const rows = Object.keys(PREFINAL_OPENS).sort((a, b) => Date.parse(PREFINAL_OPENS[a]) - Date.parse(PREFINAL_OPENS[b]))
-      .map(k => `<tr${k === me ? ' class="me"' : ''}><td>${k}</td><td>${labels[k] || ''}</td><td>${fmtUnlock(PREFINAL_OPENS[k])}</td></tr>`).join('');
-    box.innerHTML = '<p class="en-h">EXAMINATION IS SCHEDULED FOR NEXT WEEK</p>'
-      + '<p>The Prefinal Examination is locked until next week. It unlocks at your class schedule\u2019s first meeting, and only students of that schedule can open it, with the examination code for their schedule. I apologize for the sudden change of schedule. Thank you and God bless!</p>'
-      + (me && PREFINAL_OPENS[me] ? `<div class="en-mine">Your schedule <b>${me}</b> unlocks <b>${fmtUnlock(PREFINAL_OPENS[me])}</b>.</div>` : '')
-      + `<details${me && PREFINAL_OPENS[me] ? '' : ' open'}><summary>Unlock times by schedule</summary><table>${rows}</table></details>`;
+    box.hidden = anyOpen;
+    box.innerHTML = anyOpen ? '' : '<p class="en-h">EXAMINATION IS ON HOLD</p><p>Wait for further announcement.</p>';
   });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderExamNotice); else renderExamNotice();
+setTimeout(() => refreshExamGate(), 0);   // front page too: the notice follows the gate
 
 document.querySelectorAll('[data-go]').forEach(x => {
   x.addEventListener('click', () => showScreen(x.dataset.go));
@@ -1144,10 +1165,25 @@ async function loadExamRecord(key) {
   return best;
 }
 
+/* Closed by the instructor's exam gate → locked row (finished exams keep their QR row). */
+function examGateClosed(e) {
+  const g = window.ExamGate ? ExamGate.read() : null;
+  if (window.ExamGate && ExamGate.isOpen(g, e.id)) return false;
+  setRow(e, { score: '', end: '🔒', note: window.ExamGate ? ExamGate.closedText(g, e.id) : 'Closed · wait for further announcement', locked: true });
+  return true;
+}
+let gateCheckedAt = 0;
+function refreshExamGate() {
+  if (!window.ExamGate || Date.now() - gateCheckedAt < 30000) return;
+  gateCheckedAt = Date.now();
+  ExamGate.fetch(8000).then(() => { EXAMS.forEach(refreshExam); renderExamNotice(); });
+}
+
 async function refreshExam(e) {
   if (e.paper) {
     const r = await loadExamRecord(e.prefix + '_result');
     if (r) { setRow(e, { score: '✓', note: `Finished · Set ${r.set} · ${r.flags || 0} flag${r.flags === 1 ? '' : 's'}`, done: true }); return; }
+    if (examGateClosed(e)) return;
     const s = await loadExamRecord(e.prefix + '_session');
     if (s && !s.submitted) { setRow(e, { score: `Set ${s.set}`, note: 'In progress — tap to resume' }); return; }
     const sch = myExamSched();
@@ -1163,6 +1199,7 @@ async function refreshExam(e) {
     setRow(e, { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
   }
+  if (examGateClosed(e)) return;
   if (session) {
     const total = (session.order && session.order.length) || '?';
     const item = (session.cur || 0) + 1;
@@ -1179,6 +1216,7 @@ async function refreshExam(e) {
 function refreshAll() {
   refreshActivities();
   EXAMS.forEach(refreshExam);
+  refreshExamGate();
   refreshOffline();
 }
 
@@ -1633,6 +1671,60 @@ document.getElementById('qrDl').addEventListener('click', () => {
   if (!qrLastPNG) return;
   const nm = (cloudCode() || 'student').replace(/[^\w-]+/g, '_');
   const a = document.createElement('a'); a.href = qrLastPNG; a.download = 'GEEL1_Activities_' + nm + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ===== Attendance QR =====
+   Same encoding as the Score QR: JSON -> XOR (key "2026") -> Base64.
+   Payload: { v:1, t:"att", n:name, c:schedule, k:class code or "", at:unix seconds }
+   The name is kept on this device (ATT_NAME_KEY) so students type it once.
+   Read by tools/attendance_scanner.py, which logs one row per student per day. */
+const ATT_NAME_KEY = 'itict_att_name';
+let attLastPNG = null;
+function attEl(id) { return document.getElementById(id); }
+function attClear() {
+  ['attBox', 'attCap', 'attSum', 'attMsg'].forEach(id => { attEl(id).textContent = ''; });
+  attEl('attDl').disabled = true; attLastPNG = null;
+}
+async function attOpen() {
+  const sel = attEl('attSched');
+  if (!sel.options.length) sel.innerHTML = attEl('qrSched').innerHTML;   // one schedule list, kept in the Score QR panel
+  const code = cloudCode();
+  sel.value = code ? code.slice(0, 5) : await qrDefaultSched();
+  sel.disabled = !!code;
+  try { attEl('attName').value = localStorage.getItem(ATT_NAME_KEY) || ''; } catch (e) { attEl('attName').value = ''; }
+  attClear();
+  attEl('attPanel').classList.add('show');
+  setTimeout(() => attEl('attName').focus(), 50);
+}
+function attRender() {
+  attClear();
+  const msg = attEl('attMsg');
+  const name = String(attEl('attName').value || '').replace(/\s+/g, ' ').trim();
+  const sched = attEl('attSched').value;
+  const code = cloudCode();
+  if (!cloudNameOk(name) || !/\p{L}{2}/u.test(name)) { msg.textContent = 'Type your full name (at least 3 letters).'; attEl('attName').focus(); return; }
+  if (!sched) { msg.textContent = 'Choose your class schedule.'; attEl('attSched').focus(); return; }
+  try { localStorage.setItem(ATT_NAME_KEY, name); localStorage.setItem(QR_SCHED_KEY, sched); } catch (e) {}
+  const at = Math.floor(Date.now() / 1000);
+  const cv = qrMakeCanvas(qrEncrypt(JSON.stringify({ v: 1, t: 'att', n: name, c: sched, k: code, at })));
+  attEl('attBox').append(cv);
+  attEl('attCap').textContent = name + ' · ' + sched;
+  attEl('attSum').textContent = 'Made ' + new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at * 1000) + '. Show this to your instructor. A QR from another day is not accepted.';
+  try { attLastPNG = cv.toDataURL('image/png'); attEl('attDl').disabled = false; } catch (e) {}
+}
+function attCloseAll() { attEl('attPanel').classList.remove('show'); attClear(); }
+document.querySelectorAll('[data-att-open]').forEach(b => b.addEventListener('click', attOpen));
+attEl('attMake').addEventListener('click', attRender);
+attEl('attClose').addEventListener('click', attCloseAll);
+attEl('attPanel').addEventListener('click', e => { if (e.target.id === 'attPanel') attCloseAll(); });
+attEl('attName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attRender(); } });
+attEl('attName').addEventListener('input', attClear);
+attEl('attSched').addEventListener('change', attClear);
+attEl('attDl').addEventListener('click', () => {
+  if (!attLastPNG) return;
+  const d = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a'); a.href = attLastPNG; a.download = 'GEEL1_Attendance_' + d + '.png';
   document.body.appendChild(a); a.click(); a.remove();
 });
 

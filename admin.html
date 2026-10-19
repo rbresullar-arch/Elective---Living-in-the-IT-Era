@@ -64,6 +64,20 @@
   .sheet .card { width:100%; max-width:420px; }
   .sheet p { margin:0; }
   .version { text-align:center; font-size:12px; color:var(--muted); }
+  .exam { display:grid; gap:8px; padding:12px 0; border-top:.5px solid var(--sep); }
+  .exam:first-of-type { border-top:none; padding-top:0; }
+  .exam-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .exam-top b { font-size:17px; }
+  .seg { display:flex; background:var(--fill); border-radius:9px; padding:2px; }
+  .seg button { border:none; background:none; padding:7px 14px; border-radius:7px; font-size:15px; font-weight:600; cursor:pointer; color:var(--muted); }
+  .seg button.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .seg button.on.open { color:var(--green); }
+  .seg button.on.closed { color:var(--red); }
+  .times { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .times label { font-size:11px; }
+  .times input { padding:9px 10px; font-size:15px; }
+  .exam-state { font-size:14px; color:var(--muted); margin:0; }
+  .exam-state.live { color:var(--green); font-weight:600; }
 </style>
 <!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
 <link rel="manifest" href="manifest.webmanifest" id="pwa-head">
@@ -111,6 +125,20 @@
     <p class="msg" id="resetMsg"></p>
   </section>
 
+  <!-- Examinations: open / close and opening times (read by exam_gate.js on every exam page) -->
+  <section class="card" id="examCard" hidden>
+    <div class="head"><strong style="font-family:var(--sans)">Examinations</strong>
+      <div class="tools"><button class="link" id="examReload" type="button">Reload</button></div>
+    </div>
+    <p class="exam-state">Open = students can enter, within the times you set (blank = no limit). Times are Philippine time. Closed always wins.</p>
+    <div id="examList"></div>
+    <div class="row">
+      <button class="btn" id="examSave" type="button" style="flex:1">Save</button>
+      <button class="btn ghost" id="examCloseAll" type="button">Close all</button>
+    </div>
+    <p class="msg" id="examMsg"></p>
+  </section>
+
   <button class="link" id="signOut" type="button" hidden>Sign out</button>
   <p class="version" id="ver"></p>
 </main>
@@ -125,10 +153,12 @@
 
 <script>
 const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
-const VERSION = '2026.10.13.4';
+const VERSION = '2026.10.19.1';
 const NAMES = ['Sentence Order', 'Abacus', 'Pascaline', 'Binary', 'Packet Relay', 'Packet Auto',
   'QRispy Queen', 'Phish Flag', 'Netiquette Desk', 'E-commerce Week', 'Cyber Defense Ops'];
 const SS_KEY = 'itict_admin_h';
+/* Must match EXAMS ids in index.html and apps-script/Code.gs. */
+const EXAM_LIST = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' }, { id: 'examPrefinal', label: 'Prefinal' }];
 const $ = id => document.getElementById(id);
 
 let adminHash = '';
@@ -170,8 +200,9 @@ function authFail(r) {
 }
 
 function showSignedIn(on) {
-  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on;
+  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on; $('examCard').hidden = !on;
   if (!on) $('resultCard').hidden = true;
+  if (on) loadGate();
   if (on) setTimeout(() => $('code').focus(), 30);
 }
 function signOut() {
@@ -249,6 +280,80 @@ async function doReset() {
   render(r);
   setMsg($('resetMsg'), `Done. ${l.map(n => 'A' + n).join(', ')} reset for ${r.id}. The student's device clears on its next sync.`, 'ok');
 }
+
+/* ===== Examinations (exam gate) ===== */
+let gate = {};
+/* ISO <-> datetime-local value, always in Philippine time (UTC+8, no DST). */
+function isoToPH(iso) {
+  if (!iso) return '';
+  const d = new Date(Date.parse(iso) + 8 * 3600000);
+  return d.toISOString().slice(0, 16);
+}
+function phToIso(v) { return v ? new Date(Date.parse(v + ':00+08:00')).toISOString() : ''; }
+function fmtPH(iso) {
+  return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
+}
+function gateState(v) {
+  const now = Date.now();
+  if (!v || !v.open) return ['Closed', false];
+  if (v.from && now < Date.parse(v.from)) return ['Opens ' + fmtPH(v.from) + (v.until ? ' · closes ' + fmtPH(v.until) : ''), false];
+  if (v.until && now >= Date.parse(v.until)) return ['Closed at ' + fmtPH(v.until), false];
+  return ['Open now' + (v.until ? ' · closes ' + fmtPH(v.until) : ''), true];
+}
+function renderGate() {
+  const list = $('examList'); list.innerHTML = '';
+  EXAM_LIST.forEach(x => {
+    const v = gate[x.id] || { open: false, from: '', until: '' };
+    const row = document.createElement('div'); row.className = 'exam'; row.dataset.id = x.id;
+    row.innerHTML = `<div class="exam-top"><b>${x.label}</b><div class="seg">
+        <button type="button" data-open="0" class="closed${v.open ? '' : ' on'}">Closed</button>
+        <button type="button" data-open="1" class="open${v.open ? ' on' : ''}">Open</button></div></div>
+      <div class="times"><div><label>Opens at</label><input type="datetime-local" data-k="from" value="${isoToPH(v.from)}"></div>
+        <div><label>Closes at</label><input type="datetime-local" data-k="until" value="${isoToPH(v.until)}"></div></div>
+      <p class="exam-state"></p>`;
+    row.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+      row.querySelectorAll('.seg button').forEach(o => o.classList.toggle('on', o === b));
+      paintRow(row); setMsg($('examMsg'), 'Not saved yet.');
+    }));
+    row.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { paintRow(row); setMsg($('examMsg'), 'Not saved yet.'); }));
+    list.append(row); paintRow(row);
+  });
+}
+function rowValue(row) {
+  return { open: row.querySelector('.seg .on').dataset.open === '1',
+    from: phToIso(row.querySelector('[data-k=from]').value), until: phToIso(row.querySelector('[data-k=until]').value) };
+}
+function paintRow(row) {
+  const [text, live] = gateState(rowValue(row));
+  const p = row.querySelector('.exam-state'); p.textContent = text; p.classList.toggle('live', live);
+}
+async function loadGate() {
+  setMsg($('examMsg'), 'Loading…');
+  const r = await call({ action: 'adminExamGate' });
+  if (!r.ok) { if (!authFail(r)) setMsg($('examMsg'), ERR[r.error] || 'Could not load.', 'err'); return; }
+  gate = r.gate || {}; renderGate(); setMsg($('examMsg'), '');
+}
+async function saveGate(next) {
+  for (const id in next) {
+    const v = next[id];
+    if (v.from && v.until && Date.parse(v.until) <= Date.parse(v.from)) { setMsg($('examMsg'), 'Closing time must be after opening time.', 'err'); return; }
+  }
+  $('examSave').disabled = $('examCloseAll').disabled = true; setMsg($('examMsg'), 'Saving…');
+  const r = await call({ action: 'adminExamGate', gate: next });
+  $('examSave').disabled = $('examCloseAll').disabled = false;
+  if (!r.ok) { if (!authFail(r)) setMsg($('examMsg'), ERR[r.error] || 'Save failed.', 'err'); return; }
+  gate = r.gate || {}; renderGate();
+  setMsg($('examMsg'), 'Saved. Students see the change when they open or reload a page.', 'ok');
+}
+$('examSave').addEventListener('click', () => {
+  const next = {}; document.querySelectorAll('#examList .exam').forEach(row => { next[row.dataset.id] = rowValue(row); });
+  saveGate(next);
+});
+$('examCloseAll').addEventListener('click', () => {
+  const next = {}; EXAM_LIST.forEach(x => { next[x.id] = { open: false, from: '', until: '' }; });
+  saveGate(next);
+});
+$('examReload').addEventListener('click', loadGate);
 
 $('loginBtn').addEventListener('click', login);
 $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
