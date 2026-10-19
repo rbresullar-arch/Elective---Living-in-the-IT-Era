@@ -733,6 +733,8 @@ const EXAMS = [
     paper: true, opensBySched: () => PREFINAL_OPENS },   // questionnaire only: answers go on the bubble sheet; unlock per schedule
   // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
 ];
+/* Special Prefinal: online exam, row shown only to class codes assigned in admin.html */
+const SPECIAL = { id: 'examSpecial', label: 'Special Prefinal', href: 'special_prefinal_ITEra.html' };
 
 const READS = [
   { label: 'Prelim',    href: 'prelim_ITEra.html' },
@@ -742,7 +744,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.19.3';
+const APP_VERSION = '2026.10.19.4';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -881,6 +883,9 @@ function buildLists() {
   const examList = document.getElementById('examList');
   examList.innerHTML = '';
   EXAMS.forEach((e, i) => examList.append(buildExamRow(e, i)));
+  const sp = buildRow(SPECIAL, null, makeTile('#30B0C7', 'S'));
+  sp.id = 'specialRow'; sp.hidden = true;
+  examList.append(sp);
   document.getElementById('examHelp').hidden = !EXAMS.some(e => e.offline);
 
   const readList = document.getElementById('readList');
@@ -1214,9 +1219,50 @@ async function refreshExam(e) {
   setRow(e, { note: 'Not yet taken' });
 }
 
+/* ===== Special Prefinal: shown only to class codes the instructor assigns (admin.html) ===== */
+const SPECIAL_CACHE = 'itict_special_status';
+let specialAt = 0;
+function specialLocal(id) {
+  for (const st of [localStorage, sessionStorage]) {
+    try { const x = JSON.parse(st.getItem('itict_special_' + id) || 'null'); if (x) return x; } catch (e) {}
+  }
+  return null;
+}
+function paintSpecial(id, r) {
+  const row = document.getElementById('specialRow');
+  if (!row) return;
+  const loc = specialLocal(id);
+  if (!loc && !(r && r.ok && r.assigned)) { row.hidden = true; return; }
+  row.hidden = false;
+  const f = ms => new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(ms);
+  if (loc && loc.submitted) { setRow(SPECIAL, { score: '✓', note: loc.uploaded ? 'Submitted' : 'Submitted · tap to finish uploading', done: true }); return; }
+  if (r && r.state === 'done') { setRow(SPECIAL, { score: '✓', note: 'Submitted', done: true }); return; }
+  if (loc && loc.items) { setRow(SPECIAL, { score: `Set ${loc.set}`, note: 'In progress — tap to resume' }); return; }
+  if (!r) return;
+  if (r.state === 'started') { setRow(SPECIAL, { score: `Set ${r.set}`, note: 'In progress — tap to resume' }); return; }
+  if (r.state === 'closed') { setRow(SPECIAL, { score: '', end: '🔒', note: 'Closed', locked: true }); return; }
+  if (r.state === 'notyet') { setRow(SPECIAL, { score: '', note: `Opens ${f(r.opens)} · ${r.minutes} min · answer online` }); return; }
+  setRow(SPECIAL, { score: '', note: `Open until ${f(r.closes)} · ${r.minutes} min · answer online` });
+}
+function refreshSpecial() {
+  const a = cloudAcct();
+  if (!a || cloudIsLegacy(a) || !CLOUD_URL) { const row = document.getElementById('specialRow'); if (row) row.hidden = true; return; }
+  let cached = null;
+  try { const c = JSON.parse(localStorage.getItem(SPECIAL_CACHE) || 'null'); if (c && c.id === a.id) cached = c.r; } catch (e) {}
+  paintSpecial(a.id, cached);
+  if (Date.now() - specialAt < 60000) return;
+  specialAt = Date.now();
+  cloudCall({ action: 'specialStatus', id: a.id, pin: a.pin }).then(r => {
+    if (!r || !r.ok) return;
+    try { localStorage.setItem(SPECIAL_CACHE, JSON.stringify({ id: a.id, r })); } catch (e) {}
+    paintSpecial(a.id, r);
+  });
+}
+
 function refreshAll() {
   refreshActivities();
   EXAMS.forEach(refreshExam);
+  refreshSpecial();
   refreshExamGate();
   refreshOffline();
 }

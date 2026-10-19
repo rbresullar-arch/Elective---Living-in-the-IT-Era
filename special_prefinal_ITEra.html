@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Special Prefinal — Living in the IT Era</title>
+<style>
+:root{--ink:#000;--paper:#fff;--soft:#555;--line:#000;--fill:#F2F2F2;--maxw:640px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+:focus-visible{outline:3px solid #000;outline-offset:2px}
+.home{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:12px;z-index:40;display:inline-flex;align-items:center;gap:6px;
+  background:#fff;border:2px solid #000;border-radius:999px;padding:6px 14px 6px 10px;font-size:14px;font-weight:700;color:#000;text-decoration:none}
+.home svg{width:16px;height:16px}
+.pad{max-width:var(--maxw);margin:0 auto;padding:calc(env(safe-area-inset-top) + 64px) 20px calc(env(safe-area-inset-bottom) + 32px)}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);font-weight:700;margin:0 0 6px}
+h1{font-size:28px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--soft);margin:0;font-size:14px}
+.rule{border:0;border-top:2px solid var(--line);margin:20px 0}
+.status{border:2px solid #000;border-radius:14px;padding:16px;margin:0 0 18px}
+.status.open{background:#000;color:#fff}
+.status .lab{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);font-weight:700}
+.status.open .lab,.status.open .src{color:#ccc}
+.status .when{font-size:19px;font-weight:700;margin-top:4px}
+.status .cd{font-variant-numeric:tabular-nums;font-size:15px;margin-top:6px}
+.who{font-size:14px;margin:0 0 14px}
+.btn{display:block;width:100%;background:#000;color:#fff;border:2px solid #000;border-radius:12px;padding:15px 18px;font-size:17px;min-height:52px;text-align:center;font-weight:700;text-decoration:none}
+.btn.alt{background:#fff;color:#000}
+.btn[disabled]{opacity:.28;cursor:default}
+.err{font-weight:700;margin:10px 0 0;min-height:1.3em;font-size:14px}
+.rules{margin:0;padding-left:20px;font-size:15px}
+.rules li{margin:4px 0}
+.bar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:2px solid #000;padding:calc(env(safe-area-inset-top) + 10px) 18px 10px 18px}
+.bar-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:12px;padding-left:92px}
+.bar .t{flex:1;font-size:13px;line-height:1.25;font-weight:700}
+.bar .t small{display:block;font-weight:400;color:var(--soft);font-size:12px}
+.clock{flex:none;min-width:84px;height:44px;border-radius:22px;background:#000;color:#fff;display:grid;place-items:center;font-size:16px;font-weight:700;padding:0 12px;font-variant-numeric:tabular-nums}
+.clock.low{background:#fff;color:#000;border:2px solid #000}
+.list{max-width:var(--maxw);margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom) + 40px)}
+.item{border:2px solid #000;border-radius:14px;padding:16px;margin:0 0 14px}
+.item.ans{border-style:solid;background:#FAFAFA}
+.item .stem{margin:0 0 10px;font-size:18px;line-height:1.45}
+.item .num{font-weight:700;margin-right:4px}
+.ch{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:10px 10px;font-size:16px;line-height:1.4;border-radius:10px;min-height:48px}
+.ch .ltr{flex:0 0 28px;height:28px;border:2px solid #000;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.ch.on{background:#000;color:#fff}
+.ch.on .ltr{border-color:#fff}
+.finish{margin:26px 0 0}
+.finish p{text-align:center;color:var(--soft);font-size:14px;margin:0 0 12px}
+.done{text-align:center}
+.done .tick{width:72px;height:72px;border-radius:50%;background:#000;color:#fff;display:grid;place-items:center;margin:0 auto 14px}
+.done .tick svg{width:36px;height:36px}
+.facts{border:2px solid #000;border-radius:14px;margin:18px 0;text-align:left}
+.facts div{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;font-size:15px}
+.facts div+div{border-top:1px solid #ccc}
+.facts span{color:var(--soft)}
+.facts b{font-variant-numeric:tabular-nums}
+.sync{font-size:14px;margin:0 0 16px}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.sheet{background:#fff;border:2px solid #000;border-radius:18px;max-width:440px;width:100%;padding:22px 20px calc(env(safe-area-inset-bottom) + 18px)}
+.sheet h2{margin:0 0 8px;font-size:22px}
+.sheet p{margin:0 0 16px;font-size:15px}
+.sheet .row{display:flex;gap:10px}.sheet .row .btn{flex:1}
+.sec{-webkit-user-select:none;user-select:none}
+@media print{body{display:none}}
+</style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
+</head>
+<body class="sec">
+<a class="home" href="index.html" aria-label="Home" id="homeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>Home</a>
+
+<!-- Lobby -->
+<main class="pad" id="lobby">
+  <p class="eyebrow">GEEL 1 · Living in the IT Era</p>
+  <h1>Special Prefinal Examination</h1>
+  <p class="sub">Multiple choice · answer on this page · one attempt</p>
+  <hr class="rule">
+  <div class="status" id="status">
+    <div class="lab" id="stLab">Checking</div>
+    <div class="when" id="stWhen">One moment…</div>
+    <div class="cd" id="stCd"></div>
+  </div>
+  <p class="who" id="who"></p>
+  <button class="btn" id="startBtn" type="button" hidden>Start examination</button>
+  <a class="btn" id="hubBtn" href="index.html" hidden>Go to the hub</a>
+  <p class="err" id="err" role="alert"></p>
+  <hr class="rule">
+  <p class="eyebrow">General instructions</p>
+  <ol class="rules">
+    <li>Tap a choice to answer. Tap another choice to change it.</li>
+    <li>The timer starts when you tap Start and keeps running even if you leave this page.</li>
+    <li>When time is up, your answers are submitted automatically.</li>
+    <li>Your answers are saved on this phone and uploaded to your instructor. Your score is not shown.</li>
+    <li>Switching apps or tabs is recorded.</li>
+    <li>Tap <b>Submit</b> at the bottom when done. You cannot change your answers after that.</li>
+  </ol>
+</main>
+
+<!-- Questionnaire -->
+<div id="exam" hidden>
+  <div class="bar"><div class="bar-in">
+    <div class="t">Special Prefinal<small id="barS"></small></div>
+    <div class="clock" id="clock">--:--</div>
+  </div></div>
+  <div class="list" id="list"></div>
+</div>
+
+<!-- Submitted -->
+<main class="pad done" id="done" hidden>
+  <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h1>Answers submitted</h1>
+  <p class="sub" id="doneSub">Your instructor will release the results.</p>
+  <div class="facts">
+    <div><span>Class code</span><b id="fCode"></b></div>
+    <div><span>Set</span><b id="fSet"></b></div>
+    <div><span>Answered</span><b id="fAns"></b></div>
+    <div><span>Submitted</span><b id="fEnd"></b></div>
+  </div>
+  <p class="sync" id="sync"></p>
+  <a class="btn" href="index.html">Back to the hub</a>
+</main>
+
+<div class="sheet-bg" id="confirm" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cfH">
+    <h2 id="cfH"></h2>
+    <p id="cfP"></p>
+    <div class="row"><button class="btn alt" type="button" id="cfNo">Back</button><button class="btn" type="button" id="cfYes"></button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  /* Special Prefinal: only class codes assigned in the master console (admin.html) can start it.
+     Questions come from the Apps Script; the answer key never reaches the phone, and the score is not shown.
+     The attempt is kept in localStorage + sessionStorage (no IndexedDB: it can hang on iPhone). */
+  var CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var TZ = 'Asia/Manila';
+  var LETTERS = ['A', 'B', 'C', 'D'];
+  var RETRY = [5000, 15000, 45000, 90000];
+  var $ = function (id) { return document.getElementById(id); };
+
+  function acct() { try { var a = JSON.parse(localStorage.getItem('itict_cloud') || 'null'); return a && a.id && a.pin ? a : null; } catch (e) { return null; } }
+  var ACCT = acct();
+  var KEY = ACCT ? 'itict_special_' + ACCT.id : '';
+
+  function load() {
+    var best = null;
+    [function () { return localStorage.getItem(KEY); }, function () { return sessionStorage.getItem(KEY); }].forEach(function (get) {
+      try { var x = JSON.parse(get() || 'null'); if (x && (!best || (x.updated || 0) > (best.updated || 0))) best = x; } catch (e) {}
+    });
+    return best;
+  }
+  function save() {
+    if (!S) return;
+    S.updated = Date.now();
+    var v = JSON.stringify(S);
+    try { localStorage.setItem(KEY, v); } catch (e) {}
+    try { sessionStorage.setItem(KEY, v); } catch (e) {}
+  }
+
+  function call(body, ms) {
+    body.id = ACCT.id; body.pin = ACCT.pin;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, ms || 25000);
+    return fetch(CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, error: 'offline' }; })
+      .then(function (j) { clearTimeout(t); return j; });
+  }
+  var ERR = {
+    offline: 'No connection. Connect to the internet and try again.',
+    pin: 'Your log-in on this phone is out of date. Log in again on the hub.',
+    locked: 'Your account is locked for now. Tell your instructor.',
+    nouser: 'Your class code was not found. Log in again on the hub.',
+    nobank: 'The examination is not ready yet. Tell your instructor.',
+    notyet: 'The examination has not opened yet.',
+    closed: 'The examination window has closed.',
+    done: 'You already submitted this examination.',
+    busy: 'The server is busy. Try again in a moment.'
+  };
+  function errText(r) { return ERR[r && r.error] || 'Something went wrong. Try again.'; }
+
+  /* server clock offset: server now − device now */
+  var offset = 0;
+  function now() { return Date.now() + offset; }
+  function setOffset(serverNow) { if (serverNow) offset = serverNow - Date.now(); if (S) { S.offset = offset; save(); } }
+
+  function fmt(ms, o) { try { return new Intl.DateTimeFormat('en-PH', Object.assign({ timeZone: TZ }, o)).format(ms); } catch (e) { return new Date(ms).toLocaleString(); } }
+  function fmtWhen(ms) { return fmt(ms, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  function fmtLeft(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return (h ? h + ':' + p(m) : m) + ':' + p(x);
+  }
+
+  var S = null;          // { id, set, ends, items, answers, flags, submitted, submittedAt, uploaded, offset }
+  var dirty = false, tick = null, saver = null, busy = false;
+
+  /* ===== Lobby ===== */
+  function lobby(lab, when, cd, open) {
+    $('status').classList.toggle('open', !!open);
+    $('stLab').textContent = lab; $('stWhen').textContent = when; $('stCd').textContent = cd || '';
+  }
+  var info = null, lobbyTick = null;
+  function showStatus(r) {
+    info = r;
+    $('startBtn').hidden = true; $('hubBtn').hidden = true;
+    if (!r.ok) { lobby('Not available', errText(r), ''); $('hubBtn').hidden = r.error !== 'pin' && r.error !== 'nouser'; return; }
+    setOffset(r.now);
+    if (!r.assigned) { lobby('Not assigned', 'This examination is not assigned to your class code.', 'Your instructor assigns it.'); return; }
+    var win = fmtWhen(r.opens) + ' → ' + fmtWhen(r.closes) + ' · ' + r.minutes + ' min';
+    if (r.state === 'done') { lobby('Submitted', 'You already submitted this examination.', ''); return; }
+    if (r.state === 'started') { lobby('In progress', 'Set ' + r.set + ' · ends ' + fmt(r.ends, { hour: 'numeric', minute: '2-digit' }), 'Tap Resume to continue.', true); $('startBtn').textContent = 'Resume examination'; $('startBtn').hidden = false; return; }
+    if (r.state === 'closed') { lobby('Closed', 'The window for this examination has closed.', win); return; }
+    if (r.state === 'notyet') {
+      lobby('Opens', fmtWhen(r.opens), 'Opens in ' + fmtLeft(r.opens - now()) + ' · ' + r.minutes + ' min timer');
+      clearInterval(lobbyTick);
+      lobbyTick = setInterval(function () {
+        if (now() >= info.opens) { clearInterval(lobbyTick); refresh(); return; }
+        $('stCd').textContent = 'Opens in ' + fmtLeft(info.opens - now()) + ' · ' + info.minutes + ' min timer';
+      }, 1000);
+      return;
+    }
+    var left = Math.min(r.minutes * 60000, r.closes - now());
+    lobby('Open', 'Timer: ' + fmtLeft(left), 'Start by ' + fmtWhen(r.closes) + '. The timer cannot run past that time.', true);
+    $('startBtn').textContent = 'Start examination'; $('startBtn').hidden = false;
+  }
+  function refresh() {
+    lobby('Checking', 'One moment…', '');
+    return call({ action: 'specialStatus' }, 15000).then(showStatus);
+  }
+
+  function ask(title, text, yes, fn) {
+    $('cfH').textContent = title; $('cfP').textContent = text; $('cfYes').textContent = yes;
+    $('confirm').hidden = false;
+    $('cfYes').onclick = function () { $('confirm').hidden = true; fn(); };
+  }
+  $('cfNo').addEventListener('click', function () { $('confirm').hidden = true; });
+
+  $('startBtn').addEventListener('click', function () {
+    if (busy) return;
+    if (info && info.state === 'open') {
+      var left = Math.min(info.minutes * 60000, info.closes - now());
+      ask('Start now?', 'Your timer starts now and runs for ' + fmtLeft(left) + ', even if you leave this page.', 'Start', start);
+    } else start();
+  });
+  function start() {
+    busy = true; $('startBtn').disabled = true; $('err').textContent = 'Opening…';
+    call({ action: 'specialStart' }).then(function (r) {
+      busy = false; $('startBtn').disabled = false;
+      if (!r.ok) { $('err').textContent = errText(r); if (r.error === 'done') { refresh(); } return; }
+      $('err').textContent = '';
+      var prev = load();
+      S = { id: ACCT.id, set: r.set, ends: r.ends, items: r.items, flags: (prev && prev.flags) || 0, submitted: false, uploaded: false,
+        answers: (prev && prev.set === r.set && prev.answers && prev.answers.length === r.items.length) ? prev.answers : (r.progress || r.items.map(function () { return -1; })) };
+      setOffset(r.now); save();
+      openExam();
+    });
+  }
+
+  /* ===== Exam ===== */
+  function answered() { return S.answers.filter(function (a) { return a >= 0; }).length; }
+  function paintBar() {
+    var left = S.ends - now();
+    $('clock').textContent = fmtLeft(left);
+    $('clock').classList.toggle('low', left < 5 * 60000);
+    $('barS').textContent = 'Set ' + S.set + ' · ' + answered() + '/' + S.items.length + ' answered';
+    if (left <= 0) submit(true);
+  }
+  function render() {
+    var list = $('list'); list.innerHTML = '';
+    S.items.forEach(function (it, i) {
+      var box = document.createElement('div'); box.className = 'item' + (S.answers[i] >= 0 ? ' ans' : '');
+      var p = document.createElement('p'); p.className = 'stem';
+      var n = document.createElement('span'); n.className = 'num'; n.textContent = (i + 1) + '.';
+      p.appendChild(n); p.appendChild(document.createTextNode(' ' + it.q));
+      box.appendChild(p);
+      it.c.forEach(function (c, j) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'ch' + (S.answers[i] === j ? ' on' : '');
+        b.setAttribute('aria-pressed', S.answers[i] === j ? 'true' : 'false');
+        var l = document.createElement('span'); l.className = 'ltr'; l.textContent = LETTERS[j];
+        var t = document.createElement('span'); t.textContent = c;
+        b.appendChild(l); b.appendChild(t);
+        b.addEventListener('click', function () { pick(i, j, box); });
+        box.appendChild(b);
+      });
+      list.appendChild(box);
+    });
+    var f = document.createElement('div'); f.className = 'finish';
+    f.innerHTML = '<p id="finP"></p><button class="btn" type="button" id="finBtn">Submit</button>';
+    list.appendChild(f);
+    $('finBtn').addEventListener('click', function () {
+      var miss = S.items.length - answered();
+      ask('Submit your answers?', (miss ? miss + ' item' + (miss === 1 ? ' is' : 's are') + ' still unanswered. ' : 'All items are answered. ') + 'You cannot change your answers after this.', 'Submit', function () { submit(false); });
+    });
+    paintFin();
+  }
+  function paintFin() { var p = $('finP'); if (p) p.textContent = answered() + ' of ' + S.items.length + ' answered'; }
+  function pick(i, j, box) {
+    if (!S || S.submitted) return;
+    S.answers[i] = j; dirty = true; save();
+    var bs = box.querySelectorAll('.ch');
+    for (var k = 0; k < bs.length; k++) { bs[k].classList.toggle('on', k === j); bs[k].setAttribute('aria-pressed', k === j ? 'true' : 'false'); }
+    box.classList.add('ans');
+    paintBar(); paintFin();
+  }
+  function autosave() {
+    if (!S || S.submitted || !dirty) return;
+    dirty = false;
+    call({ action: 'specialSave', answers: S.answers, flags: S.flags }, 20000).then(function (r) {
+      if (!r.ok) { dirty = true; return; }
+      if (r.done) { submit(true); return; }
+      if (r.ends && r.ends !== S.ends) { S.ends = r.ends; save(); }
+      setOffset(r.now);
+    });
+  }
+  function openExam() {
+    $('lobby').hidden = true; $('done').hidden = true; $('exam').hidden = false;
+    render(); window.scrollTo(0, 0);
+    paintBar();
+    clearInterval(tick); tick = setInterval(paintBar, 1000);
+    clearInterval(saver); saver = setInterval(autosave, 45000);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!S || S.submitted || $('exam').hidden) return;
+    if (document.hidden) { S.flags = (S.flags || 0) + 1; dirty = true; save(); }
+    else paintBar();
+  });
+  window.addEventListener('pagehide', function () { if (S && !S.submitted) save(); });
+
+  /* ===== Submit ===== */
+  function submit(auto) {
+    if (!S || S.submitted) return;
+    clearInterval(tick); clearInterval(saver);
+    S.submitted = true; S.auto = !!auto; S.submittedAt = Math.min(now(), S.ends); save();
+    showDone();
+    upload(0);
+  }
+  function upload(attempt) {
+    if (!S || S.uploaded) return;
+    $('sync').textContent = 'Uploading your answers…';
+    call({ action: 'specialSubmit', answers: S.answers, flags: S.flags }).then(function (r) {
+      if (r.ok) { S.uploaded = true; save(); paintSync(); return; }
+      paintSync(r);
+      if (RETRY[attempt] != null) setTimeout(function () { upload(attempt + 1); }, RETRY[attempt]);
+    });
+  }
+  function paintSync(r) {
+    $('sync').textContent = S.uploaded ? 'Uploaded to your instructor ✓'
+      : 'Saved on this phone. ' + (r && r.error === 'offline' ? 'It uploads when you are online — open this page again later.' : errText(r) + ' Retrying…');
+  }
+  function showDone() {
+    $('lobby').hidden = true; $('exam').hidden = true; $('done').hidden = false;
+    $('doneSub').textContent = S.auto ? 'Time was up, so your answers were submitted automatically.' : 'Your instructor will release the results.';
+    $('fCode').textContent = S.id; $('fSet').textContent = S.set;
+    $('fAns').textContent = answered() + ' of ' + S.items.length;
+    $('fEnd').textContent = fmt(S.submittedAt || now(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    paintSync();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('online', function () { if (S && S.submitted && !S.uploaded) upload(0); });
+
+  document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  document.addEventListener('copy', function (e) { e.preventDefault(); });
+
+  /* ===== Boot ===== */
+  if (!ACCT) { lobby('Log in first', 'Log in on the hub with your class code and PIN.', ''); $('hubBtn').hidden = false; return; }
+  $('who').innerHTML = 'Class code <b></b>'; $('who').querySelector('b').textContent = ACCT.id;
+  S = load();
+  if (S && S.offset) offset = S.offset;
+  if (S && S.submitted) { showDone(); if (!S.uploaded) upload(0); return; }
+  if (S && S.items) {
+    /* resume at once (works offline); the server then confirms the time and whether it was already submitted */
+    openExam();
+    call({ action: 'specialStatus' }, 15000).then(function (r) {
+      if (!r.ok || !r.assigned) return;
+      setOffset(r.now);
+      /* time ran out while away: send this phone's answers (the server keeps them if they are not fewer) */
+      if (r.state === 'done') { submit(true); return; }
+      if (r.ends && r.ends !== S.ends) { S.ends = r.ends; save(); }
+      paintBar();
+    });
+    return;
+  }
+  S = null;
+  refresh();
+})();
+</script>
+</body>
+</html>

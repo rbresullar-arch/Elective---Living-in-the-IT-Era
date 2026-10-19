@@ -42,6 +42,15 @@
  *   { action: 'adminExamGate', pin }            → { ok, gate, now }  (read)
  *   { action: 'adminExamGate', pin, gate }      → saves which examinations are open; returns { ok, gate, now }
  *        gate = { <exam id>: { open: true|false, from: ISO or '', until: ISO or '' } }
+ *   { action: 'adminSpecial', pin }             → { ok, rows, bank, now }  Special Prefinal list (read)
+ *   { action: 'adminSpecial', pin, assign: { codes, opens, closes, minutes } } → assigns codes (ISO times)
+ *   { action: 'adminSpecial', pin, remove: [codes] } → removes assignments (the student may be assigned again)
+ *   { action: 'adminSpecialBank', pin, bank }   → stores the question bank + key (never sent to phones)
+ * Special Prefinal (students, same id + pin as save):
+ *   { action: 'specialStatus', id, pin }        → { ok, assigned, state, opens, closes, minutes, ends, now }
+ *   { action: 'specialStart', id, pin }         → { ok, set, ends, items: [{ q, c }], progress }
+ *   { action: 'specialSave', id, pin, answers } → progress autosave
+ *   { action: 'specialSubmit', id, pin, answers, flags } → { ok, done } (the score is never returned)
  * GET ?action=schedules → { ok, schedules: [{ code, label }] }
  * GET ?action=examGate  → { ok, gate, now }. Read by exam_gate.js on the site.
  *   Stored in the Script Property EXAM_GATE. No property (or an exam missing from it) = CLOSED.
@@ -133,12 +142,28 @@ function doPost(e) {
         log_(as, 'ADMIN', 'examGate', EXAMS.map(function (x) { return x.label + ':' + (g[x.id].open ? 'open' : 'closed'); }).join(' '));
         return json_({ ok: true, gate: g, now: Date.now() });
       }
+      if (action === 'adminSpecial' || action === 'adminSpecialBank') {
+        var sl = LockService.getScriptLock();
+        try { sl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(action === 'adminSpecial' ? adminSpecial_(as, req) : adminSpecialBank_(as, req)); } finally { sl.releaseLock(); }
+      }
       if (action === 'adminReset') {
         var al = LockService.getScriptLock();
         try { al.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
         try { return json_(adminReset_(as, req)); } finally { al.releaseLock(); }
       }
       return json_({ ok: false, error: 'bad' });
+    } catch (err) {
+      return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
+    }
+  }
+
+  /* Special Prefinal: each student writes only its own row, so no queue */
+  if (action.indexOf('special') === 0) {
+    try {
+      var sp = SpreadsheetApp.openById(SHEET_ID);
+      ensureSheetsOnce_(sp);
+      return json_(special_(sp, req, pin, action));
     } catch (err) {
       return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
     }
@@ -691,6 +716,258 @@ function setGate_(inc) {
   });
   PropertiesService.getScriptProperties().setProperty('EXAM_GATE', JSON.stringify(cur));
   return cur;
+}
+
+/* ================= Special Prefinal =================
+   Online multiple-choice Prefinal for students the instructor assigns (master console → Special Prefinal).
+   Tab "Special": one row per assigned class code. Opens/Closes = window to start; Minutes = timer.
+   The timer ends at Started + Minutes, never after Closes. Scores are written here only; phones never see them.
+   Tab "Special bank" (hidden): questions + answer key, uploaded from the master console. It is not in the site's code. */
+var SP_TAB = 'Special', SP_BANK = 'Special bank';
+var SP_HEAD = ['Code', 'Opens', 'Closes', 'Minutes', 'Set', 'Started', 'Ends', 'Submitted', 'Score', 'Total', 'Answered',
+  'Flags', 'Status', 'Answers (item 1 → last)', 'Progress (JSON)'];
+var SP_C = { code: 0, opens: 1, closes: 2, min: 3, set: 4, started: 5, ends: 6, sub: 7, score: 8, total: 9, answered: 10,
+  flags: 11, status: 12, ans: 13, prog: 14 };
+var SP_GRACE = 3 * 60 * 1000;          // upload allowance after the timer ends (slow or offline phones)
+var LETTERS = ['A', 'B', 'C', 'D'];
+
+function spSheet_(ss) {
+  var sh = ss.getSheetByName(SP_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(SP_TAB); sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, SP_HEAD.length).setValues([SP_HEAD]).setFontWeight('bold');
+  }
+  return sh;
+}
+/* "2026-10-19 16:00:00" (Philippine time), a Date, or ISO → ms; 0 when empty */
+function phMs_(v) {
+  if (v instanceof Date) return v.getTime();
+  var s = String(v || '').trim();
+  if (!s) return 0;
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(s);
+  if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600000;
+  var t = Date.parse(s);
+  return isNaN(t) ? 0 : t;
+}
+function phText_(ms) { return ms > 0 ? Utilities.formatDate(new Date(ms), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss') : ''; }
+function spRead_(sh, row) { return sh.getRange(row, 1, 1, SP_HEAD.length).getValues()[0]; }
+function spWrite_(sh, row, v) { sh.getRange(row, 1, 1, SP_HEAD.length).setNumberFormat('@').setValues([v.map(function (x) { return x == null ? '' : String(x); })]); }
+function spDone_(v) { return /^(Submitted|Auto-submitted)/.test(String(v[SP_C.status])); }
+
+/* ---- bank ---- */
+function spBank_(ss) {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('SP_BANK');
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var sh = ss.getSheetByName(SP_BANK);
+  if (!sh || sh.getLastColumn() < 1 || sh.getLastRow() < 2) return null;
+  var text = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0].join('');
+  var bank = null;
+  try { bank = JSON.parse(text); } catch (e) { return null; }
+  if (text.length < 95000) cache.put('SP_BANK', text, 600);
+  return bank;
+}
+/* Accepts { items: [{ q, c: [4], k: 0-3 }], sets: { A: [order], … } }. Missing sets → A in order, B–D shuffled. */
+function spBankCheck_(b) {
+  if (!b || !Array.isArray(b.items) || !b.items.length || b.items.length > 200) return null;
+  var items = [];
+  for (var i = 0; i < b.items.length; i++) {
+    var it = b.items[i] || {};
+    var k = Number(it.k);
+    if (typeof it.q !== 'string' || !it.q.trim() || !Array.isArray(it.c) || it.c.length !== 4 || !(k >= 0 && k <= 3)) return null;
+    items.push({ q: String(it.q), c: it.c.map(String), k: k });
+  }
+  var n = items.length, sets = {};
+  var src = b.sets && typeof b.sets === 'object' ? b.sets : null;
+  if (src) {
+    Object.keys(src).forEach(function (L) {
+      var o = src[L];
+      if (!/^[A-Z]$/.test(L) || !Array.isArray(o) || o.length !== n) return;
+      var seen = {};
+      var ok = o.every(function (x) { x = Number(x); if (!(x >= 0 && x < n) || seen[x]) return false; seen[x] = 1; return true; });
+      if (ok) sets[L] = o.map(Number);
+    });
+  }
+  if (!Object.keys(sets).length) {
+    LETTERS.forEach(function (L, j) {
+      var o = []; for (var x = 0; x < n; x++) o.push(x);
+      if (j) for (var y = n - 1; y > 0; y--) { var r = Math.floor(Math.random() * (y + 1)); var t = o[y]; o[y] = o[r]; o[r] = t; }
+      sets[L] = o;
+    });
+  }
+  return { title: String(b.title || 'Special Prefinal Examination'), items: items, sets: sets };
+}
+function adminSpecialBank_(ss, req) {
+  var bank = spBankCheck_(req.bank);
+  if (!bank) return { ok: false, error: 'bank' };
+  var sh = ss.getSheetByName(SP_BANK) || ss.insertSheet(SP_BANK);
+  sh.clear();
+  var text = JSON.stringify(bank), parts = [];
+  for (var i = 0; i < text.length; i += CHUNK) parts.push(text.slice(i, i + CHUNK));
+  sh.getRange(1, 1, 1, 2).setValues([['Uploaded', phText_(Date.now())]]);
+  sh.getRange(2, 1, 1, parts.length).setNumberFormat('@').setValues([parts]);
+  try { sh.hideSheet(); } catch (e) {}
+  CacheService.getScriptCache().remove('SP_BANK');
+  log_(ss, 'ADMIN', 'specialBank', bank.items.length + ' items · sets ' + Object.keys(bank.sets).join(''));
+  return { ok: true, bank: { n: bank.items.length, sets: Object.keys(bank.sets), at: phText_(Date.now()) } };
+}
+
+/* ---- scoring ---- */
+function spAnswers_(raw, n) {
+  if (!Array.isArray(raw) || raw.length !== n) return null;
+  var out = [];
+  for (var i = 0; i < n; i++) { var a = raw[i] == null ? -1 : Number(raw[i]); if (!(a >= -1 && a <= 3) || a !== Math.floor(a)) return null; out.push(a); }
+  return out;
+}
+/* answers are in the student's set order; returns score and the answers in item order (letters, '-' = blank) */
+function spScore_(bank, set, answers) {
+  var order = bank.sets[set], n = bank.items.length, byItem = [], score = 0, answered = 0;
+  for (var x = 0; x < n; x++) byItem.push('-');
+  for (var i = 0; i < n; i++) {
+    var item = order[i], a = answers[i];
+    if (a >= 0) { answered++; byItem[item] = LETTERS[a]; if (a === bank.items[item].k) score++; }
+  }
+  return { score: score, total: n, answered: answered, byItem: byItem.join('') };
+}
+function spFinish_(sh, row, v, bank, answers, status, at, flags) {
+  var r = spScore_(bank, v[SP_C.set], answers);
+  v[SP_C.sub] = phText_(at); v[SP_C.score] = r.score; v[SP_C.total] = r.total; v[SP_C.answered] = r.answered;
+  if (flags != null) v[SP_C.flags] = flags;
+  v[SP_C.status] = status; v[SP_C.ans] = r.byItem; v[SP_C.prog] = JSON.stringify(answers);
+  spWrite_(sh, row, v);
+}
+/* A started exam whose time (plus the upload allowance) is over is scored from its last autosave. */
+function spOverdue_(sh, row, v, bank, now) {
+  if (!bank || spDone_(v) || !v[SP_C.set]) return v;
+  var ends = phMs_(v[SP_C.ends]);
+  if (!ends || now <= ends + SP_GRACE) return v;
+  var prog = null; try { prog = JSON.parse(String(v[SP_C.prog] || 'null')); } catch (e) {}
+  prog = spAnswers_(prog, bank.items.length) || bank.items.map(function () { return -1; });
+  spFinish_(sh, row, v, bank, prog, 'Auto-submitted (time over)', ends, null);
+  return v;
+}
+function spState_(v, now) {
+  if (spDone_(v)) return 'done';
+  if (v[SP_C.set]) return now < phMs_(v[SP_C.ends]) + SP_GRACE ? 'started' : 'done';
+  var o = phMs_(v[SP_C.opens]), c = phMs_(v[SP_C.closes]);
+  if (o && now < o) return 'notyet';
+  if (c && now >= c) return 'closed';
+  return 'open';
+}
+
+/* ---- student actions ---- */
+function special_(ss, req, pin, action) {
+  var id = String(req.id || '').trim();
+  if (!CODE_RE.test(id)) return { ok: false, error: 'bad' };
+  var auth = checkPin_(ss, id, hashFor_(id, pin));
+  if (auth === 'nouser') return { ok: false, error: 'nouser' };
+  if (auth.locked) return { ok: false, error: 'locked', until: auth.until };
+  if (auth.bad) return { ok: false, error: 'pin', left: auth.left };
+
+  var sh = spSheet_(ss), row = findRow_(sh, id), now = Date.now();
+  if (!row) return { ok: true, assigned: false, now: now };
+  var bank = spBank_(ss);
+  var v = spOverdue_(sh, row, spRead_(sh, row), bank, now);
+  var state = spState_(v, now);
+  var info = { ok: true, assigned: true, state: state, now: now, opens: phMs_(v[SP_C.opens]), closes: phMs_(v[SP_C.closes]),
+    minutes: Number(v[SP_C.min]) || 0, ends: phMs_(v[SP_C.ends]), set: String(v[SP_C.set] || '') };
+  if (action === 'specialStatus') return info;
+  if (!bank) return { ok: false, error: 'nobank' };
+  var n = bank.items.length;
+
+  if (action === 'specialStart') {
+    if (state === 'done') return { ok: false, error: 'done' };
+    if (state === 'notyet') return { ok: false, error: 'notyet', opens: info.opens };
+    if (state === 'closed') return { ok: false, error: 'closed' };
+    if (state === 'open') {
+      var letters = Object.keys(bank.sets).sort();
+      v[SP_C.set] = letters[Math.floor(Math.random() * letters.length)];
+      var mins = Number(v[SP_C.min]) || 60, close = phMs_(v[SP_C.closes]);
+      var ends = now + mins * 60000;
+      if (close && close < ends) ends = close;
+      v[SP_C.started] = phText_(now); v[SP_C.ends] = phText_(ends); v[SP_C.status] = 'In progress';
+      spWrite_(sh, row, v);
+      log_(ss, id, 'specialStart', 'set ' + v[SP_C.set]);
+    }
+    var set = String(v[SP_C.set]);
+    var prog = null; try { prog = JSON.parse(String(v[SP_C.prog] || 'null')); } catch (e) {}
+    return { ok: true, set: set, ends: phMs_(v[SP_C.ends]), now: now, title: bank.title,
+      items: bank.sets[set].map(function (x) { return { q: bank.items[x].q, c: bank.items[x].c }; }),
+      progress: spAnswers_(prog, n) };
+  }
+
+  var answers = spAnswers_(req.answers, n);
+  if (!answers) return { ok: false, error: 'bad' };
+  if (!v[SP_C.set]) return { ok: false, error: 'notstarted' };
+  var flags = Math.max(0, Math.min(9999, Math.floor(Number(req.flags) || 0)));
+
+  if (action === 'specialSave') {
+    if (spDone_(v)) return { ok: true, done: true };
+    v[SP_C.prog] = JSON.stringify(answers);
+    v[SP_C.answered] = answers.filter(function (a) { return a >= 0; }).length;
+    v[SP_C.flags] = flags;
+    spWrite_(sh, row, v);
+    return { ok: true, ends: phMs_(v[SP_C.ends]), now: now };
+  }
+  if (action === 'specialSubmit') {
+    var st = String(v[SP_C.status]);
+    if (/^Submitted/.test(st)) return { ok: true, done: true };
+    var late = now > phMs_(v[SP_C.ends]) + SP_GRACE;
+    if (/^Auto-submitted/.test(st)) {
+      /* the phone's own answers arrive after the time-over scoring: keep them if they hold at least as many answers */
+      var had = Number(v[SP_C.answered]) || 0;
+      if (answers.filter(function (a) { return a >= 0; }).length < had) return { ok: true, done: true };
+      late = true;
+    }
+    spFinish_(sh, row, v, bank, answers, late ? 'Submitted (uploaded late)' : 'Submitted', now, flags);
+    log_(ss, id, 'specialSubmit', late ? 'late' : 'ok');
+    return { ok: true, done: true };
+  }
+  return { ok: false, error: 'bad' };
+}
+
+/* ---- master console ---- */
+function adminSpecial_(ss, req) {
+  var sh = spSheet_(ss), now = Date.now(), msg = {};
+  if (req.assign) {
+    var a = req.assign;
+    var opens = Date.parse(String(a.opens || '')), closes = Date.parse(String(a.closes || ''));
+    var mins = Math.floor(Number(a.minutes) || 0);
+    if (isNaN(opens) || isNaN(closes) || closes <= opens || !(mins >= 1 && mins <= 600)) return { ok: false, error: 'window' };
+    var codes = (Array.isArray(a.codes) ? a.codes : []).map(codeNorm_).filter(function (c, i, arr) { return c && arr.indexOf(c) === i; });
+    if (!codes.length) return { ok: false, error: 'code' };
+    var auth = ss.getSheetByName(SHEET.auth);
+    var added = [], updated = [], missing = [];
+    codes.forEach(function (c) {
+      if (!findRow_(auth, c)) { missing.push(c); return; }
+      var row = findRow_(sh, c), v;
+      if (row) { v = spRead_(sh, row); updated.push(c); }
+      else { row = sh.getLastRow() + 1; v = SP_HEAD.map(function () { return ''; }); v[SP_C.code] = c; added.push(c); }
+      v[SP_C.opens] = phText_(opens); v[SP_C.closes] = phText_(closes); v[SP_C.min] = mins;
+      spWrite_(sh, row, v);
+    });
+    log_(ss, 'ADMIN', 'specialAssign', added.length + ' added · ' + updated.length + ' updated · ' + missing.length + ' not found');
+    msg = { added: added, updated: updated, missing: missing };
+  }
+  if (Array.isArray(req.remove)) {
+    var gone = [];
+    req.remove.map(codeNorm_).forEach(function (c) { if (c && findRow_(sh, c)) { deleteRowsFor_(sh, c); gone.push(c); } });
+    log_(ss, 'ADMIN', 'specialRemove', gone.join(','));
+    msg.removed = gone;
+  }
+  var bank = spBank_(ss), rows = [], last = sh.getLastRow();
+  for (var r = 2; r <= last; r++) {
+    var v = spRead_(sh, r);
+    if (!CODE_RE.test(String(v[SP_C.code]).trim())) continue;
+    v = spOverdue_(sh, r, v, bank, now);
+    rows.push({ code: String(v[SP_C.code]), opens: phMs_(v[SP_C.opens]), closes: phMs_(v[SP_C.closes]), minutes: Number(v[SP_C.min]) || 0,
+      set: String(v[SP_C.set] || ''), started: phMs_(v[SP_C.started]), ends: phMs_(v[SP_C.ends]), submitted: phMs_(v[SP_C.sub]),
+      score: v[SP_C.score] === '' ? null : Number(v[SP_C.score]), total: Number(v[SP_C.total]) || 0, answered: Number(v[SP_C.answered]) || 0,
+      flags: Number(v[SP_C.flags]) || 0, status: String(v[SP_C.status] || ''), state: spState_(v, now) });
+  }
+  var bsh = ss.getSheetByName(SP_BANK);
+  return { ok: true, rows: rows, now: now, msg: msg,
+    bank: bank ? { n: bank.items.length, sets: Object.keys(bank.sets), at: bsh ? String(bsh.getRange(1, 2).getDisplayValue()) : '' } : null };
 }
 
 function json_(o) {
