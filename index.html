@@ -742,7 +742,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.19.2';
+const APP_VERSION = '2026.10.19.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -922,13 +922,13 @@ function myExamSched() {
 function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
-/* Shown while no examination is open (the gate is set in admin.html → Examinations). */
+/* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
+const EXAM_NOTICE = { head: 'PREFINAL EXAMINATION THIS AFTERNOON',
+  body: 'Prefinal Examination will be opened this afternoon on our respective schedules for: 22012, 25007, 06143, 06119. Please bring bluebooks. Thank you and God bless!' };
 function renderExamNotice() {
-  const g = window.ExamGate ? ExamGate.read() : null;
-  const anyOpen = !!window.ExamGate && EXAMS.some(e => ExamGate.isOpen(g, e.id));
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
-    box.hidden = anyOpen;
-    box.innerHTML = anyOpen ? '' : '<p class="en-h">EXAMINATION IS ON HOLD</p><p>Wait for further announcement.</p>';
+    box.hidden = !EXAM_NOTICE.body;
+    box.innerHTML = EXAM_NOTICE.body ? `<p class="en-h">${EXAM_NOTICE.head}</p><p>${EXAM_NOTICE.body}</p>` : '';
   });
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderExamNotice); else renderExamNotice();
