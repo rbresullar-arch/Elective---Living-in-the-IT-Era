@@ -3,16 +3,18 @@
 GEEL 1 — Attendance QR scanner (offline, instructor only)
 
 Reads the students' "Attendance QR" (index.html → ATTENDANCE QR) and logs one
-attendance row per student per class schedule per day in attendance.db (SQLite)
+attendance row per class code per day in attendance.db (SQLite)
 next to this script. Nothing here goes online.
 
 QR payload: Base64( JSON XOR "2026" )   (same encoding as the Score QR)
-  { v:1, t:"att", n:<full name>, c:<schedule e.g. 12030>, k:<class code or "">, at:<unix seconds> }
+  { v:1, t:"att", n:<full name>, k:<class code e.g. 12030-07>, c:<schedule = first 5 digits>, at:<unix seconds> }
 
 Checks
   - the QR must be made TODAY (this computer's date); an old screenshot is refused
   - a QR made more than 10 minutes in the future is refused (phone clock wrong)
-  - the same name + schedule is logged once per day (later scans say "already present")
+  - the QR must carry a class code (12030-07); the schedule is its first 5 digits
+  - each class code is logged once per day (later scans say "already present");
+    the same code with a different name is flagged (two beeps) and not logged
   - --sched 12030 accepts only that schedule (scan one class at a time)
 
 Install:  pip install opencv-python
@@ -23,7 +25,7 @@ Usage:
   python attendance_scanner.py image a.png b.jpg [--sched 12030]
   python attendance_scanner.py list [--date 2026-10-19] [--sched 12030]
   python attendance_scanner.py export out.csv [--date 2026-10-19] [--sched 12030]
-  python attendance_scanner.py remove 2026-10-19 12030 "Juan Dela Cruz"
+  python attendance_scanner.py remove 2026-10-19 12030-07
 """
 import argparse
 import base64
@@ -40,6 +42,7 @@ from datetime import date, datetime
 
 XOR_KEY = b"2026"
 SCHED_RE = re.compile(r"^\d{5}$")
+CODE_RE = re.compile(r"^\d{5}-\d{2,3}$")
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "attendance.db")
 FUTURE_SLACK_S = 10 * 60
 
@@ -70,16 +73,15 @@ def name_key(n):
 def db():
     con = sqlite3.connect(DB_PATH)
     con.execute("""CREATE TABLE IF NOT EXISTS attendance(
-        day TEXT NOT NULL, sched TEXT NOT NULL, name_key TEXT NOT NULL,
-        name TEXT NOT NULL, code TEXT, made_at TEXT, scanned_at TEXT,
-        PRIMARY KEY(day, sched, name_key))""")
+        day TEXT NOT NULL, code TEXT NOT NULL, sched TEXT NOT NULL,
+        name TEXT NOT NULL, made_at TEXT, scanned_at TEXT,
+        PRIMARY KEY(day, code))""")
     return con
 
 
 def record(con, payload, only_sched=None):
     """Store one scan. Returns (status, message). status: new | same | other | bad."""
     name = norm_name(payload.get("n"))
-    sched = str(payload.get("c") or "").strip()
     code = str(payload.get("k") or "").strip()
     try:
         made = datetime.fromtimestamp(int(payload.get("at")))
@@ -87,26 +89,27 @@ def record(con, payload, only_sched=None):
         return "bad", "QR has no time"
     if len(name) < 3:
         return "bad", "QR has no name"
-    if not SCHED_RE.match(sched):
-        return "bad", f"{name}: no class schedule in QR"
+    if not CODE_RE.match(code):
+        return "bad", f"REFUSED {name}: no class code in QR. Make a new one with your code."
+    sched = code[:5]
     now = datetime.now()
     if made.date() != now.date():
         return "bad", f"REFUSED {name}: QR made {made:%b %d %H:%M}, not today. Make a new one."
     if (made - now).total_seconds() > FUTURE_SLACK_S:
         return "bad", f"REFUSED {name}: QR time {made:%H:%M} is ahead of this computer (phone clock wrong)"
     if only_sched and sched != only_sched:
-        return "other", f"{name} is schedule {sched}, not {only_sched} (not logged)"
+        return "other", f"{name} ({code}) is schedule {sched}, not {only_sched} (not logged)"
     day = now.strftime("%Y-%m-%d")
-    row = con.execute("SELECT scanned_at FROM attendance WHERE day=? AND sched=? AND name_key=?",
-                      (day, sched, name_key(name))).fetchone()
+    row = con.execute("SELECT name, scanned_at FROM attendance WHERE day=? AND code=?", (day, code)).fetchone()
     if row:
-        return "same", f"{name} · {sched} already present ({row[0][11:16]})"
-    con.execute("INSERT INTO attendance(day,sched,name_key,name,code,made_at,scanned_at) VALUES(?,?,?,?,?,?,?)",
-                (day, sched, name_key(name), name, code, made.strftime("%Y-%m-%d %H:%M:%S"),
-                 now.strftime("%Y-%m-%d %H:%M:%S")))
+        if name_key(row[0]) != name_key(name):
+            return "other", f"CHECK {code}: logged today as '{row[0]}', this QR says '{name}' (not logged)"
+        return "same", f"{name} · {code} already present ({row[1][11:16]})"
+    con.execute("INSERT INTO attendance(day,code,sched,name,made_at,scanned_at) VALUES(?,?,?,?,?,?)",
+                (day, code, sched, name, made.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S")))
     con.commit()
     n = con.execute("SELECT COUNT(*) FROM attendance WHERE day=? AND sched=?", (day, sched)).fetchone()[0]
-    return "new", f"PRESENT {name} · {sched}  ({n} today)"
+    return "new", f"PRESENT {name} · {code}  ({n} in {sched} today)"
 
 
 # ---------------- sound ----------------
@@ -249,18 +252,18 @@ def cmd_image(args):
 
 
 def rows_for(con, day, sched):
-    q, a = "SELECT day, sched, name, code, scanned_at FROM attendance WHERE 1=1", []
+    q, a = "SELECT day, sched, code, name, scanned_at FROM attendance WHERE 1=1", []
     if day:
         q += " AND day=?"; a.append(day)
     if sched:
         q += " AND sched=?"; a.append(sched)
-    return con.execute(q + " ORDER BY day, sched, name_key", a).fetchall()
+    return con.execute(q + " ORDER BY day, code", a).fetchall()
 
 
 def cmd_list(args):
     rows = rows_for(db(), args.date, args.sched)
     for r in rows:
-        print(f"{r[0]}  {r[1]}  {r[4][11:16]}  {r[2]}" + (f"  ({r[3]})" if r[3] else ""))
+        print(f"{r[0]}  {r[2]}  {r[4][11:16]}  {r[3]}")
     print(f"{len(rows)} present")
 
 
@@ -268,15 +271,14 @@ def cmd_export(args):
     rows = rows_for(db(), args.date, args.sched)
     with open(args.out, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["Date", "Schedule", "Name", "Class code", "Scanned at"])
+        w.writerow(["Date", "Schedule", "Class code", "Name", "Scanned at"])
         w.writerows(rows)
     print(f"{len(rows)} rows -> {args.out}")
 
 
 def cmd_remove(args):
     con = db()
-    n = con.execute("DELETE FROM attendance WHERE day=? AND sched=? AND name_key=?",
-                    (args.day, args.sched, name_key(args.name))).rowcount
+    n = con.execute("DELETE FROM attendance WHERE day=? AND code=?", (args.day, args.code)).rowcount
     con.commit()
     print("Removed." if n else "No such row.")
 
@@ -288,7 +290,7 @@ def main():
     s = sub.add_parser("image"); s.add_argument("files", nargs="+"); s.add_argument("--sched"); s.set_defaults(fn=cmd_image)
     s = sub.add_parser("list"); s.add_argument("--date", default=date.today().isoformat()); s.add_argument("--sched"); s.set_defaults(fn=cmd_list)
     s = sub.add_parser("export"); s.add_argument("out"); s.add_argument("--date"); s.add_argument("--sched"); s.set_defaults(fn=cmd_export)
-    s = sub.add_parser("remove"); s.add_argument("day"); s.add_argument("sched"); s.add_argument("name"); s.set_defaults(fn=cmd_remove)
+    s = sub.add_parser("remove"); s.add_argument("day"); s.add_argument("code"); s.set_defaults(fn=cmd_remove)
     args = ap.parse_args()
     if not args.cmd:
         args = ap.parse_args(["scan"])

@@ -542,9 +542,10 @@
     <strong id="attTitle">Attendance QR</strong>
     <label for="attName">Your full name</label>
     <input type="text" id="attName" autocomplete="name" autocapitalize="words">
-    <div class="qr-note">Saved on this device only, so you do not retype it next time. It is not sent online.</div>
-    <label for="attSched">Class schedule</label>
-    <select id="attSched"></select>
+    <div class="qr-note">Name and code are saved on this device only, so you do not retype them. They are not sent online.</div>
+    <label for="attCode">Class code</label>
+    <input type="text" id="attCode" inputmode="numeric" autocomplete="off" placeholder="e.g. 12030-07">
+    <div class="qr-note" id="attSchedNote">Your class code is on Home, or from your instructor.</div>
     <button type="button" class="box small-btn" id="attMake">Make Attendance QR</button>
     <div class="qr-msg" id="attMsg"></div>
     <div class="qr-box" id="attBox"></div>
@@ -741,7 +742,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.19.1';
+const APP_VERSION = '2026.10.19.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1676,40 +1677,52 @@ document.getElementById('qrDl').addEventListener('click', () => {
 
 /* ===== Attendance QR =====
    Same encoding as the Score QR: JSON -> XOR (key "2026") -> Base64.
-   Payload: { v:1, t:"att", n:name, c:schedule, k:class code or "", at:unix seconds }
-   The name is kept on this device (ATT_NAME_KEY) so students type it once.
+   Payload: { v:1, t:"att", n:name, k:class code, c:schedule (first 5 digits of the code), at:unix seconds }
+   Name and code are kept on this device (ATT_NAME_KEY, ATT_CODE_KEY) so students type them once.
+   The code comes from the logged-in account when there is one (then it cannot be edited).
    Read by tools/attendance_scanner.py, which logs one row per student per day. */
-const ATT_NAME_KEY = 'itict_att_name';
+const ATT_NAME_KEY = 'itict_att_name', ATT_CODE_KEY = 'itict_att_code';
 let attLastPNG = null;
 function attEl(id) { return document.getElementById(id); }
 function attClear() {
   ['attBox', 'attCap', 'attSum', 'attMsg'].forEach(id => { attEl(id).textContent = ''; });
   attEl('attDl').disabled = true; attLastPNG = null;
 }
-async function attOpen() {
-  const sel = attEl('attSched');
-  if (!sel.options.length) sel.innerHTML = attEl('qrSched').innerHTML;   // one schedule list, kept in the Score QR panel
-  const code = cloudCode();
-  sel.value = code ? code.slice(0, 5) : await qrDefaultSched();
-  sel.disabled = !!code;
+function attSchedLabel(code) {
+  const o = attEl('qrSched').querySelector(`option[value="${code.slice(0, 5)}"]`);
+  return o ? o.textContent : '';
+}
+function attPaintSched() {
+  const code = codeNorm(attEl('attCode').value);
+  attEl('attSchedNote').textContent = code ? (attSchedLabel(code) || 'Schedule ' + code.slice(0, 5) + ' is not a class schedule.') : 'Your class code is on Home, or from your instructor.';
+}
+function attOpen() {
+  const acct = cloudCode();
+  let saved = '';
+  try { saved = localStorage.getItem(ATT_CODE_KEY) || ''; } catch (e) {}
+  const code = acct || (isCode(saved) ? saved : '') || knownGet()[0] || '';
+  attEl('attCode').value = code;
+  attEl('attCode').readOnly = !!acct;
   try { attEl('attName').value = localStorage.getItem(ATT_NAME_KEY) || ''; } catch (e) { attEl('attName').value = ''; }
-  attClear();
+  attPaintSched(); attClear();
   attEl('attPanel').classList.add('show');
-  setTimeout(() => attEl('attName').focus(), 50);
+  setTimeout(() => attEl(attEl('attName').value ? 'attCode' : 'attName').focus(), 50);
 }
 function attRender() {
   attClear();
   const msg = attEl('attMsg');
   const name = String(attEl('attName').value || '').replace(/\s+/g, ' ').trim();
-  const sched = attEl('attSched').value;
-  const code = cloudCode();
+  const code = codeNorm(attEl('attCode').value);
   if (!cloudNameOk(name) || !/\p{L}{2}/u.test(name)) { msg.textContent = 'Type your full name (at least 3 letters).'; attEl('attName').focus(); return; }
-  if (!sched) { msg.textContent = 'Choose your class schedule.'; attEl('attSched').focus(); return; }
-  try { localStorage.setItem(ATT_NAME_KEY, name); localStorage.setItem(QR_SCHED_KEY, sched); } catch (e) {}
+  if (!code) { msg.textContent = 'Type your class code, e.g. 12030-07.'; attEl('attCode').focus(); return; }
+  const sched = code.slice(0, 5);
+  if (!QR_SCHEDULES.includes(sched)) { msg.textContent = 'Schedule ' + sched + ' is not one of the class schedules. Check your code.'; attEl('attCode').focus(); return; }
+  attEl('attCode').value = code;
+  try { localStorage.setItem(ATT_NAME_KEY, name); localStorage.setItem(ATT_CODE_KEY, code); } catch (e) {}
   const at = Math.floor(Date.now() / 1000);
-  const cv = qrMakeCanvas(qrEncrypt(JSON.stringify({ v: 1, t: 'att', n: name, c: sched, k: code, at })));
+  const cv = qrMakeCanvas(qrEncrypt(JSON.stringify({ v: 1, t: 'att', n: name, k: code, c: sched, at })));
   attEl('attBox').append(cv);
-  attEl('attCap').textContent = name + ' · ' + sched;
+  attEl('attCap').textContent = name + ' · ' + code;
   attEl('attSum').textContent = 'Made ' + new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at * 1000) + '. Show this to your instructor. A QR from another day is not accepted.';
   try { attLastPNG = cv.toDataURL('image/png'); attEl('attDl').disabled = false; } catch (e) {}
 }
@@ -1720,7 +1733,8 @@ attEl('attClose').addEventListener('click', attCloseAll);
 attEl('attPanel').addEventListener('click', e => { if (e.target.id === 'attPanel') attCloseAll(); });
 attEl('attName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attRender(); } });
 attEl('attName').addEventListener('input', attClear);
-attEl('attSched').addEventListener('change', attClear);
+attEl('attCode').addEventListener('input', () => { attClear(); attPaintSched(); });
+attEl('attCode').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attRender(); } });
 attEl('attDl').addEventListener('click', () => {
   if (!attLastPNG) return;
   const d = new Date().toISOString().slice(0, 10);
