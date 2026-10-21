@@ -744,7 +744,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.21.1';
+const APP_VERSION = '2026.10.22.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -929,7 +929,7 @@ function fmtUnlock(iso) {
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
 const EXAM_NOTICE = { head: 'SCHEDULE 12030 · THURSDAY',
-  body: 'For 12030, our examination will be on Friday - we will not meet today. Thank you and God bless!' };
+  body: 'For 12030 (Th 8:00 - 9:00 AM), our examination will be on Friday - we will not meet today. Thank you and God bless!' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
