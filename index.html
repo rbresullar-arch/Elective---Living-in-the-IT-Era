@@ -744,7 +744,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.19.4';
+const APP_VERSION = '2026.10.21.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -928,8 +928,8 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: 'PREFINAL EXAMINATION THIS AFTERNOON',
-  body: 'Prefinal Examination will be opened this afternoon on our respective schedules for: 22012, 25007, 06143, 06119. Please bring bluebooks. Thank you and God bless!' };
+const EXAM_NOTICE = { head: 'SCHEDULE 12030 · THURSDAY',
+  body: 'For 12030, our examination will be on Friday - we will not meet today. Thank you and God bless!' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
