@@ -138,6 +138,22 @@
   /* ===== Grouped lists ===== */
   .group { background:var(--surface); border-radius:16px; overflow:hidden; box-shadow:var(--sh-1); }
   .group:empty { display:none; }
+  /* Activities grouped by term */
+  .terms { display:grid; gap:22px; }
+  .term { display:grid; gap:8px; }
+  .term-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 16px; }
+  .term-h b { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.02em; }
+  .term-h b span { font-weight:400; text-transform:none; letter-spacing:0; }
+  .term-h small { font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .term-h small.all { color:var(--green); font-weight:600; }
+  /* Back to top: floats on the right once the page is scrolled */
+  .to-top { position:fixed; right:max(12px, env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:40;
+    width:44px; height:44px; border-radius:50%; border:none; cursor:pointer; display:grid; place-items:center; padding:0;
+    background:var(--surface); color:var(--blue); box-shadow:0 4px 16px rgba(0,0,0,.18), 0 0 0 .5px var(--sep);
+    opacity:0; transform:translateY(12px); pointer-events:none; transition:opacity .2s, transform .2s; }
+  .to-top.show { opacity:1; transform:none; pointer-events:auto; }
+  .to-top svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+  @media (prefers-reduced-motion: reduce) { .to-top { transition:none; } }
   .row { position:relative; display:flex; align-items:stretch; }
   .group > .cell { position:relative; }
   .row + .row::before, .group > .cell + .cell::before { content:""; position:absolute; top:0; left:64px; right:0; border-top:.5px solid var(--sep); z-index:1; }
@@ -375,7 +391,7 @@
     <div class="navbar"><button type="button" class="back" data-go="home"><svg viewBox="0 0 11 18" aria-hidden="true"><path d="M9.5 1.5 2 9l7.5 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Home</button></div>
     <h1 class="large">Activities</h1>
     <div class="sumbar" id="actSummary"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><div><b id="actSumNum">0 of 0</b><small>activities completed</small></div></div>
-    <div class="group" id="activityList"></div>
+    <div class="terms" id="activityList"></div>
     <button type="button" class="qr-open" id="qrOpenBtn">QR</button>
     <button type="button" class="crest" id="crestBtn" aria-label="Living in the IT Era">
       <svg viewBox="0 0 44 44" aria-hidden="true"><defs><linearGradient id="crg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E5CE6"/><stop offset=".55" stop-color="#BF5AF2"/><stop offset="1" stop-color="#FF375F"/></linearGradient></defs><rect x="2" y="2" width="40" height="40" rx="11" fill="url(#crg)"/><text x="22" y="28" text-anchor="middle" font-family="-apple-system,Inter,Helvetica,Arial,sans-serif" font-weight="700" font-size="15" fill="#fff">IT</text></svg>
@@ -536,6 +552,8 @@
   </div>
 </div>
 
+<button type="button" class="to-top" id="toTop" aria-label="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="M5.5 11.5 12 5l6.5 6.5"/></svg></button>
+
 <!-- Attendance QR panel -->
 <div id="attPanel" role="dialog" aria-modal="true" aria-labelledby="attTitle">
   <div class="box qr-card">
@@ -686,6 +704,8 @@ const a7Pct = r => r.percentage != null ? r.percentage : Math.round((r.bestStars
    The game saves { percentage, bestPoints, bestAccuracy, runs, lastPercentage }. */
 
 /* Tile colour and display name per activity (presentation only). */
+/* Activities grouped by term on the Activities screen (inclusive activity numbers). */
+const ACT_TERMS = [{ label: 'Prelims', from: 1, to: 4 }, { label: 'Prefinals', from: 5, to: 9 }, { label: 'Finals', from: 10, to: 11 }];
 const TILE_COLORS = ['#0A84FF', '#FF9F0A', '#5E5CE6', '#30B0C7', '#34C759', '#FF375F', '#BF5AF2', '#FF453A', '#FFCC00'];
 const ACT_NAMES = ['IT & ICT in Our Lives', 'Abacus Addition', 'The Pascaline', 'Binary Decoder', 'Packet Route', 'Packet Auto-Route', 'Qrispy Queen', 'Phish or Legit', 'Netiquette Desk', 'Seller Journey', 'Cyber Defense Ops'];
 const EXAM_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6'];
@@ -744,7 +764,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.10.22.2';
+const APP_VERSION = '2026.10.22.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -872,12 +892,33 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('offline', refreshOffline);
 }
 
+/* Back to top: shown after scrolling past about one screen. */
+(function () {
+  const b = document.getElementById('toTop');
+  if (!b) return;
+  let on = false;
+  const paint = () => { const s = window.scrollY > Math.max(400, window.innerHeight * 0.8); if (s !== on) { on = s; b.classList.toggle('show', s); } };
+  window.addEventListener('scroll', paint, { passive: true });
+  b.addEventListener('click', () => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+  paint();
+})();
 function buildLists() {
   const actList = document.getElementById('activityList');
   actList.innerHTML = '';
-  ACTIVITIES.forEach(a => {
-    actList.append(buildRow(a, null, makeTile(TILE_COLORS[(a.n - 1) % TILE_COLORS.length], String(a.n)), ACT_NAMES[a.n - 1] || a.label));
-    if (a.redo) actList.append(buildRedoRow(a));
+  ACT_TERMS.forEach(t => {
+    const sec = el('section', 'term'); sec.dataset.term = t.label;
+    const h = el('div', 'term-h'), title = el('b', null, t.label + ' ');
+    title.append(el('span', null, `· Activities ${t.from}–${t.to}`));
+    const count = el('small', 'term-count'); h.append(title, count);
+    const list = el('div', 'group');
+    ACTIVITIES.filter(a => a.n >= t.from && a.n <= t.to).forEach(a => {
+      list.append(buildRow(a, null, makeTile(TILE_COLORS[(a.n - 1) % TILE_COLORS.length], String(a.n)), ACT_NAMES[a.n - 1] || a.label));
+      if (a.redo) list.append(buildRedoRow(a));
+    });
+    sec.append(h, list); actList.append(sec);
   });
 
   const examList = document.getElementById('examList');
@@ -944,9 +985,22 @@ document.querySelectorAll('[data-go]').forEach(x => {
 });
 
 /* ===== Row rendering ===== */
+/* "2/4 done" beside each term heading */
+function paintTermCounts() {
+  ACT_TERMS.forEach(t => {
+    const sec = document.querySelector(`#activityList .term[data-term="${t.label}"]`);
+    if (!sec) return;
+    const acts = ACTIVITIES.filter(a => a.n >= t.from && a.n <= t.to);
+    const done = acts.filter(a => { const b = document.getElementById(a.id + 'Btn'); return b && b.classList.contains('done'); }).length;
+    const c = sec.querySelector('.term-count');
+    c.textContent = done === acts.length ? 'All done' : `${done}/${acts.length} done`;
+    c.classList.toggle('all', done === acts.length && acts.length > 0);
+  });
+}
 function setRow(item, { score = '—', end = '›', note = '', locked = false, done = false }) {
   const btn = document.getElementById(item.id + 'Btn');
   if (!btn) return;
+  queueMicrotask(paintTermCounts);
   document.getElementById(item.id + 'Score').textContent = score;
   document.getElementById(item.id + 'End').textContent = end;
   document.getElementById(item.id + 'Note').textContent = note;
