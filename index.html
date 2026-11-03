@@ -113,11 +113,10 @@
   .small-btn { border:none; border-radius:999px; padding:11px 22px; font-size:17px; font-weight:500; cursor:pointer; background:var(--fill); color:var(--blue); }
   .small-btn:active, .cell:active, .pill:not(.locked):active { opacity:.7; }
   .small-btn:disabled { opacity:.4; cursor:default; }
-  .small-btn.primary, .name-box .small-btn, #qrMake, #attMake, .pv-foot .small-btn, .qr-open, .att-open {
+  .small-btn.primary, .name-box .small-btn, #qrMake, #attMake, .pv-foot .small-btn, .att-open {
     background:var(--blue); color:var(--blue-ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px var(--blue-soft); }
   .name-box .small-btn { display:block; width:100%; margin-top:18px; padding:13px; }
   .att-open { display:block; width:100%; margin:14px 0 0; padding:15px 16px; font-size:17px; font-weight:700; letter-spacing:.04em; border:none; border-radius:16px; cursor:pointer; }
-  .qr-open { display:block; width:auto; min-width:140px; margin:0 auto; padding:13px 32px; font-size:17px; border:none; border-radius:999px; cursor:pointer; }
   .logout-row { display:flex; justify-content:center; }
   .logout-row .small-btn { background:var(--surface); color:var(--red); box-shadow:var(--sh-1); }
   .link-btn { background:none; border:none; color:var(--blue); font-size:14px; cursor:pointer; padding:2px; }
@@ -393,7 +392,6 @@
     <h1 class="large">Activities</h1>
     <div class="sumbar" id="actSummary"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><div><b id="actSumNum">0 of 0</b><small>activities completed</small></div></div>
     <div class="terms" id="activityList"></div>
-    <button type="button" class="qr-open" id="qrOpenBtn">QR</button>
     <button type="button" class="crest" id="crestBtn" aria-label="Living in the IT Era">
       <svg viewBox="0 0 44 44" aria-hidden="true"><defs><linearGradient id="crg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E5CE6"/><stop offset=".55" stop-color="#BF5AF2"/><stop offset="1" stop-color="#FF375F"/></linearGradient></defs><rect x="2" y="2" width="40" height="40" rx="11" fill="url(#crg)"/><text x="22" y="28" text-anchor="middle" font-family="-apple-system,Inter,Helvetica,Arial,sans-serif" font-weight="700" font-size="15" fill="#fff">IT</text></svg>
     </button>
@@ -774,7 +772,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.03.1';
+const APP_VERSION = '2026.11.03.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1762,23 +1760,11 @@ function qrClear() {
   ['qrBox', 'qrCap', 'qrSum', 'qrMsg'].forEach(id => { document.getElementById(id).textContent = ''; });
   document.getElementById('qrDl').disabled = true; qrLastPNG = null;
 }
-async function qrOpen() {
-  const sel = document.getElementById('qrSched');
-  const code = cloudCode();
-  sel.value = code ? code.slice(0, 5) : await qrDefaultSched();
-  sel.disabled = !!code;
-  document.getElementById('qrCodeLine').textContent = code ? 'Class code: ' + code : 'No class code yet';
-  document.getElementById('qrName').value = '';
-  qrClear();
-  document.getElementById('qrPanel').classList.add('show');
-  setTimeout(() => document.getElementById('qrName').focus(), 50);
-}
 function qrCloseAll() {
   document.getElementById('qrPanel').classList.remove('show');
   document.getElementById('qrName').value = '';   // the name is not kept
   qrClear();
 }
-document.getElementById('qrOpenBtn').addEventListener('click', qrOpen);
 document.getElementById('qrClose').addEventListener('click', qrCloseAll);
 document.getElementById('qrPanel').addEventListener('click', e => { if (e.target.id === 'qrPanel') qrCloseAll(); });
 document.getElementById('qrMake').addEventListener('click', qrRender);
