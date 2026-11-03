@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Prefinals Summative Activity</title>
+<style>
+/* Prefinals Summative Activity (hub slot 12).
+   5 parts · each: read (one paragraph at a time, shown only with the Reveal button) → 4 questions, one at a time, Next only.
+   20 questions × 25 points = 500. One way only: a reading cannot be reopened once its questions start.
+   Screen test first: hold-to-reveal if the screen keeps a held touch, else tap-to-reveal for 7 s. */
+:root{
+  color-scheme:light dark;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+  --serif:"New York","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --ground:#F5F5F7; --paper:#FFFFFF; --ink:#1D1D1F; --muted:#6E6E73; --hair:rgba(60,60,67,.16); --fill:rgba(118,118,128,.12);
+  --blue:#0071E3; --blue-soft:rgba(0,113,227,.10); --green:#248A3D; --green-soft:rgba(52,199,89,.14); --red:#D70015;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){ :root{
+  --ground:#000; --paper:#1C1C1E; --ink:#F5F5F7; --muted:#98989D; --hair:rgba(84,84,88,.6); --fill:rgba(118,118,128,.24);
+  --blue:#0A84FF; --blue-soft:rgba(10,132,255,.2); --green:#30D158; --green-soft:rgba(48,209,88,.18); --red:#FF453A;
+  --sh-1:0 0 0 .5px rgba(255,255,255,.06),0 4px 14px rgba(0,0,0,.5); } }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ground)}
+body{margin:0;color:var(--ink);font-family:var(--sf);font-size:17px;line-height:1.5;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:focus-within{outline:3px solid var(--blue-soft);outline-offset:2px}
+main{max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));display:grid;gap:16px}
+#view{display:grid;gap:16px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top a{color:var(--blue);text-decoration:none}
+.tag{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.card{background:var(--paper);border-radius:18px;box-shadow:var(--sh-1);padding:18px}
+h1{font-size:28px;line-height:1.15;letter-spacing:-.03em;margin:4px 0 8px}
+h2{font-size:22px;line-height:1.2;letter-spacing:-.02em;margin:2px 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+.rules{display:grid;gap:8px;margin:12px 0 10px;padding:0;list-style:none;font-size:16px}
+.rules li{padding-left:22px;position:relative}
+.rules li::before{content:"";position:absolute;left:6px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.btn{border:none;border-radius:999px;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:15px 20px;width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.ghost{border:none;border-radius:999px;background:var(--fill);font-weight:600;font-size:16px;padding:12px 18px}
+.ghost:disabled{opacity:.35;cursor:default}
+.row{display:flex;gap:10px;align-items:center}
+.row .ghost{flex:1}
+.bar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--blue);border-radius:3px}
+
+/* screen test */
+.arena{position:relative;height:56vh;min-height:300px;border-radius:18px;background:var(--paper);box-shadow:var(--sh-1);overflow:hidden;touch-action:none}
+.dot{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:none;padding:0;background:var(--blue-soft);touch-action:none;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dot svg{width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.dot .core{fill:var(--blue)}
+.dot .ring{fill:none;stroke:var(--blue);stroke-width:6;stroke-linecap:round}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.dots span{width:10px;height:10px;border-radius:50%;background:var(--fill)}
+.dots span.ok{background:var(--green)} .dots span.bad{background:var(--red)}
+
+/* reading */
+.pager{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.text{font-family:var(--serif);font-size:19px;line-height:1.65;letter-spacing:0;min-height:12em;margin-top:8px;transition:filter .12s,opacity .12s}
+.text.hide{filter:blur(9px);opacity:.55}
+.text p{margin:0}
+/* pinned to the bottom of the screen so it stays reachable while scrolling a long paragraph */
+.reveal{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;box-shadow:0 6px 20px rgba(0,0,0,.25);overflow:hidden;border:none;border-radius:16px;background:var(--ink);color:var(--paper);font-weight:700;font-size:18px;padding:18px;width:100%;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.reveal.on{background:var(--blue);color:#fff}
+.reveal i{position:absolute;left:0;bottom:0;height:5px;background:rgba(255,255,255,.75);width:0}
+
+/* questions */
+.q{display:grid;gap:10px;border:none;margin:0}
+.q .stem{margin:0 0 4px;font-weight:600}
+.q .stem b{color:var(--muted);margin-right:4px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--fill);cursor:pointer;border:2px solid transparent;font-size:16px;line-height:1.4}
+.opt input{margin:2px 0 0;width:18px;height:18px;accent-color:var(--blue);flex:none}
+.opt:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.msg{min-height:1.3em;margin:0;text-align:center;font-size:15px;color:var(--red)}
+.big{display:block;font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1.05;text-align:center;margin:8px 0}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:end center;padding:16px;z-index:10}
+.sheet .card{width:100%;max-width:420px;display:grid;gap:10px}
+.gate{max-width:420px;margin:20vh auto;text-align:center}
+</style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
+<script id="itictCloudPush">
+/* Cloud backup: sends a result to the instructor's Google Sheet the moment this
+   page saves it. Works only after the student created a PIN on the hub
+   (localStorage 'itict_cloud'). Never blocks or changes the page; failures are
+   silent and the hub uploads everything on the next visit. */
+(function(){
+  var URL_='https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var ACT={itict_essay_result:'activity1',itict_abacus_result:'activity2',itict_pascaline_result:'activity3',itict_binary_result:'activity4',
+    itict_activity5_result:'activity5',itict_activity6_result:'activity6',itict_activity7_result:'activity7',itict_activity8_result:'activity8',itict_activity9_result:'activity9',
+    itict_activity10_result:'activity10',itict_activity11_result:'activity11',itict_activity12_result:'activity12'};
+  var EXAM={itict_prelim:'examPrelim',itict_midterm:'exam1'};
+  var pending={}, timers={};
+  try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
+  function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
+  var RETRY=[10000,30000,90000];
+  function send(key,data,attempt){
+    if(!data){ data=pending[key]; delete pending[key]; clearTimeout(timers[key]); }
+    var a=acct(); if(!a||!data) return;
+    attempt=attempt||0;
+    var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
+    function again(){ if(RETRY[attempt]!=null) setTimeout(function(){ send(key,data,attempt+1); },RETRY[attempt]); }
+    try{
+      fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j&&!j.ok&&(j.error==='busy'||j.error==='server')) again(); })   /* queue: wait and retry */
+        .catch(again);
+    }catch(e){}
+  }
+  function route(k,v){
+    var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
+    if(!rec||typeof rec!=='object') return null;
+    if(ACT[k]){ var d={}; d[ACT[k]]=rec; return {wait:800,data:d}; }
+    var m=/^(itict_[a-z]+)_(result|session)$/.exec(k);
+    if(m&&EXAM[m[1]]){ var x={prefix:m[1]}; x[m[2]]=rec; var e={}; e[EXAM[m[1]]]=x; return {wait:m[2]==='session'?20000:800,data:{exams:e}}; }
+    return null;
+  }
+  var orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    var out=orig.apply(this,arguments);
+    try{
+      if(this===window.localStorage){
+        var key=String(k), r=route(key,String(v));
+        if(r){ pending[key]=r.data; clearTimeout(timers[key]); timers[key]=setTimeout(function(){ send(key); },r.wait); }
+      }
+    }catch(e){}
+    return out;
+  };
+  function flush(){ for(var k in pending) send(k); }
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') flush(); });
+})();
+</script>
+</head>
+<body>
+<div class="gate card" id="gate" hidden></div>
+<main id="app">
+  <div class="top"><a href="index.html">‹ Home</a><span class="tag" id="topTag">Prefinals · Summative</span></div>
+  <div id="view"></div>
+</main>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="card">
+    <p id="confirmText"></p>
+    <button type="button" class="btn" id="confirmYes"></button>
+    <button type="button" class="ghost" id="confirmNo">Not yet</button>
+  </div>
+</div>
+
+<script>
+/* ===================== CONTENT =====================
+   Each part: title, paragraphs (shown one at a time), and 4 questions.
+   In questions, `a` is the index of the correct choice; choices are shuffled on screen. */
+const PTS = 25;
+const PARTS = [
+{ title: 'The internet',
+  paras: [
+  'It is nine in the evening. Juan, a student, taps a link in his group chat: the group\'s report, kept in Google Docs, due tomorrow morning. Less than two seconds later the document fills his screen, and he can see three coloured cursors moving as his groupmates type from their own homes. It feels like nothing happened. In fact his request was chopped into pieces, translated from a name into a number, encrypted, carried through cables, answered by a computer in a distant building, and rebuilt into a page on his phone.',
+  'First, a distinction people often blur. The <b>internet</b> is the physical network: the cables, routers, wireless links and shared rules that let any computer exchange data with any other. The <b>World Wide Web</b> is one service that runs on top of it: the pages and sites you open in a browser. Email, video calls and online games also run on the internet, but they are not the web. The internet is the roads; the web is one kind of traffic. This is also why the course says <b>ICT</b>, Information and Communication Technology: the C, communication, is what the internet adds.',
+  'Juan\'s phone does not send his request as one continuous stream. It breaks the data into small pieces called <b>packets</b>. Each packet is labelled with where it came from, where it is going, and which piece of the whole it is, for example piece 3 of 40. Packets travel independently, may take different routes, and can arrive out of order. This design, <b>packet switching</b>, was developed in the 1960s partly so that a network could survive damage: if one route fails, packets simply go around it. There is no single wire that, if cut, stops everything.',
+  'Two rules make the swarm dependable. <b>IP</b> (Internet Protocol) gives every device an address, such as 142.250.72.14, so each packet knows where to go. <b>TCP</b> (Transmission Control Protocol) numbers the packets, checks that all of them arrived, puts them back in order, and asks again for any that went missing. Together they are <b>TCP/IP</b>, the shared language of every connected device.',
+  'The trip is also surprisingly physical. Juan\'s phone talks to his home router over Wi-Fi; the router connects to his internet provider; the provider connects to a worldwide mesh of cables. Most data that crosses oceans travels as pulses of light through <b>fibre-optic cables on the sea floor</b>. At the far end is a <b>server</b>, a computer that waits for requests and answers them. Juan\'s phone is the <b>client</b>: it asks, and the server answers.'],
+  qs: [
+  { q: 'Which statement about the internet and the World Wide Web is correct?',
+    c: ['The web is one service that runs on the internet; email also runs on the internet but is not the web', 'The internet and the web are two names for the same thing', 'The web is the cables and routers; the internet is the pages', 'Email and video calls are parts of the web'], a: 0 },
+  { q: 'Why was packet switching designed so that packets can take different routes?',
+    c: ['So the network keeps working when part of it is damaged', 'So every packet arrives in the correct order', 'So packets do not need addresses', 'So only one cable is needed between two countries'], a: 0 },
+  { q: 'Juan\'s photo is split into packets. They arrive out of order and one is missing. What fixes this?',
+    c: ['TCP numbers the packets, puts them in order and asks again for the missing one', 'DNS looks up the missing packet by its name', 'HTTPS encrypts the packets so none can get lost', 'The router holds every packet until the missing one comes by the same route'], a: 0 },
+  { q: 'In the article, which is the client and which is the server?',
+    c: ['Juan\'s phone is the client that asks; the computer in the distant building is the server that answers', 'Juan\'s phone is the server because it shows the document', 'The fibre-optic cable is the server', 'The home router is the client and the phone is the server'], a: 0 }] },
+
+{ title: 'The web and the browser',
+  paras: [
+  'Juan never typed a number. The link said <i>docs.google.com</i>, a name a person can remember. Before anything else, his phone had to find out which IP address that name belongs to. It asked the <b>Domain Name System (DNS)</b>, often called the internet\'s phone book. The lookup takes a fraction of a second and happens every time you visit a site.',
+  'A domain name reads from right to left, from general to specific. In <i>docs.google.com</i>, <b>.com</b> is the <b>top-level domain</b> (others include .org, .edu, .gov and country codes like .ph), <i>google</i> is the registered name, and <i>docs</i> points to a particular service inside it. When DNS fails, people often say "the internet is down" even though their Wi-Fi is working. The connection is fine; the phone book is not answering.',
+  'With the address found, Juan\'s browser asked the server for the page using <b>HTTP</b>, the HyperText Transfer Protocol: an agreed set of requests ("please send me this page") and responses ("here it is"). You have seen HTTP\'s error messages before. The familiar <b>404</b> is the server saying it looked and found no page at that address.',
+  'Juan\'s link began with <b>HTTPS</b>. The S means secure: the whole conversation between his browser and the server was <b>encrypted</b>, so anyone watching along the route would see only scrambled data. That is what the padlock in the address bar means. On a page without it, a password or card number travels as readable text.',
+  'But the padlock has a limit many people miss. It does <b>not</b> mean the website is honest. A fake login page made by a scammer can also use HTTPS and show a padlock. The padlock protects the conversation; it says nothing about who is on the other end.'],
+  qs: [
+  { q: 'Your Wi-Fi is connected, but no website opens by its name. What is most likely not working?',
+    c: ['DNS, which turns names into IP addresses', 'The fibre-optic cables', 'CSS, which decides how pages look', 'Your phone\'s copy of the website'], a: 0 },
+  { q: 'In the address docs.google.com, which part is the top-level domain?',
+    c: ['.com', 'docs', 'google', 'docs.google'], a: 0 },
+  { q: 'A page shows "404". What does that mean?',
+    c: ['The server found no page at that address', 'The page is encrypted', 'Your Wi-Fi is off', 'The page has 404 visitors right now'], a: 0 },
+  { q: 'What does the padlock beside a web address tell you?',
+    c: ['The conversation with the server is encrypted, but not that the site is honest', 'The website is official and safe to trust', 'The website has no viruses', 'The page will load faster'], a: 0 }] },
+
+{ title: 'Building the web',
+  paras: [
+  'What came back from the server was not a picture of a page. It was plain text written in three languages, which Juan\'s browser read and turned into what he sees. The usual way to remember them is a human body: a skeleton, skin and clothing, and muscles.',
+  '<b>HTML</b> (HyperText Markup Language) is the skeleton. It labels the content: this is a heading, this is a paragraph, this is an image, this is a link. Labels are written as tags in angle brackets, usually in pairs, such as &lt;p&gt; to start a paragraph and &lt;/p&gt; to end it. HTML is a <b>markup language, not a programming language</b>: it describes content but does not calculate or make decisions.',
+  '<b>CSS</b> (Cascading Style Sheets) is the skin and clothing: colours, fonts, spacing and layout. Keeping structure (HTML) separate from appearance (CSS) is one of the web\'s best design decisions, because a site can get a completely new look by changing only its style sheet, without changing a single word of its content.',
+  '<b>JavaScript</b> is the muscles. Unlike HTML, it is a real programming language: it reacts to what the user does and changes the page live. The moving cursors, the menus that open, and the text that updates while Juan\'s groupmates type are JavaScript at work.',
+  'The most important HTML feature is the <b>hyperlink</b>, the idea Tim Berners-Lee built into the web at CERN starting in 1989; links are what make the web a web. And the page fit Juan\'s narrow phone even though the same document opens on wide laptop screens. That is <b>responsive design</b>: one set of files that detects the screen size and rearranges itself, stacking columns and folding menus. Since smartphones spread after 2007, it is the normal standard.'],
+  qs: [
+  { q: 'A school wants its website to have new colours and fonts without changing any of its words. Which language should it change?',
+    c: ['CSS', 'HTML', 'JavaScript', 'HTTP'], a: 0 },
+  { q: 'Which description of HTML is correct?',
+    c: ['A markup language that labels content such as headings, paragraphs and links', 'A programming language that makes decisions and calculations', 'The protocol that encrypts web pages', 'The system that turns names into IP addresses'], a: 0 },
+  { q: 'The live cursors and menus in Juan\'s document respond to what users do. Which language makes this happen?',
+    c: ['JavaScript', 'HTML', 'CSS', 'DNS'], a: 0 },
+  { q: 'What is responsive design?',
+    c: ['One set of page files that rearranges itself to fit the screen size', 'A separate website made only for phones', 'A page that loads faster when the internet is slow', 'A page that answers questions automatically'], a: 0 }] },
+
+{ title: 'The cloud',
+  paras: [
+  'The report itself was never on Juan\'s phone. It sits on servers in a <b>data centre</b>, a large building full of computers that run day and night, use a great deal of electricity and need constant cooling. "The cloud" sounds weightless, but it is very physical: when you save to the cloud, you save onto a drive in a specific building, possibly in another country. The cloud is someone else\'s computer.',
+  'In the old model, you bought a program, installed it on one computer and kept your files there. If that computer broke, your work was gone; on another computer you could not reach it; and every new version had to be bought and installed again.',
+  'Google Docs is an example of <b>Software as a Service (SaaS)</b>: instead of installing a program, you use one that runs on the provider\'s servers, usually through a browser and often for a subscription. Gmail, Google Drive, OneDrive, Canva and Spotify work the same way. Juan\'s work is reachable from any device, updates happen automatically, and because there is <b>one true copy on the server</b>, the whole group can edit at the same time and watch each other\'s changes appear.',
+  'The bargain has another side. Your files now depend on a company\'s security and on your account staying safe, so the account needs a strong, unique password and two-factor authentication. And the cloud is a backup, not a guarantee: accounts get locked, files get deleted, and a deletion can sync to every device at once. Professionals follow the <b>3-2-1 rule</b>: keep three copies of anything important, on two different kinds of storage, with at least one copy in a different place.'],
+  qs: [
+  { q: 'Where is Juan\'s Google Docs report actually stored?',
+    c: ['On servers in a data centre', 'Only on Juan\'s phone', 'In the air between his phone and the router', 'Inside the group chat'], a: 0 },
+  { q: 'Which is an example of Software as a Service (SaaS)?',
+    c: ['Using Google Docs in a browser while it runs on Google\'s servers', 'Installing a program from a disc onto one computer', 'Saving a file to a USB drive', 'Printing a document at home'], a: 0 },
+  { q: 'Why can Juan\'s whole group edit the report at the same time?',
+    c: ['There is one true copy on the server that everyone works on', 'Each member has a separate copy that is emailed around', 'The phones connect directly to each other with no server', 'Google Docs only allows one editor at a time'], a: 0 },
+  { q: 'Which plan follows the 3-2-1 rule?',
+    c: ['Three copies: Google Docs, a file on his laptop, and a copy on a USB drive kept at home', 'One copy in Google Docs shared with three groupmates', 'Three copies, all in the same Google Drive account', 'Two copies on his phone and one in the same phone\'s gallery'], a: 0 }] },
+
+{ title: 'People and the network',
+  paras: [
+  'Being a good digital citizen starts with <b>netiquette</b>: remembering there is a real person on the other end, and not typing what you would not say to someone\'s face. It also means caring about your <b>digital footprint</b>: posts and photos are hard to take back and can be screenshotted. For a health student, a careless post about a patient, even without a name, can break confidentiality.',
+  'The next morning Juan gets a text: "Your Google account will be suspended in 24 hours. Verify now:" followed by a link. This is <b>phishing</b>, a message dressed up as someone you trust, designed to rush you into clicking and typing your password. It is <b>social engineering</b>: it attacks the person, not the computer. The signs are a false deadline, a link whose real destination does not match the name, and a request a real company would not make by text.',
+  'The defence is one habit: <b>slow down and verify</b>. Juan does not tap the link. He opens his account the usual way, through the app he already trusts, and finds nothing wrong. Even if he had been fooled, <b>two-factor authentication</b> would have asked for a second proof, a code on his phone, so a stolen password alone would not have been enough to get in.',
+  'Juan\'s evening depends on things many people lack. According to the International Telecommunication Union, about 2.6 billion people, roughly one in three, were still offline in 2024. This <b>digital divide</b> has layers: <b>infrastructure</b> (no fast network nearby), <b>affordability</b> (the network exists, but data or a device costs too much), and <b>skills</b>, or digital literacy (a person has a phone and a connection but was never taught to use them safely and well).',
+  'A related gap is <b>accessibility</b>. A page built without care can lock out a person who is blind and uses a screen reader, who cannot use a mouse, or who cannot hear a video. Accessible design means image descriptions, <b>captions</b>, controls that work without a mouse, and enough colour contrast to read. Understanding the network is the easier part; the harder part is using it with judgement and remembering the people it still does not reach.'],
+  qs: [
+  { q: 'A text says "Your account will be suspended in 24 hours" and links to a login page with a padlock. What is the best response?',
+    c: ['Do not tap the link; open the account the usual way through the app you already trust', 'Log in through the link because the padlock proves it is safe', 'Reply with your password so the company can check', 'Forward the link to classmates so they can verify too'], a: 0 },
+  { q: 'What does two-factor authentication add to an account?',
+    c: ['A second proof, such as a code on your phone, so a stolen password alone is not enough', 'A second password you must change every day', 'A faster way to log in without a password', 'A backup copy of all your files'], a: 0 },
+  { q: 'Lito has a smartphone and a working data plan, but was never taught how to use online services or spot scams. Which layer of the digital divide is this?',
+    c: ['Skills (digital literacy)', 'Infrastructure', 'Affordability', 'Accessibility'], a: 0 },
+  { q: 'Which change makes a video lesson more accessible to a student who cannot hear?',
+    c: ['Adding captions', 'Making the video longer', 'Using brighter colours in the thumbnail', 'Requiring a faster internet connection'], a: 0 }] }
+];
+const QTOTAL = PARTS.reduce((s, p) => s + p.qs.length, 0), MAX = QTOTAL * PTS;   // 20 × 25 = 500
+
+/* ===================== SETTINGS ===================== */
+const TEST_DOTS = 10, TEST_HOLD_MS = 1000, TEST_PASS = 8;   // screen test: hold 8 of 10 dots → hold mode
+const TAP_SHOW_MS = 7000;                                   // tap mode: a tap shows the paragraph for 7 s
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ===================== STORAGE =====================
+   Progress (one way): itict_summative_progress — localStorage + sessionStorage + cookie.
+   Result (hub format): itict_activity12_result — localStorage + cookie + IndexedDB + sessionStorage. */
+const PROG_KEY = 'itict_summative_progress';
+const RESULT_KEY = 'itict_activity12_result', RESULT_IDB = 'activity12_result';
+function ckGet(k){ try{ const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }catch(e){ return null; } }
+function ckSet(k,v){ try{ document.cookie=k+'='+encodeURIComponent(v)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){} }
+function parse(s){ try{ return s?JSON.parse(s):null; }catch(e){ return null; } }
+function loadProg(){
+  let a=null,b=null; try{ a=parse(localStorage.getItem(PROG_KEY)); }catch(e){} try{ b=parse(sessionStorage.getItem(PROG_KEY)); }catch(e){}
+  /* the copy furthest along wins, so clearing one layer cannot roll progress back */
+  return [a,b,parse(ckGet(PROG_KEY))].filter(Boolean).sort((x,y)=>(y.seq||0)-(x.seq||0))[0] || null;
+}
+function saveProg(){
+  P.seq = (P.seq || 0) + 1;
+  const s = JSON.stringify(P);
+  try{ localStorage.setItem(PROG_KEY, s); }catch(e){}
+  try{ sessionStorage.setItem(PROG_KEY, s); }catch(e){}
+  const c = JSON.stringify(Object.assign({}, P, { log: [] }));   // cookie: no event log (size limit)
+  if (c.length < 3500) ckSet(PROG_KEY, c);
+}
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeResult(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  ckSet(RESULT_KEY, json);
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null;
+  try{ r = parse(localStorage.getItem(RESULT_KEY)); }catch(e){}
+  r = r || parse(ckGet(RESULT_KEY)) || await idbRead(RESULT_IDB);
+  if (r) await writeResult(r);
+  return r;
+}
+
+/* ===================== STATE =====================
+   P.step: intro → test → tutorial → read → questions → (next part read …) → done */
+let P = null;
+function freshProg(){
+  return { v: 1, seq: 0, step: 'intro', mode: null, test: [], part: 0, para: 0, qi: 0,
+    answers: PARTS.map(p => p.qs.map(() => null)), blocked: [],
+    flags: { leave: 0, copy: 0, capture: 0 }, log: [], startedAt: new Date().toISOString() };
+}
+function logFlag(kind, extra){
+  P.log.push({ k: kind, t: new Date().toISOString(), part: P.part + 1, step: P.step, x: extra || '' });
+  if (P.log.length > 200) P.log.shift();
+}
+
+/* ===================== VIEWS ===================== */
+const view = () => $('view');
+let tapTimer = 0, tapRaf = 0;
+
+function render(){
+  clearTimeout(tapTimer); cancelAnimationFrame(tapRaf);
+  ({ intro: vIntro, test: vTest, tutorial: vTutorial, read: vRead, questions: vQuestions, done: vDone })[P.step]();
+  window.scrollTo(0, 0);
+}
+
+function vIntro(){
+  view().innerHTML = `<section class="card">
+    <span class="tag">Prefinals Summative Activity · 500 points</span>
+    <h1>One Tap, Halfway Around the World</h1>
+    <p class="muted">A factual article about the Prefinals reading, in 5 short parts.</p>
+    <ul class="rules">
+      <li>Each part: read it, then answer <b>4 questions</b>, one at a time. 20 questions × 25 points = <b>500 points</b>.</li>
+      <li>After <b>Next</b>, you cannot go back to a question.</li>
+      <li><b>One way only.</b> When you go to a part's questions, you cannot open that reading again.</li>
+      <li>The text stays blurred. You read it with the <b>Reveal</b> button, one paragraph at a time.</li>
+      <li>You get <b>one attempt</b>. Your score shows at the end.</li>
+      <li>Copying text or capturing the screen ends that part at once. Leaving this page is recorded.</li>
+    </ul>
+    <p class="muted" style="font-size:15px">First, a short screen test (about 20 seconds) checks how your phone handles holding a finger on the screen.</p>
+    <button type="button" class="btn" id="go">Start the screen test</button>
+  </section>`;
+  $('go').onclick = () => { P.step = 'test'; P.test = []; saveProg(); render(); };
+}
+
+/* ---- Screen test: hold each dot until its ring fills ---- */
+function vTest(){
+  view().innerHTML = `<section class="card">
+    <h2>Screen test</h2>
+    <p class="muted" style="margin:0">Press and <b>hold</b> each dot until its ring fills, then let go. ${TEST_DOTS} dots.</p>
+    <div class="dots" id="tdots">${Array.from({ length: TEST_DOTS }, () => '<span></span>').join('')}</div>
+  </section>
+  <div class="arena" id="arena"></div>`;
+  paintTestDots();
+  nextDot();
+}
+function paintTestDots(){ document.querySelectorAll('#tdots span').forEach((s, i) => { s.className = P.test[i] === true ? 'ok' : P.test[i] === false ? 'bad' : ''; }); }
+function nextDot(){
+  const arena = $('arena'); if (!arena) return;
+  if (P.test.length >= TEST_DOTS) return finishTest();
+  arena.innerHTML = '';
+  const d = document.createElement('button'); d.type = 'button'; d.className = 'dot'; d.setAttribute('aria-label', 'Hold this dot');
+  d.innerHTML = '<svg viewBox="0 0 76 76"><circle class="core" cx="38" cy="38" r="12"/><circle class="ring" cx="38" cy="38" r="32" stroke-dasharray="0 202"/></svg>';
+  const r = arena.getBoundingClientRect();
+  d.style.left = (48 + Math.random() * Math.max(0, r.width - 96)) + 'px';
+  d.style.top = (48 + Math.random() * Math.max(0, r.height - 96)) + 'px';
+  arena.append(d);
+  const ring = d.querySelector('.ring');
+  let t0 = 0, raf = 0, done = false;
+  const tick = () => {
+    const f = Math.min(1, (performance.now() - t0) / TEST_HOLD_MS);
+    ring.setAttribute('stroke-dasharray', (f * 202).toFixed(1) + ' 202');
+    if (f >= 1) { result(true); return; }
+    raf = requestAnimationFrame(tick);
+  };
+  const result = ok => {
+    if (done) return; done = true; cancelAnimationFrame(raf);
+    P.test.push(ok); saveProg(); paintTestDots();
+    setTimeout(nextDot, ok ? 250 : 450);
+  };
+  d.addEventListener('contextmenu', e => e.preventDefault());
+  d.addEventListener('pointerdown', e => { e.preventDefault(); try { d.setPointerCapture(e.pointerId); } catch (x) {} t0 = performance.now(); raf = requestAnimationFrame(tick); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => d.addEventListener(ev, () => { if (t0 && !done) result(false); }));
+}
+function finishTest(){
+  P.mode = P.test.filter(Boolean).length >= TEST_PASS ? 'hold' : 'tap';
+  P.step = 'tutorial'; saveProg(); render();
+}
+
+/* ---- Reveal button (tutorial and reading) ---- */
+function wireReveal(btn, text){
+  const fill = btn.querySelector('i');
+  const show = on => { text.classList.toggle('hide', !on); btn.classList.toggle('on', on); };
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+  if (P.mode === 'hold') {
+    btn.querySelector('span').textContent = 'Hold to reveal';
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (x) {} show(true); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, () => show(false)));
+  } else {
+    btn.querySelector('span').textContent = 'Tap to reveal (7 s)';
+    btn.addEventListener('click', () => {
+      clearTimeout(tapTimer); cancelAnimationFrame(tapRaf); show(true);
+      const t0 = performance.now();
+      const tick = () => { const f = 1 - Math.min(1, (performance.now() - t0) / TAP_SHOW_MS); fill.style.width = (f * 100) + '%'; if (f > 0) tapRaf = requestAnimationFrame(tick); };
+      tick();
+      tapTimer = setTimeout(() => { show(false); fill.style.width = '0'; }, TAP_SHOW_MS);
+    });
+  }
+  return show;
+}
+const REVEAL_HTML = '<button type="button" class="reveal" id="reveal"><span></span><i></i></button>';
+
+/* ---- Tutorial: one practice paragraph ---- */
+function vTutorial(){
+  const hold = P.mode === 'hold', okN = P.test.filter(Boolean).length;
+  view().innerHTML = `<section class="card">
+    <span class="tag">How to read · ${okN} of ${TEST_DOTS} holds worked</span>
+    <h2>${hold ? 'Hold to reveal' : 'Tap to reveal'}</h2>
+    <p class="muted" style="margin:0">${hold
+      ? 'Your screen keeps a held touch well. <b>Press and hold the Reveal button</b> to read the paragraph. Let go and it blurs again.'
+      : 'Your screen did not keep a held touch reliably, so you will <b>tap the Reveal button</b>. Each tap shows the paragraph for 7 seconds; tap again to keep reading.'}
+      Do not press on the text itself. If a paragraph is longer than your screen, let go, scroll down, then ${hold ? 'hold' : 'tap'} again. Try it now.</p>
+  </section>
+  <section class="card"><span class="pager">Practice paragraph</span>
+    <div class="text hide" id="text"><p>This is a practice paragraph. In the activity, every paragraph looks blurred like this until you use the Reveal button below. Use Back and Next to move between paragraphs. When you finish a part, tap To questions.</p></div>
+  </section>
+  ${REVEAL_HTML}
+  <button type="button" class="btn" id="go" disabled>Start Part 1</button>`;
+  const show = wireReveal($('reveal'), $('text'));
+  $('reveal').addEventListener(hold ? 'pointerdown' : 'click', () => { $('go').disabled = false; });
+  $('go').onclick = () => { show(false); P.step = 'read'; P.part = 0; P.para = 0; saveProg(); render(); };
+}
+
+/* ---- Reading: one paragraph at a time ---- */
+function vRead(){
+  const part = PARTS[P.part], n = part.paras.length, last = P.para === n - 1;
+  $('topTag').textContent = `Part ${P.part + 1} of ${PARTS.length}`;
+  view().innerHTML = `<section class="card">
+    <span class="tag">Part ${P.part + 1} of ${PARTS.length} · Reading</span>
+    <h2>${esc(part.title)}</h2>
+    <div class="bar" aria-hidden="true"><i style="width:${((P.para + 1) / n * 100).toFixed(0)}%"></i></div>
+  </section>
+  <section class="card"><span class="pager">Paragraph ${P.para + 1} of ${n}</span>
+    <div class="text hide" id="text"><p>${part.paras[P.para]}</p></div>
+  </section>
+  ${REVEAL_HTML}
+  <div class="row"><button type="button" class="ghost" id="prev" ${P.para ? '' : 'disabled'}>‹ Back</button>
+    <button type="button" class="ghost" id="next" ${last ? 'disabled' : ''}>Next ›</button></div>
+  ${last ? '<button type="button" class="btn" id="toQ">To questions</button>' : ''}`;
+  wireReveal($('reveal'), $('text'));
+  $('prev').onclick = () => { if (P.para) { P.para--; saveProg(); render(); } };
+  $('next').onclick = () => { if (!last) { P.para++; saveProg(); render(); } };
+  if (last) $('toQ').onclick = () => ask(`Go to the Part ${P.part + 1} questions? You cannot open this reading again.`, 'To questions', () => { P.step = 'questions'; P.qi = 0; saveProg(); render(); });
+}
+
+/* ---- Questions: one at a time, Next only (no going back) ---- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function vQuestions(){
+  const part = PARTS[P.part], base = PARTS.slice(0, P.part).reduce((s, p) => s + p.qs.length, 0);
+  const i = P.qi || 0, q = part.qs[i], lastQ = i === part.qs.length - 1, lastPart = P.part === PARTS.length - 1;
+  $('topTag').textContent = `Part ${P.part + 1} of ${PARTS.length}`;
+  view().innerHTML = `<section class="card">
+    <span class="tag">Part ${P.part + 1} of ${PARTS.length} · Question ${i + 1} of ${part.qs.length}</span>
+    <h2>${esc(part.title)}</h2>
+    <div class="bar" aria-hidden="true"><i style="width:${((i + 1) / part.qs.length * 100).toFixed(0)}%"></i></div>
+  </section>
+  <form id="quiz"><div class="card q" role="radiogroup" aria-labelledby="qText">
+    <p class="stem" id="qText"><b>${base + i + 1}.</b>${esc(q.q)} <span class="muted" style="font-weight:500;font-size:14px">(${PTS} pts)</span></p>
+    ${shuffle(q.c.map((_, k) => k)).map(k => `<label class="opt"><input type="radio" name="ans" value="${k}"${P.answers[P.part][i] === k ? ' checked' : ''}><span>${esc(q.c[k])}</span></label>`).join('')}
+  </div></form>
+  <p class="muted" style="font-size:14px;text-align:center;margin:0">You cannot go back to a question after Next.</p>
+  <button type="button" class="btn" id="nextQ" ${P.answers[P.part][i] == null ? 'disabled' : ''}>${lastQ ? (lastPart ? 'Finish' : `Submit Part ${P.part + 1}`) : 'Next'}</button>`;
+  $('quiz').addEventListener('change', e => {   // the choice survives a reload until Next
+    P.answers[P.part][i] = Number(e.target.value); saveProg(); $('nextQ').disabled = false;
+  });
+  $('nextQ').onclick = () => {
+    if (P.answers[P.part][i] == null) return;
+    if (!lastQ) { P.qi = i + 1; saveProg(); render(); return; }
+    ask(lastPart ? 'Submit your last answer and finish the activity?' : `Submit Part ${P.part + 1}? Part ${P.part + 2} opens next.`,
+      lastPart ? 'Finish' : 'Submit', advance);
+  };
+}
+
+/* Next part, or finish. Used after Submit, and silently after a block. */
+function advance(){
+  if (P.part < PARTS.length - 1) { P.part++; P.para = 0; P.qi = 0; P.step = 'read'; saveProg(); render(); }
+  else finish();
+}
+
+/* ---- Finish: score once, lock ---- */
+async function finish(){
+  P.step = 'done'; saveProg();
+  const parts = PARTS.map((p, i) => {
+    const blocked = P.blocked.includes(i);
+    const correct = blocked ? 0 : p.qs.filter((q, j) => P.answers[i][j] === q.a).length;
+    return { part: i + 1, correct, score: correct * PTS, blocked };
+  });
+  const correct = parts.reduce((s, x) => s + x.correct, 0), score = correct * PTS;
+  await writeResult({ score, maxScore: MAX, percentage: Math.round(score / MAX * 100), correct, total: QTOTAL,
+    parts, blockedParts: P.blocked.map(i => i + 1), flags: P.flags, mode: P.mode,
+    testHolds: P.test.filter(Boolean).length, startedAt: P.startedAt, completedAt: new Date().toISOString(), locked: true });
+  render();
+}
+async function vDone(){
+  $('topTag').textContent = 'Finished';
+  view().innerHTML = '<section class="card"><p class="muted" style="margin:0">Saving…</p></section>';
+  const r = await loadResult();
+  if (!r) return;
+  view().innerHTML = `<section class="card" style="text-align:center">
+      <span class="tag">Prefinals Summative Activity · Recorded</span>
+      <b class="big">${r.score}/${r.maxScore}</b>
+      <p class="muted" style="margin:0">${r.correct} of ${r.total} correct · ${r.percentage}% · Locked</p>
+    </section>
+    <section class="card"><p class="muted" style="margin:0">This activity has one attempt and is now complete.</p></section>
+    <a class="btn" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to Home</a>`;
+}
+
+/* ---- Confirm sheet ---- */
+function ask(text, yes, fn){
+  $('confirmText').textContent = text; $('confirmYes').textContent = yes; $('confirm').hidden = false;
+  $('confirmYes').onclick = () => { $('confirm').hidden = true; fn(); };
+}
+$('confirmNo').onclick = () => { $('confirm').hidden = true; };
+
+/* ===================== MONITORING =====================
+   Copy / cut / paste, or a detected screen capture, during a part → that part is blocked (0 points)
+   and the next reading opens at once, with no message. Leaving the page is only counted.
+   Phones give web pages no screenshot signal; captures are detected on computers only. */
+const active = () => !!P && (P.step === 'read' || P.step === 'questions');
+function block(kind, detail){
+  if (!active()) return;
+  P.flags[kind]++;
+  logFlag(kind, detail);
+  if (!P.blocked.includes(P.part)) P.blocked.push(P.part);
+  $('confirm').hidden = true;
+  advance();
+}
+['copy', 'cut', 'paste'].forEach(ev => document.addEventListener(ev, e => { if (active()) { e.preventDefault(); block('copy', ev); } }));
+document.addEventListener('keydown', e => {
+  if (!active()) return;
+  const k = (e.key || '').toLowerCase();
+  if (k === 'printscreen') { block('capture', 'PrintScreen'); return; }
+  if (e.metaKey && e.shiftKey && ['3', '4', '5', 's'].includes(k)) { block('capture', 'Cmd+Shift+' + k); return; }   // macOS screenshot keys
+  if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(k)) { e.preventDefault(); block('copy', 'keys ' + k); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'p') { e.preventDefault(); block('capture', 'print'); }
+});
+document.addEventListener('keyup', e => { if ((e.key || '').toLowerCase() === 'printscreen') block('capture', 'PrintScreen'); });
+window.addEventListener('beforeprint', () => block('capture', 'print'));
+let away = false;
+function leave(why){ if (!active() || away) return; away = true; P.flags.leave++; logFlag('leave', why); saveProg(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave('hidden'); else away = false; });
+window.addEventListener('blur', () => leave('blur'));
+window.addEventListener('focus', () => { away = false; });
+document.addEventListener('contextmenu', e => { if (active()) e.preventDefault(); });
+
+/* ===================== START ===================== */
+function gateCheck(){
+  const ua = navigator.userAgent || '';
+  if (!/FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua)) return true;
+  $('gate').hidden = false; $('app').hidden = true;
+  $('gate').innerHTML = '<h2>Open this page in your browser</h2><p class="muted">This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X), where scores cannot be saved. Tap the ⋮ or ••• menu and choose "Open in Browser".</p>';
+  return false;
+}
+(async () => {
+  if (!gateCheck()) return;
+  const done = await loadResult();
+  P = loadProg() || freshProg();
+  if (done) P.step = 'done';
+  render();
+})();
+</script>
+</body>
+</html>
