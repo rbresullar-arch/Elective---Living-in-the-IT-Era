@@ -9,6 +9,21 @@
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {});
     });
+    /* sw.js showed a saved copy (slow network) and a newer one has arrived: offer a reload. */
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      var d = e.data || {};
+      if (d.type !== 'fresh' || document.getElementById('pwaFresh')) return;
+      var here = location.pathname.replace(/index\.html$/, ''), there = String(d.path || '').replace(/index\.html$/, '');
+      if (here !== there) return;
+      var b = document.createElement('div');
+      b.id = 'pwaFresh'; b.setAttribute('role', 'status');
+      b.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);z-index:9500;' +
+        'display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;border-radius:999px;background:#1D1D1F;color:#fff;' +
+        'font:600 14px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25)';
+      b.innerHTML = 'New version ready<button type="button" style="border:0;border-radius:999px;background:#0A84FF;color:#fff;font:inherit;padding:7px 14px;cursor:pointer">Reload</button>';
+      b.querySelector('button').onclick = function () { location.reload(); };
+      document.body.appendChild(b);
+    });
   }
 
   var script = document.currentScript;

@@ -1,9 +1,12 @@
 /* Service worker — Living in the IT Era (GEEL 1)
    Pages: network-first (4 s timeout) → cached copy when offline/slow.
+   Pages are always fetched with cache: 'no-cache', so the browser's HTTP cache (GitHub Pages
+   keeps pages 10 minutes) cannot hand back an old copy as "fresh". If a saved copy had to be
+   shown and a newer one then arrives, open pages get { type: 'fresh', path } → pwa.js Reload bar.
    Fonts: cache, refresh in background.
    Google Apps Script (scores): never touched — always goes to the network.
    Bump VERSION when this file's PRECACHE list changes. */
-const VERSION = 'itera-v7';
+const VERSION = 'itera-v8';
 const PAGES = VERSION + '-pages';
 const FONTS = 'itera-fonts';
 const PRECACHE = [
@@ -55,20 +58,25 @@ self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     const keep = [PAGES, FONTS];
     for (const k of await caches.keys()) if (!keep.includes(k)) await caches.delete(k);
-    if (self.registration.navigationPreload) await self.registration.navigationPreload.enable();
+    if (self.registration.navigationPreload) await self.registration.navigationPreload.disable();   /* preload obeys the HTTP cache */
     await self.clients.claim();
     notify();
   })());
 });
+
+/* A saved copy was shown because the network was slow, and a newer copy has now arrived. */
+async function fresh(path) {
+  for (const c of await self.clients.matchAll({ type: 'window' })) c.postMessage({ type: 'fresh', path });
+}
 
 /* Tell open pages the offline copies changed (the hub refreshes its "Available offline" chips). */
 async function notify() {
   for (const c of await self.clients.matchAll({ includeUncontrolled: true, type: 'window' })) c.postMessage({ type: 'cached' });
 }
 
+/* Revalidate with GitHub every time (a 304 is tiny); never trust the browser's HTTP cache. */
 function fromNetwork(e, req) {
-  return (e.preloadResponse ? e.preloadResponse.catch(() => null) : Promise.resolve(null))
-    .then(p => p || fetch(req));
+  return fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }));
 }
 
 async function pageFirstNetwork(e) {
@@ -76,8 +84,9 @@ async function pageFirstNetwork(e) {
   const url = new URL(req.url);
   const key = url.origin + url.pathname;            /* ignore ?query / #hash */
   const cache = await caches.open(PAGES);
+  let servedSaved = false;
   const net = fromNetwork(e, req).then(r => {
-    if (r && r.ok && r.type === 'basic') cache.put(key, r.clone()).then(notify);
+    if (r && r.ok && r.type === 'basic') cache.put(key, r.clone()).then(() => { notify(); if (servedSaved) fresh(url.pathname); });
     return r;
   });
   e.waitUntil(net.catch(() => {}));
@@ -87,7 +96,7 @@ async function pageFirstNetwork(e) {
     if (r) return r;
   } catch (err) {}
   const hit = await cache.match(key) || (url.pathname.endsWith('/') && await cache.match(key + 'index.html'));
-  if (hit) return hit;
+  if (hit) { servedSaved = true; return hit; }
   try { return await net; } catch (err) {
     return (await cache.match(new URL('./index.html', self.registration.scope).href)) ||
       new Response('<meta name=viewport content="width=device-width"><p style="font:16px system-ui;padding:24px">Offline. Open this page once while online so it is saved on this device.</p>',
