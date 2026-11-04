@@ -28,6 +28,8 @@ button:focus-visible{outline:3px solid rgba(10,102,194,.35);outline-offset:2px}
 .app{max-width:560px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom));display:grid;gap:10px}
 .top{display:flex;align-items:center;justify-content:space-between}
 .top a{color:var(--blue);text-decoration:none}
+.row-r{display:flex;align-items:center;gap:8px}
+.mute{border:none;background:var(--paper);border-radius:10px;padding:5px 8px;font-size:16px;line-height:1;box-shadow:var(--sh)}
 .tag{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 
 /* HUD */
@@ -85,7 +87,7 @@ p{margin:0}
 .row2>*{flex:1}
 
 /* cabinet */
-.cabinet{background:linear-gradient(var(--wood-l),var(--wood));border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;box-shadow:inset 0 0 0 3px var(--wood-d)}
+.cabinet{background:linear-gradient(var(--wood-l),var(--wood));border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;box-shadow:inset 0 0 0 3px var(--wood-d)}
 .drawer{position:relative;height:54px;border:none;border-radius:6px;background:linear-gradient(#A26F43,#83552F);box-shadow:inset 0 0 0 2px #6A4323,0 2px 0 rgba(0,0,0,.25)}
 .drawer .lab{position:absolute;left:50%;top:9px;transform:translateX(-50%);min-width:62px;padding:3px 8px;background:var(--card);border:2px solid var(--brass);border-radius:3px;font:700 13px/1.1 var(--type);color:#3A2A1A}
 .drawer .knob{position:absolute;left:50%;bottom:7px;width:22px;height:8px;margin-left:-11px;border-radius:4px;background:var(--brass);box-shadow:0 1px 0 #8C6A22}
@@ -122,6 +124,9 @@ p{margin:0}
 .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .keys button{border:none;border-radius:10px;background:#E9E1D3;font:700 19px/1 var(--type);padding:12px 0;box-shadow:0 2px 0 #C9BCA6}
 .keys button:active{transform:translateY(2px);box-shadow:none}
+.marks{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.marks button{border:none;border-radius:10px;background:#FFF4DA;font:700 17px/1 var(--type);padding:12px 0;box-shadow:inset 0 0 0 2px #E3CFA4}
+.marks button.on{background:var(--blue);color:#fff;box-shadow:none}
 .toast{font-size:14px;font-weight:600;border-radius:10px;padding:8px 10px;text-align:center}
 .toast.good{background:#E3F4EA;color:var(--green)} .toast.bad{background:#FDE7E7;color:var(--red)}
 
@@ -201,7 +206,7 @@ p{margin:0}
 </head>
 <body>
 <div class="app" id="app">
-  <div class="top"><a href="index.html">‹ Home</a><span class="tag">Activity 13 · Midterms</span></div>
+  <div class="top"><a href="index.html">‹ Home</a><span class="row-r"><span class="tag">Activity 13 · Midterms</span><button type="button" class="mute" id="mute" aria-pressed="false" aria-label="Bell sound on. Tap to mute">🔔</button></span></div>
   <div class="hud">
     <div><span>Served</span><b id="hServed">0/8</b></div>
     <div><span>Waiting</span><b id="hWait">0</b></div>
@@ -244,8 +249,24 @@ const BOOKS = [
   { t: 'Maps and Explorers', a: ['Tomas', 'Uy'], call: '910', subj: 'GEOGRAPHY', ask: 'geography' },
   { t: 'A Short History of the Philippines', a: ['Elena', 'Garcia'], call: '959.9', subj: 'PHILIPPINES -- HISTORY', ask: null }
 ];
+/* Look-alike books that fill the drawers (never requested): similar titles, near-identical names,
+   and shared subject headings. Any book under a requested subject heading is a correct answer. */
+const DECOYS = [
+  ['Machines That Think', ['Gracia', 'Tan'], '006.3', 'ARTIFICIAL INTELLIGENCE'], ['Machines That Fly', ['Grace', 'Tang'], '629.13', 'AIRPLANES'],
+  ['Libraries of the World', ['Henrietta', 'Pascual'], '027', 'LIBRARIES'], ['Understanding Dreams', ['Carlos', 'Lim'], '154.6', 'DREAMS'],
+  ['Understanding the Weather', ['Carla', 'Lim'], '551.6', 'WEATHER'], ['World Religions Today', ['Diana', 'Ocampo'], '200', 'RELIGIONS'],
+  ['Money for Beginners', ['Rosa', 'Castro'], '332.024', 'PERSONAL FINANCE'], ['Tales from the Visayas', ['Anna', 'Bautista'], '398.2', 'FOLKLORE'],
+  ['Learning Spanish', ['Josefa', 'Ramos'], '468', 'SPANISH LANGUAGE'], ['Learning Tagalog Fast', ['Joselito', 'Ramos'], '499.211', 'TAGALOG LANGUAGE'],
+  ['A Child\'s Book of Stars', ['Liza', 'Santiago'], '523.8', 'STARS'], ['Fire in the Forest', ['Ramona', 'Cruz'], '634.9', 'FORESTS'],
+  ['The Fire Next Door', ['Ramil', 'Cruz'], '363.37', 'FIRE PREVENTION'], ['Snakes and Lizards', ['Luisa', 'Fernando'], '597.9', 'REPTILES'],
+  ['The Human Body', ['Paula', 'Mendoza'], '612', 'HUMAN BODY'], ['Wings of the Eagle', ['Benito', 'Navarro'], '598.9', 'EAGLES'],
+  ['Cooking with Rice', ['Teresita', 'Dizon'], '641.5', 'COOKERY'], ['An Introduction to Painting', ['Norma', 'Reyes'], '750', 'PAINTING'],
+  ['Hoops and Dreams', ['Marco', 'Villanueva'], '796.323', 'BASKETBALL'], ['Poems of the Mountains', ['Miguela', 'Aquino'], '821', 'ENGLISH POETRY'],
+  ['Maps of the World', ['Tomasito', 'Uy'], '912', 'ATLASES'], ['A Short History of Japan', ['Elisa', 'Garcia'], '952', 'JAPAN -- HISTORY']
+];
+DECOYS.forEach(([t, a, call, subj]) => BOOKS.push({ t, a, call, subj, ask: null, decoy: true }));
 BOOKS.forEach((b, i) => { b.id = i; b.cutter = b.a[1].slice(0, 3).toUpperCase(); b.year = 1961 + (i * 7) % 14; });
-const DRAWERS = [['A', 'B'], ['C', 'D'], ['E', 'G'], ['H', 'K'], ['L', 'M'], ['N', 'Q'], ['R', 'S'], ['T', 'Z']];
+const DRAWERS = [['A', 'A'], ['B', 'B'], ['C', 'C'], ['D', 'E'], ['F', 'G'], ['H', 'I'], ['J', 'L'], ['M', 'M'], ['N', 'O'], ['P', 'Q'], ['R', 'S'], ['T', 'Z']];
 
 /* Filing: titles skip a first A / An / The; authors file by surname; subjects by their heading. */
 const fileKey = s => s.replace(/^(a|an|the)\s+/i, '').replace(/[^A-Za-z ]/g, '').toUpperCase();
@@ -260,8 +281,9 @@ const drawerOf = key => DRAWERS.findIndex(([f, t]) => key[0] >= f && key[0] <= t
 const DRAWER_CARDS = DRAWERS.map((_, d) => CARDS.filter(c => drawerOf(c.key) === d));
 
 /* ===================== SETTINGS ===================== */
-const PATRONS = 8, FIRST_AT = 1.5, GAP = 20;     // seconds: first arrival, then one every 20 s
-const CALM = 30, FLOOR = 40, WRONG_COST = 15;   // satisfaction: 100 up to 30 s wait, −1/s to 40; −15 per wrong shelf
+const PATRONS = 10, FIRST_AT = 1.5, GAP = 17;    // seconds: first arrival, then one every 17 s
+const CALM = 20, SLOPE = 1.5, FLOOR = 30, WRONG_COST = 20;   // satisfaction: 100 up to 20 s wait, −1.5/s to 30; −20 per wrong shelf
+const TIPS_FOR = 2;                              // filing tips are shown for the first 2 patrons only
 const SKIN = ['#F1C9A5', '#E0AC82', '#C68A62', '#A86F4C', '#8D5A3B'], HAIR = ['#2B1D14', '#3B2A1E', '#5A3A22', '#1C1C1C', '#7A4B2A'],
   SHIRT = ['#3F7CAC', '#D1495B', '#2E8B57', '#EDAE49', '#6C5B7B', '#00798C', '#F28F3B', '#8E7DBE'];
 
@@ -310,19 +332,44 @@ function sendToShelf(p, ok){
     else { el.querySelector('.mood').textContent = '😕'; setTimeout(res, 700); }
   }, 1550));
 }
-function moodFor(w){ return w < CALM ? '🙂' : w < 55 ? '😐' : w < 80 ? '😟' : '😠'; }
-function ringBell(){ const b = $('bell'); b.classList.remove('ring'); void b.offsetWidth; b.classList.add('ring'); }
+function moodFor(w){ return w < CALM ? '🙂' : w < 35 ? '😐' : w < 55 ? '😟' : '😠'; }
+/* Desk bell: synthesized (no audio file). Bell-like partials with a fast strike and a long decay. */
+const MUTE_KEY = 'itict_a13_mute';
+let actx = null, muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+function audioOn(){   // needs a tap first (browser rule); called from the Start button and the mute button
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  if (!actx) { try { actx = new AC(); } catch (e) { actx = null; return; } }
+  if (actx.state === 'suspended') actx.resume();
+}
+function bellSound(){
+  if (muted || !actx || actx.state !== 'running') return;
+  const t = actx.currentTime, out = actx.createGain();
+  out.gain.value = 0.5; out.connect(actx.destination);
+  [[1320, 0.55, 1.6], [2640, 0.22, 0.9], [3520, 0.16, 0.7], [4950, 0.08, 0.4]].forEach(([f, v, d]) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
+  });
+}
+function paintMute(){
+  const b = $('mute'); b.textContent = muted ? '🔕' : '🔔'; b.setAttribute('aria-pressed', muted ? 'true' : 'false');
+  b.setAttribute('aria-label', muted ? 'Bell sound off. Tap to turn on' : 'Bell sound on. Tap to mute');
+}
+function ringBell(){ const b = $('bell'); b.classList.remove('ring'); void b.offsetWidth; b.classList.add('ring'); bellSound(); }
 
 /* ===================== GAME STATE ===================== */
 let G = null;
 function newGame(){
-  const ids = shuffle(BOOKS.map(b => b.id)).slice(0, PATRONS);
-  const kinds = shuffle(['title', 'title', 'title', 'author', 'author', 'subject', 'subject', 'title']);
+  const ids = shuffle(BOOKS.filter(b => !b.decoy).map(b => b.id)).slice(0, PATRONS);
+  const kinds = shuffle(['title', 'title', 'title', 'title', 'author', 'author', 'author', 'subject', 'subject', 'subject']);
   const patrons = ids.map((id, i) => {
     let by = kinds[i]; if (by === 'subject' && !BOOKS[id].ask) by = 'title';
     return { n: i, book: id, by, arrive: FIRST_AT + i * GAP, skin: pick(SKIN), hair: pick(HAIR), shirt: SHIRT[i % SHIRT.length], wrong: 0, wait: 0, done: false };
   });
-  G = { t: 0, patrons, queue: [], served: [], view: 'wait', drawer: -1, cardIx: 0, pulled: null, dirSec: -1, entry: '', busy: false, msg: null, startedAt: new Date().toISOString() };
+  G = { t: 0, patrons, queue: [], served: [], view: 'wait', drawer: -1, cardIx: 0, pulled: null, dirSec: -1, entry: '', mark: '', marks: [], busy: false, msg: null, startedAt: new Date().toISOString() };
 }
 function current(){ return G.queue[0] || null; }
 function request(p){
@@ -352,7 +399,7 @@ function paintHud(){
   $('hWait').textContent = G.queue.length;
   $('hSat').textContent = G.served.length ? Math.round(avgSat()) + '%' : '—';
 }
-const satOf = p => Math.max(0, (p.wait <= CALM ? 100 : Math.max(FLOOR, 100 - (p.wait - CALM))) - p.wrong * WRONG_COST);
+const satOf = p => Math.max(0, (p.wait <= CALM ? 100 : Math.max(FLOOR, 100 - (p.wait - CALM) * SLOPE)) - p.wrong * WRONG_COST);
 const avgSat = () => G.served.reduce((s, p) => s + satOf(p), 0) / Math.max(1, G.served.length);
 
 /* ===================== VIEWS ===================== */
@@ -365,9 +412,10 @@ function vIntro(){
     <p>You run the circulation desk of a library with <b>no computers</b>. Every book is listed on paper <b>index cards</b> in a wooden <b>card catalog</b>, filed in alphabetical order. Each book has three cards: one under its <b>title</b>, one under its <b>author</b> and one under its <b>subject</b>.</p>
     <p>A card's top-left corner shows the book's <b>call number</b> from the <b>Dewey Decimal System</b> (created by Melvil Dewey in 1876). The first digit tells you which part of the library to send the patron to:</p>
     <div class="dewey">${SECTIONS.map(([n, s]) => `<b>${n}</b><span>${s}</span>`).join('')}</div>
-    <p><b>How to serve a patron</b>: open the right drawer, flip to the card, pull it, then press the section and type the call number to tell the patron where to go. ${PATRONS} patrons will come. Each one gets less happy the longer they wait.</p>
+    <p>Under the number is the <b>author mark</b>: the first three letters of the author's surname (for example <b>CRU</b> for Cruz). Number and mark together are what is printed on the book's spine.</p>
+    <p><b>How to serve a patron</b>: open the right drawer, flip to the card, pull it, then press the section, type the number and pick the author mark. ${PATRONS} patrons will come, quickly. Watch out for look-alike titles and names. Each patron gets less happy after ${CALM} seconds of waiting.</p>
     <button type="button" class="btn" id="start">Open the library</button>`;
-  $('start').onclick = () => { show('wait'); };
+  $('start').onclick = () => { audioOn(); show('wait'); };
 }
 function vWait(){
   bubble(null);
@@ -377,7 +425,7 @@ function vWait(){
 }
 function startServing(){
   const p = current(); if (!p) return show('wait');
-  G.drawer = -1; G.cardIx = 0; G.pulled = null; G.dirSec = -1; G.entry = ''; G.msg = null;
+  G.drawer = -1; G.cardIx = 0; G.pulled = null; G.dirSec = -1; G.entry = ''; G.mark = ''; G.marks = []; G.msg = null;
   setTimeout(() => { if (current() === p) bubble(request(p)); }, 1500);
   show('catalog');
 }
@@ -389,8 +437,8 @@ function ruleFor(p){
 function vCatalog(){
   const p = current(); if (!p) return show('wait');
   W().innerHTML = `<p class="step"><b>Step 1 of 3 · Open the right drawer</b></p>
-    <div class="rule">${ruleFor(p)}</div>
-    <div class="cabinet">${DRAWERS.map(([f, t], i) => `<button type="button" class="drawer" data-d="${i}" aria-label="Drawer ${f} to ${t}"><span class="lab">${f}–${t}</span><span class="knob"></span></button>`).join('')}</div>
+    ${G.served.length < TIPS_FOR ? `<div class="rule">${ruleFor(p)}</div>` : ''}
+    <div class="cabinet">${DRAWERS.map(([f, t], i) => `<button type="button" class="drawer" data-d="${i}" aria-label="Drawer ${f} to ${t}"><span class="lab">${f === t ? f : f + '–' + t}</span><span class="knob"></span></button>`).join('')}</div>
     ${G.msg ? `<div class="toast ${G.msg[0]}">${G.msg[1]}</div>` : ''}`;
   W().querySelectorAll('.drawer').forEach(d => d.onclick = () => { G.drawer = +d.dataset.d; G.cardIx = 0; G.msg = null; show('drawer'); });
 }
@@ -406,9 +454,9 @@ function cardHTML(c, cls){
 }
 function vDrawer(){
   const p = current(); if (!p) return show('wait');
-  const list = DRAWER_CARDS[G.drawer], c = list[G.cardIx], [f, t] = DRAWERS[G.drawer];
+  const list = DRAWER_CARDS[G.drawer], c = list[G.cardIx], [f, t] = DRAWERS[G.drawer], dname = f === t ? f : f + '–' + t;
   W().innerHTML = `<p class="step"><b>Step 2 of 3 · Find the card</b> · Cards are in A–Z order. Flip until you reach the patron's book.</p>
-    <div class="tray"><span class="lab">DRAWER ${f}–${t}</span>
+    <div class="tray"><span class="lab">DRAWER ${dname}</span>
       <div class="stack"><div class="behind"></div>${cardHTML(c, 'in')}</div>
       <div class="pager"><button type="button" id="prev" ${G.cardIx ? '' : 'disabled'}>‹ Back</button><span>Card ${G.cardIx + 1} of ${list.length}</span><button type="button" id="next" ${G.cardIx < list.length - 1 ? '' : 'disabled'}>Next ›</button></div>
     </div>
@@ -418,20 +466,32 @@ function vDrawer(){
   $('next').onclick = () => { G.cardIx++; G.msg = null; vDrawer(); };
   $('close').onclick = () => { G.msg = null; show('catalog'); };
   $('pull').onclick = () => {
-    if (c.book === p.book) { G.pulled = c; G.msg = null; show('direct'); }
+    const fits = c.book === p.book || (p.by === 'subject' && BOOKS[c.book].subj === BOOKS[p.book].subj);
+    if (fits) { G.pulled = c; G.msg = null; G.marks = markChoices(BOOKS[c.book]); show('direct'); }
     else { G.msg = ['bad', 'That card is for a different book. Keep looking.']; vDrawer(); }
   };
 }
+/* Author mark (the letters under the number, from the author's surname): the right one plus 3 look-alikes. */
+function markChoices(b){
+  const m = b.cutter, alt = new Set([m]);
+  const others = BOOKS.map(x => x.cutter).filter(x => x !== m && x[0] === m[0]);
+  shuffle(others).forEach(x => { if (alt.size < 4) alt.add(x); });
+  const swaps = [m[0] + m[2] + m[1], m.slice(0, 2) + String.fromCharCode(((m.charCodeAt(2) - 64) % 26) + 65), m[1] + m[0] + m[2]];
+  swaps.forEach(x => { if (alt.size < 4) alt.add(x); });
+  return shuffle([...alt]);
+}
 function vDirect(){
   const p = current(); if (!p) return show('wait');
-  const b = BOOKS[p.book];
-  W().innerHTML = `<p class="step"><b>Step 3 of 3 · Tell the patron where to go</b> · Press the section, then type the call number from the card.</p>
+  const b = BOOKS[(G.pulled || { book: p.book }).book];
+  W().innerHTML = `<p class="step"><b>Step 3 of 3 · Tell the patron where to go</b> · Press the section, type the number, then pick the author mark, all from the card.</p>
     <div class="mini"><span class="call">${esc(b.call)}\n${esc(b.cutter)}</span><span>${esc(b.t)}<br>${esc(b.a[0] + ' ' + b.a[1])}</span></div>
     <div class="secs">${SECTIONS.map(([n, s], i) => `<button type="button" data-s="${i}" class="${G.dirSec === i ? 'on' : ''}"><b>${n}s</b>${s.split(' ')[0].replace(/,$/, '')}</button>`).join('')}</div>
     <div class="display" id="disp">${esc(G.entry) || '&nbsp;'}</div>
     <div class="keys">${['7', '8', '9', '⌫', '4', '5', '6', '.', '1', '2', '3', '0'].map(k => `<button type="button" data-k="${k}">${k}</button>`).join('')}</div>
+    <div class="marks">${G.marks.map(m => `<button type="button" data-m="${m}" class="${G.mark === m ? 'on' : ''}">${m}</button>`).join('')}</div>
     ${G.msg ? `<div class="toast ${G.msg[0]}">${G.msg[1]}</div>` : ''}
-    <button type="button" class="btn" id="tell" ${G.dirSec < 0 || !G.entry || G.busy ? 'disabled' : ''}>Tell the patron</button>`;
+    <button type="button" class="btn" id="tell" ${G.dirSec < 0 || !G.entry || !G.mark || G.busy ? 'disabled' : ''}>Tell the patron</button>`;
+  W().querySelectorAll('.marks button').forEach(x => x.onclick = () => { if (G.busy) return; G.mark = x.dataset.m; G.msg = null; vDirect(); });
   W().querySelectorAll('.secs button').forEach(x => x.onclick = () => { if (G.busy) return; G.dirSec = +x.dataset.s; G.msg = null; vDirect(); });
   W().querySelectorAll('.keys button').forEach(x => x.onclick = () => {
     if (G.busy) return;
@@ -443,9 +503,9 @@ function vDirect(){
   $('tell').onclick = tell;
 }
 async function tell(){
-  const p = current(), b = BOOKS[p.book];
-  if (!p || G.busy) return;
-  const ok = G.dirSec === Math.floor(Number(b.call) / 100) && G.entry === b.call;
+  const p = current(); if (!p || G.busy) return;
+  const b = BOOKS[G.pulled.book];
+  const ok = G.dirSec === Math.floor(Number(b.call) / 100) && G.entry === b.call && G.mark === b.cutter;
   G.busy = true; vDirect();
   bubble(ok ? `Thank you! Off to the <b>${SECTIONS[G.dirSec][0]}s</b>.` : `Okay, the <b>${SECTIONS[G.dirSec][0]}s</b>…`);
   if (ok) {
@@ -464,8 +524,8 @@ async function tell(){
     bubble(`That shelf didn't have it. Can you check again?`);
     p.el.classList.add('flip'); p.el.style.bottom = ''; p.el.style.zIndex = ''; p.x = null; placeQueue();
     G.busy = false;
-    G.msg = ['bad', 'Wrong shelf. The patron came back. Check the section and call number on the card.'];
-    G.dirSec = -1; G.entry = ''; vDirect();
+    G.msg = ['bad', 'Wrong shelf. The patron came back. Check the section, number and author mark on the card.'];
+    G.dirSec = -1; G.entry = ''; G.mark = ''; G.marks = markChoices(b); vDirect();
   }
 }
 
@@ -514,10 +574,12 @@ function vDone(){
     <div class="rule"><b>Then and now.</b> You served ${PATRONS} patrons in ${Math.floor(r.total / 60)} min ${r.total % 60} s, about <b>${r.avgWait} seconds of waiting each</b>, with cards that had to be typed, filed and kept in order by hand. Today an online public access catalog (<b>OPAC</b>) searches every title, author and subject at once in about a second, from any phone, and can show whether the book is on the shelf. That shift from paper records to digital systems is <b>digital transformation</b>.</div>
     <button type="button" class="btn" id="again">Practice again</button>
     <a class="ghost" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to Home</a>`;
-  $('again').onclick = () => { $('people').innerHTML = ''; newGame(); show('wait'); };
+  $('again').onclick = () => { audioOn(); $('people').innerHTML = ''; newGame(); show('wait'); };
 }
 
 /* ===================== START ===================== */
+$('mute').onclick = () => { muted = !muted; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (e) {} audioOn(); paintMute(); if (!muted) bellSound(); };
+paintMute();
 (async () => {
   buildShelves();
   newGame();
