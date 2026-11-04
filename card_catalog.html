@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Card Catalog</title>
+<style>
+/* Activity 13 (Midterms) — The Card Catalog: a library desk before digitization.
+   Patrons queue at the counter and ask for a book (by title, author or subject). The player finds the
+   card in the card catalog, reads its Dewey Decimal call number, and directs the patron with the
+   section buttons and keypad. Each patron's wait sets their satisfaction; the run's average is the score. */
+:root{
+  color-scheme:light;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+  --type:"Courier New",Courier,"Nimbus Mono PS",monospace;
+  --ground:#F2EDE4; --paper:#FFFDF8; --ink:#2A2118; --muted:#7A6E60; --hair:rgba(60,40,20,.18);
+  --wood:#8A5A34; --wood-d:#5E3B20; --wood-l:#B07A4C; --brass:#D8B25A; --card:#FBF6E6; --card-line:#9FB7D8; --card-red:#D9534F;
+  --blue:#0A66C2; --green:#2E8B57; --red:#C62828; --amber:#E39B1B;
+  --sh:0 1px 2px rgba(0,0,0,.06),0 6px 18px rgba(60,40,20,.14);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ground)}
+body{margin:0;color:var(--ink);font-family:var(--sf);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid rgba(10,102,194,.35);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.top{display:flex;align-items:center;justify-content:space-between}
+.top a{color:var(--blue);text-decoration:none}
+.tag{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.hud div{background:var(--paper);border-radius:12px;padding:6px 10px;box-shadow:var(--sh)}
+.hud b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}
+.hud span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+
+/* ===== Scene ===== */
+.scene{position:relative;height:262px;border-radius:16px;overflow:hidden;box-shadow:var(--sh);
+  background:linear-gradient(#E9DCC6 0 62%,#C9A37A 62% 100%)}
+.scene::before{content:"";position:absolute;left:0;right:0;top:62%;height:3px;background:rgba(0,0,0,.12)}
+.shelf{position:absolute;bottom:38%;width:15%;height:46%;background:var(--wood-d);border-radius:4px 4px 0 0;padding:4px 3px 0;display:grid;gap:3px;grid-template-rows:repeat(3,1fr)}
+.shelf .row{display:flex;align-items:flex-end;gap:1px;background:rgba(0,0,0,.25);border-bottom:3px solid var(--wood-l);padding:0 2px}
+.shelf .row i{display:block;flex:1;border-radius:1px 1px 0 0}
+.sign{position:absolute;top:-24px;left:50%;transform:translateX(-50%);background:#20303F;color:#fff;font:700 8px/1.1 var(--type);padding:2px 3px;border-radius:3px;text-align:center}
+.door{position:absolute;right:2%;bottom:38%;width:12%;height:50%;background:#6B4A2E;border:3px solid #4A321E;border-bottom:none;border-radius:6px 6px 0 0}
+.door::after{content:"";position:absolute;right:12%;top:50%;width:5px;height:5px;border-radius:50%;background:var(--brass)}
+.window{position:absolute;right:18%;top:10%;width:16%;height:26%;background:linear-gradient(#BFE0F4,#E7F4FB);border:4px solid #FFF;box-shadow:0 0 0 2px #CDB89A}
+.clock{position:absolute;left:48%;top:8%;width:30px;height:30px;border-radius:50%;background:#FFF;border:3px solid #6B4A2E}
+.clock i{position:absolute;left:50%;top:50%;width:2px;height:10px;background:#333;transform-origin:50% 0;transform:rotate(180deg)}
+.counter{position:absolute;left:34%;right:0;bottom:0;height:30%;background:linear-gradient(var(--wood-l),var(--wood));border-top:6px solid var(--wood-d);z-index:3}
+.counter::after{content:"CIRCULATION DESK";position:absolute;left:0;right:0;top:34%;text-align:center;font:800 10px/1 var(--sf);letter-spacing:.16em;color:rgba(255,240,210,.75)}
+.bell{position:absolute;left:39%;bottom:30%;width:22px;height:13px;border-radius:12px 12px 2px 2px;background:var(--brass);z-index:4;box-shadow:0 2px 0 #9C7A2E}
+.bell.ring{animation:ring .5s}
+@keyframes ring{20%{transform:rotate(-14deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(5deg)}}
+
+.patron{position:absolute;bottom:22%;width:46px;height:96px;margin-left:-23px;z-index:2;transition:left 1.5s linear,opacity .5s,bottom .6s}
+.patron .head{position:absolute;left:12px;top:14px;width:22px;height:24px;border-radius:50% 50% 46% 46%}
+.patron .hair{position:absolute;left:10px;top:10px;width:26px;height:14px;border-radius:13px 13px 4px 4px}
+.patron .body{position:absolute;left:4px;top:38px;width:38px;height:52px;border-radius:16px 16px 6px 6px}
+.patron .mood{position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:16px;line-height:1;transition:transform .2s}
+.patron.walk{animation:bob .4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-3px)}}
+.patron.flip{transform:scaleX(-1)} .patron.flip .mood{transform:translateX(-50%) scaleX(-1)}
+.patron.walk.flip{animation:bobf .4s ease-in-out infinite}
+@keyframes bobf{0%,100%{transform:scaleX(-1)}50%{transform:scaleX(-1) translateY(-3px)}}
+.more{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.55);color:#fff;font:700 12px/1 var(--sf);padding:5px 8px;border-radius:999px;z-index:5}
+.bubble{position:absolute;bottom:66%;left:50%;max-width:64%;transform:translateX(-30%);background:#FFF;border-radius:14px;padding:8px 11px;font-size:13.5px;line-height:1.3;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:6;transition:opacity .2s}
+.bubble::after{content:"";position:absolute;left:24%;bottom:-8px;border:8px solid transparent;border-top-color:#FFF;border-bottom:0}
+.bubble b{font-weight:700}
+
+/* ===== Work area ===== */
+.work{background:var(--paper);border-radius:16px;box-shadow:var(--sh);padding:14px;display:grid;gap:12px;min-height:330px;align-content:start}
+.step{font-size:14px;color:var(--muted);margin:0}
+.step b{color:var(--ink)}
+h1{font-size:26px;line-height:1.15;margin:4px 0 6px;letter-spacing:-.02em}
+h2{font-size:19px;margin:0}
+p{margin:0}
+.btn{border:none;border-radius:999px;background:var(--blue);color:#fff;font-weight:700;font-size:16px;padding:14px 18px;width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.ghost{border:none;border-radius:999px;background:rgba(60,40,20,.08);font-weight:700;font-size:15px;padding:11px 16px}
+.row2{display:flex;gap:8px}
+.row2>*{flex:1}
+
+/* cabinet */
+.cabinet{background:linear-gradient(var(--wood-l),var(--wood));border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;box-shadow:inset 0 0 0 3px var(--wood-d)}
+.drawer{position:relative;height:54px;border:none;border-radius:6px;background:linear-gradient(#A26F43,#83552F);box-shadow:inset 0 0 0 2px #6A4323,0 2px 0 rgba(0,0,0,.25)}
+.drawer .lab{position:absolute;left:50%;top:9px;transform:translateX(-50%);min-width:62px;padding:3px 8px;background:var(--card);border:2px solid var(--brass);border-radius:3px;font:700 13px/1.1 var(--type);color:#3A2A1A}
+.drawer .knob{position:absolute;left:50%;bottom:7px;width:22px;height:8px;margin-left:-11px;border-radius:4px;background:var(--brass);box-shadow:0 1px 0 #8C6A22}
+.drawer:active{transform:translateY(1px)}
+.rule{font-size:13px;background:#FFF4DA;border-radius:10px;padding:8px 10px;color:#5A4632}
+
+/* open drawer + card */
+.tray{position:relative;background:linear-gradient(#7A4E2C,#5E3B20);border-radius:10px;padding:16px 12px 14px;overflow:hidden;animation:pull .35s ease-out}
+@keyframes pull{from{transform:translateY(-14px) scaleY(.9);opacity:.4}to{transform:none;opacity:1}}
+.tray .lab{position:absolute;left:12px;top:4px;font:700 11px/1 var(--type);color:var(--card)}
+.stack{position:relative;height:186px;perspective:700px}
+.stack .behind{position:absolute;left:10px;right:10px;top:0;height:170px;background:#EFE6CC;border-radius:4px;transform:translateY(-6px) scale(.96)}
+.icard{position:absolute;left:0;right:0;top:8px;height:176px;background:var(--card);border-radius:4px;padding:10px 12px 8px 12px;font:14px/1.35 var(--type);color:#2C2216;
+  background-image:linear-gradient(transparent 33px,var(--card-red) 33px 35px,transparent 35px),repeating-linear-gradient(transparent 0 22px,var(--card-line) 22px 23px);background-position:0 0,0 13px;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);transform-origin:50% 100%}
+.icard.in{animation:flipin .25s ease-out}
+@keyframes flipin{from{transform:rotateX(-35deg);opacity:.3}to{transform:none;opacity:1}}
+.icard .hole{position:absolute;left:50%;bottom:7px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#5E3B20;box-shadow:inset 0 1px 2px rgba(0,0,0,.4)}
+.icard .call{position:absolute;left:12px;top:42px;font-weight:700;white-space:pre;line-height:1.35}
+.icard .head{font-weight:700;height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.icard .bodytxt{margin-left:72px;margin-top:10px;white-space:normal}
+.icard .kind{position:absolute;right:10px;top:10px;font:700 10px/1 var(--sf);letter-spacing:.06em;color:#8B7A5E}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#F6E7C8;font-size:13px;margin-top:6px}
+.pager button{border:none;border-radius:999px;background:rgba(255,240,210,.18);color:#FFF4DA;font-weight:700;padding:9px 16px}
+
+/* direct console */
+.mini{background:var(--card);border-radius:6px;padding:8px 10px;font:13px/1.35 var(--type);box-shadow:0 1px 3px rgba(0,0,0,.18);display:flex;gap:12px}
+.mini .call{font-weight:700;white-space:pre}
+.secs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.secs button{border:none;border-radius:10px;background:#20303F;color:#FFF;padding:7px 2px;font-size:12px;line-height:1.15}
+.secs button b{display:block;font:700 15px/1.1 var(--type)}
+.secs button.on{background:var(--blue);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--blue)}
+.display{font:700 24px/1 var(--type);background:#1B1F1A;color:#9CFF8A;border-radius:10px;padding:12px 14px;letter-spacing:.06em;min-height:50px;text-align:right}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.keys button{border:none;border-radius:10px;background:#E9E1D3;font:700 19px/1 var(--type);padding:12px 0;box-shadow:0 2px 0 #C9BCA6}
+.keys button:active{transform:translateY(2px);box-shadow:none}
+.toast{font-size:14px;font-weight:600;border-radius:10px;padding:8px 10px;text-align:center}
+.toast.good{background:#E3F4EA;color:var(--green)} .toast.bad{background:#FDE7E7;color:var(--red)}
+
+/* intro / result */
+.dewey{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:14px;background:#FFF4DA;border-radius:10px;padding:10px 12px}
+.dewey b{font-family:var(--type)}
+.big{font-size:44px;font-weight:800;text-align:center;letter-spacing:-.02em;line-height:1.05}
+.stars{font-size:30px;text-align:center;letter-spacing:4px;color:var(--amber)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.facts div{background:#FFF4DA;border-radius:10px;padding:8px 4px}
+.facts b{display:block;font-size:18px}
+.facts span{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F2EDE4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
+<script id="itictCloudPush">
+/* Cloud backup: sends a result to the instructor's Google Sheet the moment this
+   page saves it. Works only after the student created a PIN on the hub
+   (localStorage 'itict_cloud'). Never blocks or changes the page; failures are
+   silent and the hub uploads everything on the next visit. */
+(function(){
+  var URL_='https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+  var ACT={itict_essay_result:'activity1',itict_abacus_result:'activity2',itict_pascaline_result:'activity3',itict_binary_result:'activity4',
+    itict_activity5_result:'activity5',itict_activity6_result:'activity6',itict_activity7_result:'activity7',itict_activity8_result:'activity8',itict_activity9_result:'activity9',
+    itict_activity10_result:'activity10',itict_activity11_result:'activity11',itict_activity12_result:'activity12',itict_activity13_result:'activity13'};
+  var EXAM={itict_prelim:'examPrelim',itict_midterm:'exam1'};
+  var pending={}, timers={};
+  try{ if(!window.fetch||!window.localStorage||!Storage) return; }catch(e){ return; }
+  function acct(){ try{ var a=JSON.parse(localStorage.getItem('itict_cloud')||'null'); return a&&a.id&&a.pin?a:null; }catch(e){ return null; } }
+  var RETRY=[10000,30000,90000];
+  function send(key,data,attempt){
+    if(!data){ data=pending[key]; delete pending[key]; clearTimeout(timers[key]); }
+    var a=acct(); if(!a||!data) return;
+    attempt=attempt||0;
+    var body=JSON.stringify({action:'save',id:a.id,pin:a.pin,name:a.name||'',create:true,data:data});
+    function again(){ if(RETRY[attempt]!=null) setTimeout(function(){ send(key,data,attempt+1); },RETRY[attempt]); }
+    try{
+      fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,keepalive:body.length<60000})
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if(j&&!j.ok&&(j.error==='busy'||j.error==='server')) again(); })   /* queue: wait and retry */
+        .catch(again);
+    }catch(e){}
+  }
+  function route(k,v){
+    var rec; try{ rec=JSON.parse(v); }catch(e){ return null; }
+    if(!rec||typeof rec!=='object') return null;
+    if(ACT[k]){ var d={}; d[ACT[k]]=rec; return {wait:800,data:d}; }
+    var m=/^(itict_[a-z]+)_(result|session)$/.exec(k);
+    if(m&&EXAM[m[1]]){ var x={prefix:m[1]}; x[m[2]]=rec; var e={}; e[EXAM[m[1]]]=x; return {wait:m[2]==='session'?20000:800,data:{exams:e}}; }
+    return null;
+  }
+  var orig=Storage.prototype.setItem;
+  Storage.prototype.setItem=function(k,v){
+    var out=orig.apply(this,arguments);
+    try{
+      if(this===window.localStorage){
+        var key=String(k), r=route(key,String(v));
+        if(r){ pending[key]=r.data; clearTimeout(timers[key]); timers[key]=setTimeout(function(){ send(key); },r.wait); }
+      }
+    }catch(e){}
+    return out;
+  };
+  function flush(){ for(var k in pending) send(k); }
+  window.addEventListener('pagehide',flush);
+  document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden') flush(); });
+})();
+</script>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top"><a href="index.html">‹ Home</a><span class="tag">Activity 13 · Midterms</span></div>
+  <div class="hud">
+    <div><span>Served</span><b id="hServed">0/8</b></div>
+    <div><span>Waiting</span><b id="hWait">0</b></div>
+    <div><span>Satisfaction</span><b id="hSat">—</b></div>
+  </div>
+  <div class="scene" id="scene" aria-label="Library circulation desk">
+    <div class="window"></div><div class="clock"><i id="clockHand"></i></div><div class="door"></div>
+    <div id="shelves"></div>
+    <div id="people"></div>
+    <div class="counter"></div><div class="bell" id="bell"></div>
+    <div class="bubble" id="bubble" hidden></div>
+    <div class="more" id="more" hidden></div>
+  </div>
+  <div class="work" id="work" aria-live="polite"></div>
+</div>
+
+<script>
+/* ===================== DATA =====================
+   Fictional titles and authors; the call numbers use real Dewey Decimal classes for each subject. */
+const SECTIONS = [
+  ['000', 'General works & computers'], ['100', 'Philosophy & psychology'], ['200', 'Religion'], ['300', 'Social sciences'],
+  ['400', 'Language'], ['500', 'Science'], ['600', 'Technology'], ['700', 'Arts & recreation'], ['800', 'Literature'], ['900', 'History & geography']];
+const BOOKS = [
+  { t: 'Machines That Count', a: ['Grace', 'Tan'], call: '004', subj: 'COMPUTERS', ask: 'computers' },
+  { t: 'Libraries and How They Work', a: ['Henry', 'Pascual'], call: '027', subj: 'LIBRARIES', ask: 'libraries' },
+  { t: 'Understanding the Mind', a: ['Carlo', 'Lim'], call: '150', subj: 'PSYCHOLOGY', ask: 'psychology' },
+  { t: 'World Religions', a: ['Diane', 'Ocampo'], call: '200', subj: 'RELIGIONS', ask: 'the world\'s religions' },
+  { t: 'Money and Markets', a: ['Rosa', 'Castillo'], call: '330', subj: 'ECONOMICS', ask: 'economics' },
+  { t: 'Tales from the Mountain Province', a: ['Ana', 'Bautista'], call: '398.2', subj: 'FOLKLORE', ask: 'folk tales' },
+  { t: 'Learning Tagalog', a: ['Jose', 'Ramos'], call: '499.211', subj: 'TAGALOG LANGUAGE', ask: 'the Tagalog language' },
+  { t: 'A Child\'s Book of Planets', a: ['Liza', 'Santos'], call: '523.4', subj: 'PLANETS', ask: 'planets' },
+  { t: 'The Fire Under Our Feet', a: ['Ramon', 'Cruz'], call: '551.21', subj: 'VOLCANOES', ask: 'volcanoes' },
+  { t: 'Snakes of the Islands', a: ['Luis', 'Fernandez'], call: '597.96', subj: 'SNAKES', ask: 'snakes' },
+  { t: 'The Human Heart', a: ['Paolo', 'Mendoza'], call: '612.1', subj: 'HEART', ask: 'the human heart' },
+  { t: 'Wings: How Airplanes Fly', a: ['Ben', 'Navarro'], call: '629.13', subj: 'AIRPLANES', ask: 'airplanes' },
+  { t: 'Cooking with Coconut', a: ['Teresa', 'Dizon'], call: '641.5', subj: 'COOKERY', ask: 'cooking' },
+  { t: 'An Introduction to Music', a: ['Nora', 'Reyes'], call: '780', subj: 'MUSIC', ask: 'music' },
+  { t: 'Hoops: The Story of Basketball', a: ['Mark', 'Villanueva'], call: '796.323', subj: 'BASKETBALL', ask: 'basketball' },
+  { t: 'Poems of the Sea', a: ['Miguel', 'Aquino'], call: '821', subj: 'ENGLISH POETRY', ask: 'English poetry' },
+  { t: 'Maps and Explorers', a: ['Tomas', 'Uy'], call: '910', subj: 'GEOGRAPHY', ask: 'geography' },
+  { t: 'A Short History of the Philippines', a: ['Elena', 'Garcia'], call: '959.9', subj: 'PHILIPPINES -- HISTORY', ask: null }
+];
+BOOKS.forEach((b, i) => { b.id = i; b.cutter = b.a[1].slice(0, 3).toUpperCase(); b.year = 1961 + (i * 7) % 14; });
+const DRAWERS = [['A', 'B'], ['C', 'D'], ['E', 'G'], ['H', 'K'], ['L', 'M'], ['N', 'Q'], ['R', 'S'], ['T', 'Z']];
+
+/* Filing: titles skip a first A / An / The; authors file by surname; subjects by their heading. */
+const fileKey = s => s.replace(/^(a|an|the)\s+/i, '').replace(/[^A-Za-z ]/g, '').toUpperCase();
+const CARDS = [];
+BOOKS.forEach(b => {
+  CARDS.push({ book: b.id, kind: 'TITLE', head: b.t, key: fileKey(b.t) });
+  CARDS.push({ book: b.id, kind: 'AUTHOR', head: `${b.a[1]}, ${b.a[0]}`, key: (b.a[1] + ' ' + b.a[0]).toUpperCase() });
+  CARDS.push({ book: b.id, kind: 'SUBJECT', head: b.subj, key: b.subj.replace(/[^A-Z ]/g, '') });
+});
+CARDS.sort((x, y) => x.key < y.key ? -1 : x.key > y.key ? 1 : 0);
+const drawerOf = key => DRAWERS.findIndex(([f, t]) => key[0] >= f && key[0] <= t);
+const DRAWER_CARDS = DRAWERS.map((_, d) => CARDS.filter(c => drawerOf(c.key) === d));
+
+/* ===================== SETTINGS ===================== */
+const PATRONS = 8, FIRST_AT = 1.5, GAP = 20;     // seconds: first arrival, then one every 20 s
+const CALM = 30, FLOOR = 40, WRONG_COST = 15;   // satisfaction: 100 up to 30 s wait, −1/s to 40; −15 per wrong shelf
+const SKIN = ['#F1C9A5', '#E0AC82', '#C68A62', '#A86F4C', '#8D5A3B'], HAIR = ['#2B1D14', '#3B2A1E', '#5A3A22', '#1C1C1C', '#7A4B2A'],
+  SHIRT = ['#3F7CAC', '#D1495B', '#2E8B57', '#EDAE49', '#6C5B7B', '#00798C', '#F28F3B', '#8E7DBE'];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ===================== SCENE ===================== */
+function buildShelves(){
+  const units = [['000–100', 0], ['200–300', 1], ['400–500', 2], ['600–700', 3], ['800–900', 4]];
+  const sx = [1, 7.6, 14.2, 20.8, 27.4];
+  $('shelves').innerHTML = units.map(([label], u) => `<div class="shelf" style="left:${sx[u]}%;width:6%"><span class="sign">${label.replace('–', '<br>')}</span>${
+    [0, 1, 2].map(() => `<div class="row">${Array.from({ length: 4 + Math.floor(Math.random() * 3) }, () => `<i style="height:${60 + Math.random() * 38}%;background:${pick(SHIRT)}"></i>`).join('')}</div>`).join('')}</div>`).join('');
+}
+const shelfX = call => [4, 10.6, 17.2, 23.8, 30.4][Math.floor(Number(call) / 200)];
+const DESK = 52, QX = [52, 67, 79, 91];          // counter spot, then queue spots (left %)
+
+function makePatron(p){
+  const el = document.createElement('div'); el.className = 'patron flip walk';
+  el.innerHTML = `<div class="hair" style="background:${p.hair}"></div><div class="head" style="background:${p.skin}"></div><div class="body" style="background:${p.shirt}"></div><div class="mood">🙂</div>`;
+  el.style.left = '108%';
+  $('people').append(el); p.el = el;
+}
+function placeQueue(){
+  const q = G.queue;
+  q.forEach((p, i) => {
+    const x = i < QX.length ? QX[i] : 104;
+    if (p.x !== x) { p.x = x; p.el.classList.add('walk', 'flip'); p.el.style.left = x + '%'; clearTimeout(p.stopT); p.stopT = setTimeout(() => p.el.classList.remove('walk'), 1500); }
+    p.el.style.opacity = i < QX.length ? 1 : 0;
+  });
+  const extra = q.length - QX.length; $('more').hidden = extra <= 0; $('more').textContent = `+${extra} in line`;
+}
+function bubble(text){
+  const b = $('bubble');
+  if (!text) { b.hidden = true; return; }
+  b.innerHTML = text; b.hidden = false; b.style.left = DESK + '%';
+}
+function sendToShelf(p, ok){
+  const el = p.el; el.classList.remove('flip'); el.classList.add('walk');
+  el.style.zIndex = 1; el.style.bottom = '30%'; el.style.left = shelfX(G.dirSec * 100 + 1) + '%';
+  p.x = null;
+  return new Promise(res => setTimeout(() => {
+    el.classList.remove('walk');
+    if (ok) { el.querySelector('.mood').textContent = '📖'; setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 600); res(); }, 700); }
+    else { el.querySelector('.mood').textContent = '😕'; setTimeout(res, 700); }
+  }, 1550));
+}
+function moodFor(w){ return w < CALM ? '🙂' : w < 55 ? '😐' : w < 80 ? '😟' : '😠'; }
+function ringBell(){ const b = $('bell'); b.classList.remove('ring'); void b.offsetWidth; b.classList.add('ring'); }
+
+/* ===================== GAME STATE ===================== */
+let G = null;
+function newGame(){
+  const ids = shuffle(BOOKS.map(b => b.id)).slice(0, PATRONS);
+  const kinds = shuffle(['title', 'title', 'title', 'author', 'author', 'subject', 'subject', 'title']);
+  const patrons = ids.map((id, i) => {
+    let by = kinds[i]; if (by === 'subject' && !BOOKS[id].ask) by = 'title';
+    return { n: i, book: id, by, arrive: FIRST_AT + i * GAP, skin: pick(SKIN), hair: pick(HAIR), shirt: SHIRT[i % SHIRT.length], wrong: 0, wait: 0, done: false };
+  });
+  G = { t: 0, patrons, queue: [], served: [], view: 'wait', drawer: -1, cardIx: 0, pulled: null, dirSec: -1, entry: '', busy: false, msg: null, startedAt: new Date().toISOString() };
+}
+function current(){ return G.queue[0] || null; }
+function request(p){
+  const b = BOOKS[p.book];
+  if (p.by === 'author') return `Hello! I'm looking for a book by <b>${esc(b.a[0] + ' ' + b.a[1])}</b>.`;
+  if (p.by === 'subject') return `Good day! Do you have a book about <b>${esc(b.ask)}</b>?`;
+  return `Hi! Do you have <b>“${esc(b.t)}”</b>?`;
+}
+
+/* ===================== LOOP ===================== */
+let last = 0, raf = 0;
+function loop(ts){
+  const dt = last ? Math.min(0.25, (ts - last) / 1000) : 0; last = ts;
+  if (G && G.view !== 'intro' && G.view !== 'done') {
+    G.t += dt;
+    G.patrons.forEach(p => {
+      if (!p.el && G.t >= p.arrive) { makePatron(p); G.queue.push(p); placeQueue(); ringBell(); if (G.queue.length === 1) startServing(); }
+      if (p.el && !p.done) { p.wait = G.t - p.arrive; const m = p.el.querySelector('.mood'); const e = p.puzzled ? '😕' : moodFor(p.wait); if (m.textContent !== e && !G.busy) m.textContent = e; }
+    });
+    paintHud();
+    $('clockHand').style.transform = `rotate(${180 + G.t * 6}deg)`;
+  }
+  raf = requestAnimationFrame(loop);
+}
+function paintHud(){
+  $('hServed').textContent = `${G.served.length}/${PATRONS}`;
+  $('hWait').textContent = G.queue.length;
+  $('hSat').textContent = G.served.length ? Math.round(avgSat()) + '%' : '—';
+}
+const satOf = p => Math.max(0, (p.wait <= CALM ? 100 : Math.max(FLOOR, 100 - (p.wait - CALM))) - p.wrong * WRONG_COST);
+const avgSat = () => G.served.reduce((s, p) => s + satOf(p), 0) / Math.max(1, G.served.length);
+
+/* ===================== VIEWS ===================== */
+const W = () => $('work');
+function show(view){ G.view = view; ({ intro: vIntro, wait: vWait, catalog: vCatalog, drawer: vDrawer, direct: vDirect, done: vDone })[view](); }
+
+function vIntro(){
+  W().innerHTML = `<span class="tag">Before digitization · 1970s</span>
+    <h1>The Card Catalog</h1>
+    <p>You run the circulation desk of a library with <b>no computers</b>. Every book is listed on paper <b>index cards</b> in a wooden <b>card catalog</b>, filed in alphabetical order. Each book has three cards: one under its <b>title</b>, one under its <b>author</b> and one under its <b>subject</b>.</p>
+    <p>A card's top-left corner shows the book's <b>call number</b> from the <b>Dewey Decimal System</b> (created by Melvil Dewey in 1876). The first digit tells you which part of the library to send the patron to:</p>
+    <div class="dewey">${SECTIONS.map(([n, s]) => `<b>${n}</b><span>${s}</span>`).join('')}</div>
+    <p><b>How to serve a patron</b>: open the right drawer, flip to the card, pull it, then press the section and type the call number to tell the patron where to go. ${PATRONS} patrons will come. Each one gets less happy the longer they wait.</p>
+    <button type="button" class="btn" id="start">Open the library</button>`;
+  $('start').onclick = () => { show('wait'); };
+}
+function vWait(){
+  bubble(null);
+  W().innerHTML = G.served.length < PATRONS
+    ? `<p class="step"><b>The desk is quiet.</b> The next patron is on the way…</p>`
+    : '';
+}
+function startServing(){
+  const p = current(); if (!p) return show('wait');
+  G.drawer = -1; G.cardIx = 0; G.pulled = null; G.dirSec = -1; G.entry = ''; G.msg = null;
+  setTimeout(() => { if (current() === p) bubble(request(p)); }, 1500);
+  show('catalog');
+}
+function ruleFor(p){
+  if (p.by === 'author') return 'Author cards are filed by the author\'s <b>surname</b> (last name).';
+  if (p.by === 'subject') return 'Subject cards are filed under the <b>subject heading</b>, in capital letters.';
+  return 'Title cards are filed by the <b>first word</b> of the title, skipping <b>A</b>, <b>An</b> and <b>The</b>.';
+}
+function vCatalog(){
+  const p = current(); if (!p) return show('wait');
+  W().innerHTML = `<p class="step"><b>Step 1 of 3 · Open the right drawer</b></p>
+    <div class="rule">${ruleFor(p)}</div>
+    <div class="cabinet">${DRAWERS.map(([f, t], i) => `<button type="button" class="drawer" data-d="${i}" aria-label="Drawer ${f} to ${t}"><span class="lab">${f}–${t}</span><span class="knob"></span></button>`).join('')}</div>
+    ${G.msg ? `<div class="toast ${G.msg[0]}">${G.msg[1]}</div>` : ''}`;
+  W().querySelectorAll('.drawer').forEach(d => d.onclick = () => { G.drawer = +d.dataset.d; G.cardIx = 0; G.msg = null; show('drawer'); });
+}
+function cardHTML(c, cls){
+  const b = BOOKS[c.book];
+  const lines = c.kind === 'TITLE' ? [`${b.a[1]}, ${b.a[0]}.`, `Manila : Bookmark Press, ${b.year}.`]
+    : c.kind === 'AUTHOR' ? [`${b.t} / ${b.a[0]} ${b.a[1]}.`, `Manila : Bookmark Press, ${b.year}.`]
+    : [`${b.a[1]}, ${b.a[0]}.`, `${b.t}. ${b.year}.`];
+  return `<div class="icard ${cls || ''}"><span class="kind">${c.kind} CARD</span>
+    <div class="head">${esc(c.head)}</div>
+    <div class="call">${esc(b.call)}\n${esc(b.cutter)}</div>
+    <div class="bodytxt">${lines.map(esc).join('<br>')}</div><span class="hole"></span></div>`;
+}
+function vDrawer(){
+  const p = current(); if (!p) return show('wait');
+  const list = DRAWER_CARDS[G.drawer], c = list[G.cardIx], [f, t] = DRAWERS[G.drawer];
+  W().innerHTML = `<p class="step"><b>Step 2 of 3 · Find the card</b> · Cards are in A–Z order. Flip until you reach the patron's book.</p>
+    <div class="tray"><span class="lab">DRAWER ${f}–${t}</span>
+      <div class="stack"><div class="behind"></div>${cardHTML(c, 'in')}</div>
+      <div class="pager"><button type="button" id="prev" ${G.cardIx ? '' : 'disabled'}>‹ Back</button><span>Card ${G.cardIx + 1} of ${list.length}</span><button type="button" id="next" ${G.cardIx < list.length - 1 ? '' : 'disabled'}>Next ›</button></div>
+    </div>
+    ${G.msg ? `<div class="toast ${G.msg[0]}">${G.msg[1]}</div>` : ''}
+    <div class="row2"><button type="button" class="ghost" id="close">Close drawer</button><button type="button" class="btn" id="pull">Pull this card</button></div>`;
+  $('prev').onclick = () => { G.cardIx--; G.msg = null; vDrawer(); };
+  $('next').onclick = () => { G.cardIx++; G.msg = null; vDrawer(); };
+  $('close').onclick = () => { G.msg = null; show('catalog'); };
+  $('pull').onclick = () => {
+    if (c.book === p.book) { G.pulled = c; G.msg = null; show('direct'); }
+    else { G.msg = ['bad', 'That card is for a different book. Keep looking.']; vDrawer(); }
+  };
+}
+function vDirect(){
+  const p = current(); if (!p) return show('wait');
+  const b = BOOKS[p.book];
+  W().innerHTML = `<p class="step"><b>Step 3 of 3 · Tell the patron where to go</b> · Press the section, then type the call number from the card.</p>
+    <div class="mini"><span class="call">${esc(b.call)}\n${esc(b.cutter)}</span><span>${esc(b.t)}<br>${esc(b.a[0] + ' ' + b.a[1])}</span></div>
+    <div class="secs">${SECTIONS.map(([n, s], i) => `<button type="button" data-s="${i}" class="${G.dirSec === i ? 'on' : ''}"><b>${n}s</b>${s.split(' ')[0].replace(/,$/, '')}</button>`).join('')}</div>
+    <div class="display" id="disp">${esc(G.entry) || '&nbsp;'}</div>
+    <div class="keys">${['7', '8', '9', '⌫', '4', '5', '6', '.', '1', '2', '3', '0'].map(k => `<button type="button" data-k="${k}">${k}</button>`).join('')}</div>
+    ${G.msg ? `<div class="toast ${G.msg[0]}">${G.msg[1]}</div>` : ''}
+    <button type="button" class="btn" id="tell" ${G.dirSec < 0 || !G.entry || G.busy ? 'disabled' : ''}>Tell the patron</button>`;
+  W().querySelectorAll('.secs button').forEach(x => x.onclick = () => { if (G.busy) return; G.dirSec = +x.dataset.s; G.msg = null; vDirect(); });
+  W().querySelectorAll('.keys button').forEach(x => x.onclick = () => {
+    if (G.busy) return;
+    const k = x.dataset.k;
+    if (k === '⌫') G.entry = G.entry.slice(0, -1);
+    else if (G.entry.length < 7 && !(k === '.' && G.entry.includes('.'))) G.entry += k;
+    G.msg = null; vDirect();
+  });
+  $('tell').onclick = tell;
+}
+async function tell(){
+  const p = current(), b = BOOKS[p.book];
+  if (!p || G.busy) return;
+  const ok = G.dirSec === Math.floor(Number(b.call) / 100) && G.entry === b.call;
+  G.busy = true; vDirect();
+  bubble(ok ? `Thank you! Off to the <b>${SECTIONS[G.dirSec][0]}s</b>.` : `Okay, the <b>${SECTIONS[G.dirSec][0]}s</b>…`);
+  if (ok) {
+    p.done = true; p.wait = G.t - p.arrive;
+    G.queue.shift(); G.served.push(p);
+    await sendToShelf(p, true);
+    bubble(null);
+    G.busy = false;
+    placeQueue();
+    if (G.served.length >= PATRONS) return finish();
+    if (G.queue.length) startServing(); else show('wait');
+  } else {
+    p.wrong++; p.puzzled = true;
+    await sendToShelf(p, false);
+    setTimeout(() => { p.puzzled = false; }, 4000);
+    bubble(`That shelf didn't have it. Can you check again?`);
+    p.el.classList.add('flip'); p.el.style.bottom = ''; p.el.style.zIndex = ''; p.x = null; placeQueue();
+    G.busy = false;
+    G.msg = ['bad', 'Wrong shelf. The patron came back. Check the section and call number on the card.'];
+    G.dirSec = -1; G.entry = ''; vDirect();
+  }
+}
+
+/* ===================== RESULT ===================== */
+const RESULT_KEY = 'itict_activity13_result', RESULT_IDB = 'activity13_result';
+function ckGet(k){ try{ const m=document.cookie.match(new RegExp('(?:^|; )'+k+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }catch(e){ return null; } }
+function parse(s){ try{ return s?JSON.parse(s):null; }catch(e){ return null; } }
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('itict_db',1); r.onupgradeneeded=()=>r.result.createObjectStore('results'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbPut(k,v){ try{ const db=await idbOpen(); await new Promise(r=>{ const q=db.transaction('results','readwrite').objectStore('results').put(v,k); q.onsuccess=q.onerror=()=>r(); }); }catch(e){} }
+async function idbRead(k){ try{ const db=await idbOpen(); return await new Promise(r=>{ const q=db.transaction('results','readonly').objectStore('results').get(k); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }catch(e){ return null; } }
+async function writeResult(rec){
+  const json = JSON.stringify(rec);
+  try{ localStorage.setItem(RESULT_KEY, json); }catch(e){}
+  try{ document.cookie = RESULT_KEY+'='+encodeURIComponent(json)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  await idbPut(RESULT_IDB, rec);
+  try{ sessionStorage.setItem(RESULT_KEY, json); }catch(e){}
+}
+async function loadResult(){
+  let r = null; try{ r = parse(localStorage.getItem(RESULT_KEY)); }catch(e){}
+  r = r || parse(ckGet(RESULT_KEY)) || await idbRead(RESULT_IDB);
+  if (r) await writeResult(r);
+  return r;
+}
+let recorded = null;
+async function finish(){
+  const sat = Math.round(avgSat());
+  const waits = G.served.map(p => p.wait), avgWait = Math.round(waits.reduce((a, b) => a + b, 0) / waits.length);
+  const wrong = G.served.reduce((s, p) => s + p.wrong, 0);
+  G.result = { sat, avgWait, wrong, total: Math.round(G.t), longest: Math.round(Math.max(...waits)) };
+  if (!recorded) {
+    recorded = { score: sat, maxScore: 100, percentage: sat, stars: Math.round(sat / 10) / 2, served: G.served.length, avgWait, longestWait: G.result.longest,
+      wrongShelves: wrong, totalSec: G.result.total, startedAt: G.startedAt, completedAt: new Date().toISOString(), locked: true };
+    await writeResult(recorded);
+    G.first = true;
+  }
+  show('done');
+}
+function starsText(s){ const full = Math.floor(s), half = s - full >= .5; return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0)); }
+function vDone(){
+  bubble(null);
+  const r = G.result, stars = Math.round(r.sat / 10) / 2;
+  W().innerHTML = `<span class="tag">${G.first ? 'Activity 13 score recorded · Locked' : 'Practice run'}</span>
+    <div class="big">${r.sat}%</div><div class="stars" aria-label="${stars} of 5 stars">${starsText(stars)}</div>
+    <p style="text-align:center;color:var(--muted)">Patron satisfaction${G.first ? '' : ` · Recorded score stays <b>${recorded.percentage}%</b>`}</p>
+    <div class="facts"><div><b>${r.avgWait}s</b><span>Avg wait</span></div><div><b>${r.longest}s</b><span>Longest</span></div><div><b>${r.wrong}</b><span>Wrong shelf</span></div></div>
+    <div class="rule"><b>Then and now.</b> You served ${PATRONS} patrons in ${Math.floor(r.total / 60)} min ${r.total % 60} s, about <b>${r.avgWait} seconds of waiting each</b>, with cards that had to be typed, filed and kept in order by hand. Today an online public access catalog (<b>OPAC</b>) searches every title, author and subject at once in about a second, from any phone, and can show whether the book is on the shelf. That shift from paper records to digital systems is <b>digital transformation</b>.</div>
+    <button type="button" class="btn" id="again">Practice again</button>
+    <a class="ghost" href="index.html" style="display:block;text-align:center;text-decoration:none">Back to Home</a>`;
+  $('again').onclick = () => { $('people').innerHTML = ''; newGame(); show('wait'); };
+}
+
+/* ===================== START ===================== */
+(async () => {
+  buildShelves();
+  newGame();
+  recorded = await loadResult();
+  show('intro');
+  if (recorded) W().insertAdjacentHTML('afterbegin', `<div class="toast good">Recorded score: ${recorded.percentage}% satisfaction (locked). New runs are practice.</div>`);
+  raf = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

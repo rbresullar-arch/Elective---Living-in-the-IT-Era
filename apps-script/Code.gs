@@ -69,7 +69,7 @@ var SHEET = { scores: 'Scores', data: 'Data', auth: 'Auth', reset: 'Reset', log:
 var MAX_FAILS = 3;
 var LOCK_MS = 24 * 60 * 60 * 1000;
 var LOG_KEEP = 4000;
-var ACTIVITY_COUNT = 12;
+var ACTIVITY_COUNT = 13;
 var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' },
   { id: 'examPrefinal', label: 'Prefinal', paper: true }];   // paper: bubble-sheet exam → Set, Start, End, Flags columns
 var CHUNK = 45000;          // chars per cell (cell limit is 50,000)
@@ -477,7 +477,7 @@ function ensureSheets_(ss) {
   heads[SHEET.scores].push('Last sync', 'Flags (review)');
   heads[SHEET.data] = ['Code', 'Schedule', 'Updated', 'JSON (split across columns)'];
   heads[SHEET.auth] = ['Code', 'PIN hash (clear cell to reset PIN)', 'Registered', 'Wrong tries', 'Locked until (clear to unlock)'];
-  heads[SHEET.reset] = ['Code (as in Scores)', 'Activity: A1–A12 or ALL', 'Applied (filled by script)'];
+  heads[SHEET.reset] = ['Code (as in Scores)', 'Activity: A1–A13 or ALL', 'Applied (filled by script)'];
   heads[SHEET.log] = ['Time', 'Code', 'Action', 'Result'];
   heads[SHEET.sched] = ['Schedule code (5 digits)', 'Label'];
   var rebuild = false;

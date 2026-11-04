@@ -708,10 +708,11 @@ const a7Pct = r => r.percentage != null ? r.percentage : Math.round((r.bestStars
    Term points: each activity is worth 100 points (its percentage), unless it sets `points`
    (the Prefinals Summative Activity is worth 500, as much as the other five together). */
 const ACT_TERMS = [{ label: 'Prelims', acts: [1, 2, 3, 4], note: 'Activities 1–4' },
+  { label: 'Midterms', acts: [13], note: 'Activity 13' },
   { label: 'Prefinals', acts: [5, 6, 7, 8, 9, 12], note: 'Activities 5–9 + Summative' },
   { label: 'Finals', acts: [10, 11], note: 'Activities 10–11' }];
 const TILE_COLORS = ['#0A84FF', '#FF9F0A', '#5E5CE6', '#30B0C7', '#34C759', '#FF375F', '#BF5AF2', '#FF453A', '#FFCC00'];
-const ACT_NAMES = ['IT & ICT in Our Lives', 'Abacus Addition', 'The Pascaline', 'Binary Decoder', 'Packet Route', 'Packet Auto-Route', 'Qrispy Queen', 'Phish or Legit', 'Netiquette Desk', 'Seller Journey', 'Cyber Defense Ops', 'Prefinals Summative Activity'];
+const ACT_NAMES = ['IT & ICT in Our Lives', 'Abacus Addition', 'The Pascaline', 'Binary Decoder', 'Packet Route', 'Packet Auto-Route', 'Qrispy Queen', 'Phish or Legit', 'Netiquette Desk', 'Seller Journey', 'Cyber Defense Ops', 'Prefinals Summative Activity', 'The Card Catalog'];
 const EXAM_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6'];
 const READ_COLORS = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6'];
 const BOOK_ICON = '<svg viewBox="0 0 24 24"><path d="M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 6v13.5"/></svg>';
@@ -752,6 +753,8 @@ const ACTIVITIES = [
     score: r => (r.percentage || 0) + '%',
     progressKey: 'itict_summative_progress',
     note: r => `${r.score}/${r.maxScore || 500} pts · ${r.correct != null ? r.correct : '—'} of ${r.total || 20} correct` + ((r.blockedParts || []).length ? ` · ${r.blockedParts.length} part${r.blockedParts.length > 1 ? 's' : ''} blocked` : '') + ' · Locked' },
+  { label: 'Activity 13', href: 'card_catalog.html', requires: [],
+    note: r => `${(+(r.stars || 0)).toFixed(1)}★ satisfaction · avg wait ${r.avgWait != null ? r.avgWait : '—'} s · ${r.wrongShelves || 0} wrong shelf · Locked` },
 ];
 
 const EXAMS = [
@@ -772,7 +775,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.03.3';
+const APP_VERSION = '2026.11.04.1';
 
 /* ======================= END OF CONFIG ======================= */
 
