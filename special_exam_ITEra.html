@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Special Examination</title>
+<style>
+/* Special Examinations (Prelim, Midterm, Prefinals): special_exam_ITEra.html?exam=prelim|midterm|prefinals
+   Open to every student logged in on the hub (class code + PIN). One attempt. 45-minute timer.
+   The student states a reason (max 100 characters) before starting.
+   Part 1: 10 remembering items (1 pt each). Parts 2–5: situations, 2–3 items each (5 pts each). 60 points.
+   One question at a time, Next only. A situation stays on screen with its own questions.
+   Questions come from the Apps Script; the key never reaches the phone and the score is never shown. */
+:root{
+  color-scheme:light dark;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+  --serif:"New York","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --ground:#F5F5F7; --paper:#FFFFFF; --ink:#1D1D1F; --muted:#6E6E73; --hair:rgba(60,60,67,.16); --fill:rgba(118,118,128,.12);
+  --blue:#0071E3; --blue-soft:rgba(0,113,227,.10); --green:#248A3D; --green-soft:rgba(52,199,89,.14); --red:#D70015; --orange:#C93400;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){ :root{
+  --ground:#000; --paper:#1C1C1E; --ink:#F5F5F7; --muted:#98989D; --hair:rgba(84,84,88,.6); --fill:rgba(118,118,128,.24);
+  --blue:#0A84FF; --blue-soft:rgba(10,132,255,.2); --green:#30D158; --green-soft:rgba(48,209,88,.18); --red:#FF453A; --orange:#FF9F0A;
+  --sh-1:0 0 0 .5px rgba(255,255,255,.06),0 4px 14px rgba(0,0,0,.5); } }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ground)}
+body{margin:0;color:var(--ink);font-family:var(--sf);font-size:17px;line-height:1.5;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:focus-within{outline:3px solid var(--blue-soft);outline-offset:2px}
+main{max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));display:grid;gap:16px}
+#view{display:grid;gap:16px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top a{color:var(--blue);text-decoration:none}
+.tag{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.card{background:var(--paper);border-radius:18px;box-shadow:var(--sh-1);padding:18px}
+h1{font-size:28px;line-height:1.15;letter-spacing:-.03em;margin:4px 0 8px}
+h2{font-size:22px;line-height:1.2;letter-spacing:-.02em;margin:2px 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+.rules{display:grid;gap:8px;margin:12px 0 10px;padding:0;list-style:none;font-size:16px}
+.rules li{padding-left:22px;position:relative}
+.rules li::before{content:"";position:absolute;left:6px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.btn{display:block;border:none;border-radius:999px;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:15px 20px;width:100%;text-align:center;text-decoration:none}
+.btn:disabled{opacity:.45;cursor:default}
+.ghost{border:none;border-radius:999px;background:var(--fill);font-weight:600;font-size:16px;padding:12px 18px}
+.bar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--blue);border-radius:3px}
+.state{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:var(--fill);font-size:15px}
+.state b{font-size:17px}
+.state.open{background:var(--green-soft)}
+
+/* reason */
+label.lab{display:block;font-weight:600;margin:14px 0 6px}
+textarea{width:100%;min-height:86px;resize:vertical;border:2px solid var(--hair);border-radius:12px;background:var(--ground);color:var(--ink);
+  font:inherit;font-size:16px;line-height:1.4;padding:10px 12px;-webkit-user-select:text;user-select:text}
+textarea:focus{outline:none;border-color:var(--blue)}
+.count{text-align:right;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin:4px 0 12px}
+
+/* exam */
+.clock{position:sticky;top:0;z-index:6;margin:0 -16px;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;background:color-mix(in srgb,var(--ground) 88%,transparent);
+  -webkit-backdrop-filter:saturate(160%) blur(12px);backdrop-filter:saturate(160%) blur(12px);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.clock .t{font-variant-numeric:tabular-nums;font-weight:700;font-size:20px;letter-spacing:-.01em}
+.clock .t.low{color:var(--orange)}
+.clock .s{font-size:13px;color:var(--muted);font-weight:600}
+.sit{font-family:var(--serif);font-size:18px;line-height:1.6;letter-spacing:0;margin:6px 0 0}
+.q{display:grid;gap:10px;border:none;margin:0}
+.q .stem{margin:0 0 4px;font-weight:600}
+.q .stem b{color:var(--muted);margin-right:4px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--fill);cursor:pointer;border:2px solid transparent;font-size:16px;line-height:1.4}
+.opt input{margin:2px 0 0;width:18px;height:18px;accent-color:var(--blue);flex:none}
+.opt:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.msg{min-height:1.3em;margin:0;text-align:center;font-size:15px;color:var(--red)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:15px}
+.facts dt{color:var(--muted)} .facts dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+.check{display:block;font-size:52px;line-height:1;text-align:center;margin:6px 0;color:var(--green)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:end center;padding:16px;z-index:10}
+.sheet .card{width:100%;max-width:420px;display:grid;gap:10px}
+.gate{max-width:420px;margin:20vh auto;text-align:center}
+</style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
+</head>
+<body>
+<div class="gate card" id="gate" hidden></div>
+<main id="app">
+  <div class="top" id="topRow"><a href="index.html">‹ Home</a><span class="tag" id="topTag">Special Examination</span></div>
+  <div id="view"></div>
+</main>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="card">
+    <p id="confirmText"></p>
+    <button type="button" class="btn" id="confirmYes"></button>
+    <button type="button" class="ghost" id="confirmNo">Not yet</button>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+const TZ = 'Asia/Manila';
+const EXAMS = { prelim: 'Prelim', midterm: 'Midterm', prefinals: 'Prefinals' };
+const REASON_MAX = 100;
+const RETRY = [5000, 15000, 45000, 90000];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const EXAM = (new URLSearchParams(location.search).get('exam') || '').toLowerCase();
+const LABEL = EXAMS[EXAM] || '';
+function acct(){ try { const a = JSON.parse(localStorage.getItem('itict_cloud') || 'null'); return a && a.id && a.pin ? a : null; } catch (e) { return null; } }
+const ACCT = acct();
+const KEY = ACCT && LABEL ? 'itict_spx_' + EXAM + '_' + ACCT.id : '';
+
+/* ===================== STORAGE =====================
+   The attempt lives in localStorage + sessionStorage (newest copy wins). The server holds the official copy. */
+let S = null;   // { exam, id, ends, title, parts, answers, order, pos:{part,q}, blocked, flags:{leave,copy,capture}, submitted, uploaded, auto, submittedAt, offset, updated }
+function load(){
+  let best = null;
+  [() => localStorage.getItem(KEY), () => sessionStorage.getItem(KEY)].forEach(get => {
+    try { const x = JSON.parse(get() || 'null'); if (x && (!best || (x.updated || 0) > (best.updated || 0))) best = x; } catch (e) {}
+  });
+  return best;
+}
+function save(){
+  if (!S) return;
+  S.updated = Date.now();
+  const v = JSON.stringify(S);
+  try { localStorage.setItem(KEY, v); } catch (e) {}
+  try { sessionStorage.setItem(KEY, v); } catch (e) {}
+}
+
+/* ===================== SERVER ===================== */
+function call(body, ms){
+  body.id = ACCT.id; body.pin = ACCT.pin; body.exam = EXAM;
+  const ctl = window.AbortController ? new AbortController() : null;
+  const t = setTimeout(() => { if (ctl) ctl.abort(); }, ms || 25000);
+  return fetch(CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'offline' }))
+    .then(j => { clearTimeout(t); return j; });
+}
+const ERR = {
+  offline: 'No connection. Connect to the internet and try again.',
+  pin: 'Your log-in on this phone is out of date. Log in again on the hub.',
+  locked: 'Your account is locked for now. Tell your instructor.',
+  nouser: 'Your class code was not found. Log in again on the hub.',
+  nobank: 'This examination is not ready yet. Try again later.',
+  closed: 'The special examinations closed on November 8 at 6:00 AM.',
+  done: 'You already submitted this examination.',
+  reason: 'State your reason first.',
+  busy: 'The server is busy. Try again in a moment.'
+};
+const errText = r => ERR[r && r.error] || 'Something went wrong. Try again.';
+
+let offset = 0;   // server now − device now
+const now = () => Date.now() + offset;
+function setOffset(serverNow){ if (serverNow) offset = serverNow - Date.now(); if (S) { S.offset = offset; save(); } }
+const fmt = (ms, o) => { try { return new Intl.DateTimeFormat('en-PH', Object.assign({ timeZone: TZ }, o)).format(ms); } catch (e) { return new Date(ms).toLocaleString(); } };
+const fmtWhen = ms => fmt(ms, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+function fmtLeft(ms){
+  const s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), x = s % 60;
+  return m + ':' + (x < 10 ? '0' : '') + x;
+}
+
+/* ===================== HELPERS ===================== */
+const view = () => $('view');
+function ask(text, yes, fn){
+  $('confirmText').textContent = text; $('confirmYes').textContent = yes; $('confirm').hidden = false;
+  $('confirmYes').onclick = () => { $('confirm').hidden = true; fn(); };
+}
+$('confirmNo').onclick = () => { $('confirm').hidden = true; };
+function shuffled(n){ const a = Array.from({ length: n }, (_, i) => i); for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const total = () => S.parts.reduce((s, p) => s + p.items.length, 0);
+const base = pi => S.parts.slice(0, pi).reduce((s, p) => s + p.items.length, 0);
+const answeredN = () => S.answers.filter(a => a >= 0).length;
+const flagN = () => (S.flags.leave || 0) + (S.flags.copy || 0) + (S.flags.capture || 0);
+const examActive = () => !!S && !!S.parts && !S.submitted;
+
+/* ===================== LOBBY ===================== */
+let info = null;
+function vLobby(r){
+  info = r;
+  $('topTag').textContent = 'Special ' + LABEL;
+  const e = r && r.ok && r.exams ? r.exams[EXAM] : null;
+  const st = e ? e.state : '';
+  let state = '', body = '';
+  if (!r || !r.ok) {
+    state = `<div class="state"><b>Not available</b></div>`;
+    body = `<p class="msg" style="text-align:left">${esc(errText(r))}</p>` + (r && (r.error === 'pin' || r.error === 'nouser') ? '<a class="btn" href="index.html">Go to the hub</a>' : '<button type="button" class="ghost" id="retry">Try again</button>');
+  } else if (st === 'done') {
+    state = `<div class="state"><b>Submitted</b><span class="muted">One attempt only</span></div>`;
+    body = '<p class="muted" style="margin:12px 0 0">You already submitted this examination. Your instructor will release the results.</p>';
+  } else if (st === 'closed') {
+    state = `<div class="state"><b>Closed</b><span class="muted">${esc(fmtWhen(r.closes))}</span></div>`;
+    body = '<p class="muted" style="margin:12px 0 0">The special examinations closed on November 8 at 6:00 AM.</p>';
+  } else if (st === 'notready') {
+    state = `<div class="state"><b>Not ready yet</b></div>`;
+    body = '<p class="muted" style="margin:12px 0 0">This examination is not ready yet. Try again later.</p><button type="button" class="ghost" id="retry">Check again</button>';
+  } else if (st === 'started') {
+    state = `<div class="state open"><b>In progress</b><span class="muted">ends ${esc(fmt(e.ends, { hour: 'numeric', minute: '2-digit' }))}</span></div>`;
+    body = '<p class="muted" style="margin:12px 0">You started this examination on another device or before this page was reloaded. The timer kept running.</p><button type="button" class="btn" id="resume">Resume</button>';
+  } else {
+    const left = Math.min(r.minutes * 60000, r.closes - now());
+    state = `<div class="state open"><b>Open</b><span class="muted">until ${esc(fmtWhen(r.closes))}</span></div>`;
+    body = `<ul class="rules">
+        <li><b>${r.minutes} minutes.</b> The timer starts when you tap Start and keeps running even if you leave the page.${left < r.minutes * 60000 ? ` Because the window closes soon, you will have <b>${fmtLeft(left)}</b>.` : ''}</li>
+        <li><b>Part 1:</b> 10 remembering items, <b>1 point</b> each.</li>
+        <li><b>Parts 2–5:</b> situations with 2–3 items each, <b>5 points</b> each. The situation stays on screen with its questions.</li>
+        <li>One question at a time. After <b>Next</b>, you cannot go back.</li>
+        <li><b>One attempt only.</b> Your score is not shown; your instructor releases the results.</li>
+        <li>Copying text or capturing the screen ends that part at once with 0 points. Leaving this page is recorded.</li>
+      </ul>
+      <label class="lab" for="reason">Why are you taking the special examination?</label>
+      <textarea id="reason" maxlength="${REASON_MAX}" placeholder="Example: I was confined at the hospital on the exam day." autocomplete="off"></textarea>
+      <div class="count" id="count">0/${REASON_MAX}</div>
+      <p class="msg" id="err"></p>
+      <button type="button" class="btn" id="start" disabled>Start the examination</button>`;
+  }
+  view().innerHTML = `<section class="card">
+      <span class="tag">GEEL 1 · Living in the IT Era</span>
+      <h1>Special ${esc(LABEL)} Examination</h1>
+      <p class="muted" style="margin:0 0 14px">Class code ${esc(ACCT.id)}</p>
+      ${state}${body}
+    </section>`;
+  if ($('retry')) $('retry').onclick = refresh;
+  if ($('resume')) $('resume').onclick = () => start('');
+  const ta = $('reason');
+  if (ta) {
+    const sync = () => {
+      if (ta.value.length > REASON_MAX) ta.value = ta.value.slice(0, REASON_MAX);
+      $('count').textContent = ta.value.length + '/' + REASON_MAX;
+      $('start').disabled = !ta.value.trim();
+    };
+    ta.addEventListener('input', sync);
+    $('start').onclick = () => {
+      const reason = ta.value.replace(/\s+/g, ' ').trim().slice(0, REASON_MAX);
+      if (!reason) { $('err').textContent = ERR.reason; return; }
+      ask(`Start now? Your ${r.minutes}-minute timer starts at once and cannot be paused.`, 'Start', () => start(reason));
+    };
+  }
+}
+function refresh(){
+  $('topTag').textContent = 'Special ' + LABEL;
+  view().innerHTML = '<section class="card"><p class="muted" style="margin:0">Checking…</p></section>';
+  return call({ action: 'specialStatus' }, 15000).then(r => { if (r && r.ok) setOffset(r.now); vLobby(r); });
+}
+
+let starting = false;
+function start(reason){
+  if (starting) return;
+  starting = true;
+  const btn = $('start') || $('resume'); if (btn) btn.disabled = true;
+  if ($('err')) $('err').textContent = 'Opening…';
+  call({ action: 'specialStart', reason }).then(r => {
+    starting = false;
+    if (!r.ok) {
+      if (btn) btn.disabled = false;
+      if ($('err')) $('err').textContent = errText(r);
+      if (r.error === 'done' || r.error === 'closed') refresh();
+      return;
+    }
+    const prev = load(), p = r.progress || {};
+    const n = r.parts.reduce((s, x) => s + x.items.length, 0);
+    const same = prev && prev.parts && prev.answers && prev.answers.length === n;
+    S = { exam: EXAM, id: ACCT.id, ends: r.ends, title: r.title, parts: r.parts,
+      answers: same ? prev.answers : (p.answers || Array(n).fill(-1)),
+      order: same && prev.order ? prev.order : r.parts.flatMap(x => x.items.map(() => shuffled(4))),
+      pos: same && prev.pos ? prev.pos : (p.pos || { part: 0, q: 0 }),
+      blocked: same && prev.blocked ? prev.blocked : (p.blocked || []),
+      flags: same && prev.flags ? prev.flags : { leave: p.flags || 0, copy: 0, capture: 0 },
+      submitted: false, uploaded: false };
+    /* never resume behind the furthest point reached on either side */
+    if (p.pos && (p.pos.part > S.pos.part || (p.pos.part === S.pos.part && p.pos.q > S.pos.q))) S.pos = p.pos;
+    setOffset(r.now); save();
+    openExam();
+  });
+}
+
+/* ===================== EXAM ===================== */
+let tick = 0, saver = 0, dirty = false;
+function openExam(){
+  render();
+  clearInterval(tick); tick = setInterval(paintClock, 1000);
+  clearInterval(saver); saver = setInterval(autosave, 30000);
+}
+function paintClock(){
+  if (!examActive()) return;
+  const left = S.ends - now(), t = $('clockT');
+  if (t) { t.textContent = fmtLeft(left); t.classList.toggle('low', left < 5 * 60000); }
+  if (left <= 0) submit(true);
+}
+function render(){
+  if (!examActive()) return;
+  const pi = S.pos.part, part = S.parts[pi];
+  if (!part) { finish(false); return; }
+  const qi = Math.min(S.pos.q, part.items.length - 1), it = part.items[qi], g = base(pi) + qi;
+  const lastQ = qi === part.items.length - 1, lastPart = pi === S.parts.length - 1;
+  const order = S.order[g] || [0, 1, 2, 3];
+  $('topTag').textContent = `Part ${pi + 1} of ${S.parts.length}`;
+  view().innerHTML = `<div class="clock"><span class="s">Special ${esc(LABEL)} · ${answeredN()}/${total()} answered</span><span class="t" id="clockT"></span></div>
+    <section class="card">
+      <span class="tag">Part ${pi + 1} of ${S.parts.length} · Question ${qi + 1} of ${part.items.length}</span>
+      <h2>${esc(part.title)}</h2>
+      <div class="bar" aria-hidden="true"><i style="width:${((qi + 1) / part.items.length * 100).toFixed(0)}%"></i></div>
+      ${part.text ? `<p class="sit">${esc(part.text)}</p>` : ''}
+    </section>
+    <form id="quiz"><div class="card q" role="radiogroup" aria-labelledby="qText">
+      <p class="stem" id="qText"><b>${g + 1}.</b>${esc(it.q)} <span class="muted" style="font-weight:500;font-size:14px">(${part.pts} pt${part.pts === 1 ? '' : 's'})</span></p>
+      ${order.map(k => `<label class="opt"><input type="radio" name="ans" value="${k}"${S.answers[g] === k ? ' checked' : ''}><span>${esc(it.c[k])}</span></label>`).join('')}
+    </div></form>
+    <p class="muted" style="font-size:14px;text-align:center;margin:0">You cannot go back to a question after Next.</p>
+    <button type="button" class="btn" id="nextQ" ${S.answers[g] >= 0 ? '' : 'disabled'}>${lastQ ? (lastPart ? 'Finish' : `Submit Part ${pi + 1}`) : 'Next'}</button>`;
+  paintClock();
+  window.scrollTo(0, 0);
+  $('quiz').addEventListener('change', e => { S.answers[g] = Number(e.target.value); dirty = true; save(); $('nextQ').disabled = false; });
+  $('nextQ').onclick = () => {
+    if (!(S.answers[g] >= 0)) return;
+    if (!lastQ) { S.pos = { part: pi, q: qi + 1 }; dirty = true; save(); render(); return; }
+    ask(lastPart ? 'Submit your last answer and finish the examination? You cannot change your answers after this.' : `Submit Part ${pi + 1}? Part ${pi + 2} opens next.`,
+      lastPart ? 'Finish' : 'Submit', () => advance());
+  };
+}
+/* Next part, or finish. Used after Submit, and silently after a block. */
+function advance(){
+  if (!examActive()) return;
+  if (S.pos.part < S.parts.length - 1) { S.pos = { part: S.pos.part + 1, q: 0 }; dirty = true; save(); autosave(); render(); }
+  else finish(false);
+}
+function finish(auto){ submit(auto); }
+function autosave(){
+  if (!examActive() || !dirty) return;
+  dirty = false;
+  call({ action: 'specialSave', answers: S.answers, blocked: S.blocked, flags: flagN(), pos: S.pos }, 20000).then(r => {
+    if (!r.ok) { dirty = true; return; }
+    if (r.done) { submit(true); return; }
+    if (r.ends && r.ends !== S.ends) { S.ends = r.ends; save(); }
+    setOffset(r.now);
+  });
+}
+
+/* ===================== SUBMIT ===================== */
+function submit(auto){
+  if (!S || S.submitted) return;
+  clearInterval(tick); clearInterval(saver);
+  $('confirm').hidden = true;
+  S.submitted = true; S.auto = !!auto; S.submittedAt = Math.min(now(), S.ends); save();
+  vDone();
+  upload(0);
+}
+function upload(attempt){
+  if (!S || S.uploaded) return;
+  paintSync({ pending: true });
+  call({ action: 'specialSubmit', answers: S.answers, blocked: S.blocked, flags: flagN() }).then(r => {
+    if (r.ok) { S.uploaded = true; save(); paintSync(); return; }
+    paintSync(r);
+    if (RETRY[attempt] != null) setTimeout(() => upload(attempt + 1), RETRY[attempt]);
+  });
+}
+function paintSync(r){
+  const el = $('sync'); if (!el) return;
+  el.textContent = S.uploaded ? 'Uploaded to your instructor ✓'
+    : r && r.pending ? 'Uploading your answers…'
+    : 'Saved on this phone. ' + (r && r.error === 'offline' ? 'It uploads when you are online. Open this page again later.' : errText(r) + ' Retrying…');
+  el.style.color = S.uploaded ? 'var(--green)' : 'var(--muted)';
+}
+function vDone(){
+  $('topTag').textContent = 'Submitted';
+  view().innerHTML = `<section class="card" style="text-align:center">
+      <span class="tag">Special ${esc(LABEL)} Examination</span>
+      <span class="check" aria-hidden="true">✓</span>
+      <h2>Submitted</h2>
+      <p class="muted" style="margin:0">${S.auto ? 'Time was up, so your answers were submitted automatically. ' : ''}Your instructor will release the results.</p>
+      <dl class="facts" style="text-align:left">
+        <dt>Class code</dt><dd>${esc(S.id)}</dd>
+        <dt>Answered</dt><dd>${answeredN()} of ${total()}</dd>
+        <dt>Submitted</dt><dd>${esc(fmt(S.submittedAt || now(), { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }))}</dd>
+      </dl>
+      <p id="sync" style="margin:14px 0 0;font-size:15px;font-weight:600"></p>
+    </section>
+    <a class="btn" href="index.html">Back to Home</a>`;
+  paintSync();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('online', () => { if (S && S.submitted && !S.uploaded) upload(0); });
+
+/* ===================== MONITORING =====================
+   Copy / cut / paste, or a detected screen capture, during the examination → that part is blocked (0 points)
+   and the next part opens at once, with no message. Leaving the page is only counted.
+   Phones give web pages no screenshot signal; captures are detected on computers only. */
+function block(kind){
+  if (!examActive()) return;
+  S.flags[kind] = (S.flags[kind] || 0) + 1;
+  if (!S.blocked.includes(S.pos.part)) S.blocked.push(S.pos.part);
+  $('confirm').hidden = true;
+  dirty = true; save();
+  advance();
+}
+['copy', 'cut', 'paste'].forEach(ev => document.addEventListener(ev, e => { if (examActive()) { e.preventDefault(); block('copy'); } }));
+document.addEventListener('keydown', e => {
+  if (!examActive()) return;
+  const k = (e.key || '').toLowerCase();
+  if (k === 'printscreen') { block('capture'); return; }
+  if (e.metaKey && e.shiftKey && ['3', '4', '5', 's'].includes(k)) { block('capture'); return; }
+  if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(k)) { e.preventDefault(); block('copy'); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'p') { e.preventDefault(); block('capture'); }
+});
+document.addEventListener('keyup', e => { if ((e.key || '').toLowerCase() === 'printscreen') block('capture'); });
+window.addEventListener('beforeprint', () => block('capture'));
+let away = false;
+function leave(){ if (!examActive() || away) return; away = true; S.flags.leave = (S.flags.leave || 0) + 1; dirty = true; save(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else { away = false; paintClock(); } });
+window.addEventListener('blur', leave);
+window.addEventListener('focus', () => { away = false; });
+window.addEventListener('pagehide', () => { if (S && !S.submitted) save(); });
+document.addEventListener('contextmenu', e => { if (e.target.tagName !== 'TEXTAREA') e.preventDefault(); });
+
+/* ===================== START ===================== */
+function gateCheck(){
+  const ua = navigator.userAgent || '';
+  if (!/FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(ua)) return true;
+  $('gate').hidden = false; $('app').hidden = true;
+  $('gate').innerHTML = '<h2>Open this page in your browser</h2><p class="muted">This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X), where your answers cannot be saved. Tap the ⋮ or ••• menu and choose "Open in Browser".</p>';
+  return false;
+}
+function message(title, text){
+  view().innerHTML = `<section class="card"><h2>${esc(title)}</h2><p class="muted">${esc(text)}</p><a class="btn" href="index.html">Go to the hub</a></section>`;
+}
+if (!gateCheck()) return;
+if (!LABEL) { message('Examination not found', 'Open the special examination from the hub.'); return; }
+document.title = 'Special ' + LABEL + ' Examination';
+if (!ACCT) { message('Log in first', 'Log in on the hub with your class code and PIN, then open this examination again.'); return; }
+S = load();
+if (S && S.offset) offset = S.offset;
+if (S && S.submitted) { vDone(); if (!S.uploaded) upload(0); return; }
+if (S && S.parts) {
+  /* resume at once (works offline); the server then confirms the time and whether it was already submitted */
+  if (!S.flags || typeof S.flags !== 'object') S.flags = { leave: 0, copy: 0, capture: 0 };
+  openExam();
+  call({ action: 'specialStatus' }, 15000).then(r => {
+    if (!r.ok || !r.exams || !S || S.submitted) return;
+    setOffset(r.now);
+    const e = r.exams[EXAM];
+    if (e && e.state === 'done') { submit(true); return; }
+    /* the instructor removed this attempt: start over from the lobby */
+    if (e && (e.state === 'open' || e.state === 'closed')) {
+      clearInterval(tick); clearInterval(saver); S = null;
+      try { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); } catch (x) {}
+      refresh(); return;
+    }
+    if (e && e.ends && e.ends !== S.ends) { S.ends = e.ends; save(); }
+    paintClock();
+  });
+  return;
+}
+S = null;
+refresh();
+})();
+</script>
+</body>
+</html>

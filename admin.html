@@ -79,6 +79,7 @@
   .exam-state { font-size:14px; color:var(--muted); margin:0; }
   .exam-state.live { color:var(--green); font-weight:600; }
   textarea { width:100%; border:none; background:var(--field); border-radius:10px; padding:12px 14px; outline:none; font-family:var(--mono); font-size:15px; min-height:84px; resize:vertical; color:inherit; }
+  select { width:100%; border:none; background:var(--field); border-radius:10px; padding:12px 14px; font:inherit; font-size:15px; color:inherit; margin-bottom:10px; }
   textarea:focus { box-shadow:0 0 0 3px var(--blue-soft), 0 0 0 1px var(--blue); }
   .sp-row { display:flex; align-items:center; gap:10px; background:var(--surface); padding:11px 14px; }
   .sp-row .c { font-family:var(--mono); font-weight:600; min-width:84px; }
@@ -149,21 +150,17 @@
     <p class="msg" id="examMsg"></p>
   </section>
 
-  <!-- Special Prefinal: online exam for assigned class codes only -->
+  <!-- Special Examinations: online, open to every class code, one attempt per exam -->
   <section class="card" id="spCard" hidden>
-    <div class="head"><strong style="font-family:var(--sans)">Special Prefinal</strong>
+    <div class="head"><strong style="font-family:var(--sans)">Special Examinations</strong>
       <div class="tools"><button class="link" id="spReload" type="button">Reload</button></div>
     </div>
-    <p class="exam-state">Only the class codes listed here see it on their Examination screen. Students answer online; the score goes to the Sheet's Special tab and is never shown to them.</p>
-    <p class="sp-bank" id="spBank">Question bank: checking…</p>
-    <label for="spFile">Upload question bank (.json)</label>
+    <p class="exam-state" id="spWin">Open to every class code. One attempt each. Scores go to the Sheet's "Special Exams" tab and are never shown to students.</p>
+    <p class="sp-bank" id="spBank">Question banks: checking…</p>
+    <label for="spFile">Upload question banks (.json — one file can hold all three)</label>
     <input class="file" id="spFile" type="file" accept=".json,application/json">
-    <label for="spCodes">Class codes</label>
-    <textarea id="spCodes" placeholder="12021-07, 25007-15&#10;one or many, separated by commas, spaces or lines" autocomplete="off"></textarea>
-    <div class="times"><div><label>Opens at</label><input type="datetime-local" id="spOpens"></div>
-      <div><label>Closes at</label><input type="datetime-local" id="spCloses"></div></div>
-    <div class="times"><div><label>Timer (minutes)</label><input type="number" id="spMin" min="1" max="600" value="60" inputmode="numeric"></div><div></div></div>
-    <button class="btn" id="spAssign" type="button">Assign</button>
+    <label for="spFilter">Show</label>
+    <select id="spFilter"><option value="">All examinations</option><option value="prelim">Prelim</option><option value="midterm">Midterm</option><option value="prefinals">Prefinals</option></select>
     <p class="msg" id="spMsg"></p>
     <div class="list" id="spList"></div>
   </section>
@@ -182,7 +179,7 @@
 
 <script>
 const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
-const VERSION = '2026.11.04.1';
+const VERSION = '2026.11.05.1';
 const NAMES = ['Sentence Order', 'Abacus', 'Pascaline', 'Binary', 'Packet Relay', 'Packet Auto',
   'QRispy Queen', 'Phish Flag', 'Netiquette Desk', 'E-commerce Week', 'Cyber Defense Ops', 'Prefinals Summative Activity', 'The Card Catalog'];
 const SS_KEY = 'itict_admin_h';
@@ -384,81 +381,66 @@ $('examCloseAll').addEventListener('click', () => {
 });
 $('examReload').addEventListener('click', loadGate);
 
-/* ===== Special Prefinal ===== */
-const SP_ERR = { window: 'Set both times (closing after opening) and a timer of 1–600 minutes.', code: 'Enter at least one class code (12030-07).',
-  bank: 'That file is not a valid question bank.', busy: 'Server busy. Try again.' };
+/* ===== Special Examinations ===== */
+const SP_ERR = { bank: 'That file is not a valid question bank.', busy: 'Server busy. Try again.' };
+const SP_LABEL = { prelim: 'Prelim', midterm: 'Midterm', prefinals: 'Prefinals' };
+let spLast = null;
 function spStateText(r) {
   const t = ms => ms ? fmtPH(new Date(ms).toISOString()) : '—';
-  if (/^Submitted|^Auto/.test(r.status)) return `<b>${r.score}/${r.total}</b> · Set ${r.set} · ${r.answered} answered · ${r.flags} flag${r.flags === 1 ? '' : 's'}<br>${r.status} · ${t(r.submitted)}`;
-  if (r.set) return `<b>In progress</b> · Set ${r.set} · ${r.answered} answered · ends ${t(r.ends)}`;
-  const w = `${t(r.opens)} → ${t(r.closes)} · ${r.minutes} min`;
-  if (r.state === 'closed') return `<b>Closed, not taken</b><br>${w}`;
-  if (r.state === 'notyet') return `Waiting<br>${w}`;
-  return `<b>Open</b> · not started<br>${w}`;
+  const why = `<br>Reason: ${esc(r.reason || '—')}`;
+  if (/^Submitted|^Auto/.test(r.status)) return `<b>${r.score}/${r.max}</b> · Remember ${r.rem} · Analysis ${r.ana} · ${r.answered} answered · ${r.flags} flag${r.flags === 1 ? '' : 's'}` +
+    (r.blocked ? ` · blocked part ${r.blocked}` : '') + `<br>${esc(r.status)} · ${t(r.submitted)}` + why;
+  return `<b>In progress</b> · ${r.answered} answered · ends ${t(r.ends)}` + why;
 }
 function renderSpecial(r) {
-  const b = r.bank;
-  $('spBank').textContent = b ? `Question bank: ${b.n} items · sets ${b.sets.join(', ')} · uploaded ${b.at}` : 'Question bank: none yet. Upload it before students start.';
-  $('spBank').className = 'sp-bank' + (b ? ' ok' : '');
+  spLast = r;
+  const b = r.banks || {};
+  $('spWin').textContent = `Open to every class code until ${fmtPH(new Date(r.closes).toISOString())} · ${r.minutes} min · one attempt each. Scores go to the Sheet's "Special Exams" tab and are never shown to students.`;
+  const parts = Object.keys(SP_LABEL).map(k => b[k] ? `${SP_LABEL[k]} ${b[k].n} items / ${b[k].max} pts` : `${SP_LABEL[k]} missing`);
+  const all = Object.keys(SP_LABEL).every(k => b[k]);
+  $('spBank').textContent = 'Question banks: ' + parts.join(' · ');
+  $('spBank').className = 'sp-bank' + (all ? ' ok' : '');
   const list = $('spList'); list.innerHTML = '';
-  r.rows.sort((a, c) => a.code < c.code ? -1 : 1).forEach(x => {
+  const f = $('spFilter').value;
+  const rows = r.rows.filter(x => !f || x.exam === f).sort((a, c) => a.exam === c.exam ? (a.code < c.code ? -1 : 1) : (a.exam < c.exam ? -1 : 1));
+  rows.forEach(x => {
     const row = document.createElement('div'); row.className = 'sp-row';
-    row.innerHTML = `<span class="c"></span><span class="s"></span><button type="button" class="x">Remove</button>`;
-    row.querySelector('.c').textContent = x.code;
+    row.innerHTML = `<span class="c"></span><span class="s"></span><button type="button" class="x">Reset</button>`;
+    row.querySelector('.c').innerHTML = `${esc(x.code)}<br><small>${SP_LABEL[x.exam]}</small>`;
     row.querySelector('.s').innerHTML = spStateText(x);
     row.querySelector('.x').addEventListener('click', () => spRemove(x));
     list.append(row);
   });
-  list.hidden = !r.rows.length;
+  list.hidden = !rows.length;
 }
+function esc(v) { return String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 async function spCall(body, busyText) {
-  $('spAssign').disabled = true; setMsg($('spMsg'), busyText || 'Loading…');
+  setMsg($('spMsg'), busyText || 'Loading…');
   const r = await call(Object.assign({ action: 'adminSpecial' }, body));
-  $('spAssign').disabled = false;
   if (!r.ok) { if (!authFail(r)) setMsg($('spMsg'), SP_ERR[r.error] || ERR[r.error] || 'Failed.', 'err'); return null; }
   renderSpecial(r); setMsg($('spMsg'), '');
   return r;
 }
 function loadSpecial() { return spCall({}); }
-async function spAssign() {
-  /* commas, semicolons or lines separate codes; spaces too, unless the piece is one code written with a space (12030 07) */
-  const pieces = $('spCodes').value.split(/[,;\n]+/).map(v => v.trim()).filter(Boolean)
-    .flatMap(v => codeNorm(v) ? [v] : v.split(/\s+/));
-  const codes = [...new Set(pieces.map(codeNorm).filter(Boolean))];
-  const bad = pieces.filter(v => v && !codeNorm(v));
-  if (bad.length) { setMsg($('spMsg'), 'Not a class code: ' + bad.join(', '), 'err'); return; }
-  const opens = phToIso($('spOpens').value), closes = phToIso($('spCloses').value), minutes = Number($('spMin').value);
-  if (!codes.length) { setMsg($('spMsg'), SP_ERR.code, 'err'); return; }
-  if (!opens || !closes || Date.parse(closes) <= Date.parse(opens) || !(minutes >= 1 && minutes <= 600)) { setMsg($('spMsg'), SP_ERR.window, 'err'); return; }
-  const r = await spCall({ assign: { codes, opens, closes, minutes } }, 'Assigning…');
-  if (!r) return;
-  const m = r.msg || {};
-  const parts = [];
-  if (m.added && m.added.length) parts.push(`${m.added.length} assigned`);
-  if (m.updated && m.updated.length) parts.push(`${m.updated.length} updated (${m.updated.join(', ')})`);
-  if (m.missing && m.missing.length) parts.push(`not found: ${m.missing.join(', ')}`);
-  setMsg($('spMsg'), parts.join(' · ') || 'Done.', m.missing && m.missing.length ? 'err' : 'ok');
-  if (!(m.missing && m.missing.length)) $('spCodes').value = '';
-}
 async function spRemove(x) {
-  const taken = !!x.set;
-  if (!confirm(`Remove ${x.code} from the Special Prefinal?` + (taken ? ' Their answers and score in the Special tab are deleted, and they can take it again if you assign them again.' : ''))) return;
-  const r = await spCall({ remove: [x.code] }, 'Removing…');
-  if (r) setMsg($('spMsg'), `Removed ${x.code}.`, 'ok');
+  const taken = /^Submitted|^Auto/.test(x.status);
+  if (!confirm(`Reset ${x.code}'s Special ${SP_LABEL[x.exam]}? Their answers${taken ? ' and score' : ''} in the Special Exams tab are deleted, and they can take it again.`)) return;
+  const r = await spCall({ remove: [{ code: x.code, exam: x.exam }] }, 'Resetting…');
+  if (r) setMsg($('spMsg'), `Reset ${x.code} · ${SP_LABEL[x.exam]}.`, 'ok');
 }
 $('spFile').addEventListener('change', async () => {
   const f = $('spFile').files[0];
   if (!f) return;
   let bank;
   try { bank = JSON.parse(await f.text()); } catch (e) { setMsg($('spMsg'), SP_ERR.bank, 'err'); return; }
-  setMsg($('spMsg'), 'Uploading question bank…');
+  setMsg($('spMsg'), 'Uploading question banks…');
   const r = await call({ action: 'adminSpecialBank', bank });
   $('spFile').value = '';
-  if (!r.ok) { if (!authFail(r)) setMsg($('spMsg'), SP_ERR[r.error] || ERR[r.error] || 'Upload failed.', 'err'); return; }
-  setMsg($('spMsg'), `Question bank saved: ${r.bank.n} items, sets ${r.bank.sets.join(', ')}.`, 'ok');
-  loadSpecial().then(() => setMsg($('spMsg'), `Question bank saved: ${r.bank.n} items, sets ${r.bank.sets.join(', ')}.`, 'ok'));
+  if (!r.ok) { if (!authFail(r)) setMsg($('spMsg'), (SP_ERR[r.error] || ERR[r.error] || 'Upload failed.') + (r.exam ? ` (${SP_LABEL[r.exam]})` : ''), 'err'); return; }
+  const done = 'Question banks saved: ' + Object.keys(bank.exams || {}).map(k => SP_LABEL[k] || k).join(', ') + '.';
+  loadSpecial().then(() => setMsg($('spMsg'), done, 'ok'));
 });
-$('spAssign').addEventListener('click', spAssign);
+$('spFilter').addEventListener('change', () => { if (spLast) renderSpecial(spLast); });
 $('spReload').addEventListener('click', loadSpecial);
 
 $('loginBtn').addEventListener('click', login);

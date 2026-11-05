@@ -42,15 +42,16 @@
  *   { action: 'adminExamGate', pin }            → { ok, gate, now }  (read)
  *   { action: 'adminExamGate', pin, gate }      → saves which examinations are open; returns { ok, gate, now }
  *        gate = { <exam id>: { open: true|false, from: ISO or '', until: ISO or '' } }
- *   { action: 'adminSpecial', pin }             → { ok, rows, bank, now }  Special Prefinal list (read)
- *   { action: 'adminSpecial', pin, assign: { codes, opens, closes, minutes } } → assigns codes (ISO times)
- *   { action: 'adminSpecial', pin, remove: [codes] } → removes assignments (the student may be assigned again)
- *   { action: 'adminSpecialBank', pin, bank }   → stores the question bank + key (never sent to phones)
- * Special Prefinal (students, same id + pin as save):
- *   { action: 'specialStatus', id, pin }        → { ok, assigned, state, opens, closes, minutes, ends, now }
- *   { action: 'specialStart', id, pin }         → { ok, set, ends, items: [{ q, c }], progress }
- *   { action: 'specialSave', id, pin, answers } → progress autosave
- *   { action: 'specialSubmit', id, pin, answers, flags } → { ok, done } (the score is never returned)
+ *   { action: 'adminSpecial', pin }             → { ok, rows, banks, closes, minutes, now }  Special Exams list (read)
+ *   { action: 'adminSpecial', pin, remove: [{ code, exam }] } → deletes those attempts (the student may take it again)
+ *   { action: 'adminSpecialBank', pin, bank }   → bank = { exams: { prelim|midterm|prefinals: { title, parts } } };
+ *        stores questions + key in the hidden "Special Exams bank" tab (never sent to phones with the key)
+ * Special Exams (students, same id + pin as save). Open to every class code; one attempt per exam.
+ *   Window ends SPX_CLOSES (Philippine time); timer SPX_MINUTES. exam = 'prelim' | 'midterm' | 'prefinals'.
+ *   { action: 'specialStatus', id, pin }        → { ok, closes, minutes, exams: { <exam>: { state, ends } }, now }
+ *   { action: 'specialStart', id, pin, exam, reason } → { ok, ends, parts: [{ title, text, pts, items: [{ q, c }] }], progress }
+ *   { action: 'specialSave', id, pin, exam, answers, blocked, flags, pos } → progress autosave
+ *   { action: 'specialSubmit', id, pin, exam, answers, blocked, flags } → { ok, done } (the score is never returned)
  * GET ?action=schedules → { ok, schedules: [{ code, label }] }
  * GET ?action=examGate  → { ok, gate, now }. Read by exam_gate.js on the site.
  *   Stored in the Script Property EXAM_GATE. No property (or an exam missing from it) = CLOSED.
@@ -158,7 +159,7 @@ function doPost(e) {
     }
   }
 
-  /* Special Prefinal: each student writes only its own row, so no queue */
+  /* Special Exams: each student writes only its own rows, so no queue */
   if (action.indexOf('special') === 0) {
     try {
       var sp = SpreadsheetApp.openById(SHEET_ID);
@@ -722,24 +723,34 @@ function setGate_(inc) {
   return cur;
 }
 
-/* ================= Special Prefinal =================
-   Online multiple-choice Prefinal for students the instructor assigns (master console → Special Prefinal).
-   Tab "Special": one row per assigned class code. Opens/Closes = window to start; Minutes = timer.
-   The timer ends at Started + Minutes, never after Closes. Scores are written here only; phones never see them.
-   Tab "Special bank" (hidden): questions + answer key, uploaded from the master console. It is not in the site's code. */
-var SP_TAB = 'Special', SP_BANK = 'Special bank';
-var SP_HEAD = ['Code', 'Opens', 'Closes', 'Minutes', 'Set', 'Started', 'Ends', 'Submitted', 'Score', 'Total', 'Answered',
-  'Flags', 'Status', 'Answers (item 1 → last)', 'Progress (JSON)'];
-var SP_C = { code: 0, opens: 1, closes: 2, min: 3, set: 4, started: 5, ends: 6, sub: 7, score: 8, total: 9, answered: 10,
-  flags: 11, status: 12, ans: 13, prog: 14 };
-var SP_GRACE = 3 * 60 * 1000;          // upload allowance after the timer ends (slow or offline phones)
+/* ================= Special Examinations =================
+   Online special examinations (Prelim, Midterm, Prefinals) for students who missed the regular one.
+   Open to every student with a class code + PIN: no assignment. One attempt per student per exam.
+   Window: from the bank upload until SPX_CLOSES (Philippine time). Timer: SPX_MINUTES, never past SPX_CLOSES.
+   Tab "Special Exams": one row per class code + exam. The score is written here only; phones never see it.
+   Tab "Special Exams bank" (hidden): questions + answer key per exam, uploaded from the master console.
+   The key is never in the site's code (the repository is public). */
+var SPX_TAB = 'Special Exams', SPX_BANK = 'Special Exams bank';
+var SPX_CLOSES = '2026-11-08 06:00';   // Philippine time
+var SPX_MINUTES = 45;
+var SPX_EXAMS = [{ id: 'prelim', label: 'Prelim' }, { id: 'midterm', label: 'Midterm' }, { id: 'prefinals', label: 'Prefinals' }];
+var SPX_HEAD = ['Code', 'Exam', 'Reason', 'Started', 'Ends', 'Submitted', 'Remember', 'Analysis', 'Score', 'Max',
+  'Answered', 'Flags', 'Blocked parts', 'Status', 'Answers (item 1 → last)', 'Progress (JSON)'];
+var SPX_C = { code: 0, exam: 1, reason: 2, started: 3, ends: 4, sub: 5, rem: 6, ana: 7, score: 8, max: 9,
+  answered: 10, flags: 11, blocked: 12, status: 13, ans: 14, prog: 15 };
+var SPX_GRACE = 3 * 60 * 1000;         // upload allowance after the timer ends (slow or offline phones)
 var LETTERS = ['A', 'B', 'C', 'D'];
 
-function spSheet_(ss) {
-  var sh = ss.getSheetByName(SP_TAB);
+function spxExam_(v) {
+  var e = String(v || '').toLowerCase();
+  return SPX_EXAMS.some(function (x) { return x.id === e; }) ? e : '';
+}
+function spxLabel_(e) { for (var i = 0; i < SPX_EXAMS.length; i++) if (SPX_EXAMS[i].id === e) return SPX_EXAMS[i].label; return e; }
+function spxSheet_(ss) {
+  var sh = ss.getSheetByName(SPX_TAB);
   if (!sh) {
-    sh = ss.insertSheet(SP_TAB); sh.setFrozenRows(1);
-    sh.getRange(1, 1, 1, SP_HEAD.length).setValues([SP_HEAD]).setFontWeight('bold');
+    sh = ss.insertSheet(SPX_TAB); sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, SPX_HEAD.length).setValues([SPX_HEAD]).setFontWeight('bold');
   }
   return sh;
 }
@@ -754,108 +765,143 @@ function phMs_(v) {
   return isNaN(t) ? 0 : t;
 }
 function phText_(ms) { return ms > 0 ? Utilities.formatDate(new Date(ms), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss') : ''; }
-function spRead_(sh, row) { return sh.getRange(row, 1, 1, SP_HEAD.length).getValues()[0]; }
-function spWrite_(sh, row, v) { sh.getRange(row, 1, 1, SP_HEAD.length).setNumberFormat('@').setValues([v.map(function (x) { return x == null ? '' : String(x); })]); }
-function spDone_(v) { return /^(Submitted|Auto-submitted)/.test(String(v[SP_C.status])); }
+function spxRead_(sh, row) { return sh.getRange(row, 1, 1, SPX_HEAD.length).getValues()[0]; }
+function spxWrite_(sh, row, v) { sh.getRange(row, 1, 1, SPX_HEAD.length).setNumberFormat('@').setValues([v.map(function (x) { return x == null ? '' : String(x); })]); }
+function spxDone_(v) { return /^(Submitted|Auto-submitted)/.test(String(v[SPX_C.status])); }
+function spxFind_(sh, code, exam) {
+  var last = sh.getLastRow();
+  if (last < 2) return 0;
+  var vals = sh.getRange(2, 1, last - 1, 2).getDisplayValues();
+  for (var i = 0; i < vals.length; i++)
+    if (String(vals[i][0]).trim().toUpperCase() === code && String(vals[i][1]).trim().toLowerCase() === exam) return i + 2;
+  return 0;
+}
+/* plain one-line text, at most 100 characters */
+function spxReason_(v) {
+  return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+}
 
 /* ---- bank ---- */
-function spBank_(ss) {
+function spxBankAll_(ss) {
   var cache = CacheService.getScriptCache();
-  var hit = cache.get('SP_BANK');
+  var hit = cache.get('SPX_BANK');
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
-  var sh = ss.getSheetByName(SP_BANK);
-  if (!sh || sh.getLastColumn() < 1 || sh.getLastRow() < 2) return null;
+  var sh = ss.getSheetByName(SPX_BANK);
+  if (!sh || sh.getLastColumn() < 1 || sh.getLastRow() < 2) return {};
   var text = sh.getRange(2, 1, 1, sh.getLastColumn()).getValues()[0].join('');
-  var bank = null;
-  try { bank = JSON.parse(text); } catch (e) { return null; }
-  if (text.length < 95000) cache.put('SP_BANK', text, 600);
-  return bank;
+  var all = {};
+  try { all = JSON.parse(text) || {}; } catch (e) { return {}; }
+  if (text.length < 95000) cache.put('SPX_BANK', text, 600);
+  return all;
 }
-/* Accepts { items: [{ q, c: [4], k: 0-3 }], sets: { A: [order], … } }. Missing sets → A in order, B–D shuffled. */
-function spBankCheck_(b) {
-  if (!b || !Array.isArray(b.items) || !b.items.length || b.items.length > 200) return null;
-  var items = [];
-  for (var i = 0; i < b.items.length; i++) {
-    var it = b.items[i] || {};
-    var k = Number(it.k);
-    if (typeof it.q !== 'string' || !it.q.trim() || !Array.isArray(it.c) || it.c.length !== 4 || !(k >= 0 && k <= 3)) return null;
-    items.push({ q: String(it.q), c: it.c.map(String), k: k });
+/* One exam: { title, parts: [{ title, text, pts, items: [{ q, c: [4], k: 0-3 }] }] } */
+function spxBankCheck_(b) {
+  if (!b || !Array.isArray(b.parts) || !b.parts.length || b.parts.length > 30) return null;
+  var parts = [], n = 0;
+  for (var p = 0; p < b.parts.length; p++) {
+    var src = b.parts[p] || {}, pts = Number(src.pts);
+    if (!(pts >= 1 && pts <= 100) || !Array.isArray(src.items) || !src.items.length) return null;
+    var items = [];
+    for (var i = 0; i < src.items.length; i++) {
+      var it = src.items[i] || {}, k = Number(it.k);
+      if (typeof it.q !== 'string' || !it.q.trim() || !Array.isArray(it.c) || it.c.length !== 4 || !(k >= 0 && k <= 3) || k !== Math.floor(k)) return null;
+      items.push({ q: String(it.q), c: it.c.map(String), k: k });
+    }
+    n += items.length;
+    parts.push({ title: String(src.title || ''), text: String(src.text || ''), pts: pts, items: items });
   }
-  var n = items.length, sets = {};
-  var src = b.sets && typeof b.sets === 'object' ? b.sets : null;
-  if (src) {
-    Object.keys(src).forEach(function (L) {
-      var o = src[L];
-      if (!/^[A-Z]$/.test(L) || !Array.isArray(o) || o.length !== n) return;
-      var seen = {};
-      var ok = o.every(function (x) { x = Number(x); if (!(x >= 0 && x < n) || seen[x]) return false; seen[x] = 1; return true; });
-      if (ok) sets[L] = o.map(Number);
-    });
-  }
-  if (!Object.keys(sets).length) {
-    LETTERS.forEach(function (L, j) {
-      var o = []; for (var x = 0; x < n; x++) o.push(x);
-      if (j) for (var y = n - 1; y > 0; y--) { var r = Math.floor(Math.random() * (y + 1)); var t = o[y]; o[y] = o[r]; o[r] = t; }
-      sets[L] = o;
-    });
-  }
-  return { title: String(b.title || 'Special Prefinal Examination'), items: items, sets: sets };
+  if (n > 200) return null;
+  return { title: String(b.title || 'Special Examination'), parts: parts };
 }
+function spxCount_(bank) { return bank.parts.reduce(function (s, p) { return s + p.items.length; }, 0); }
+function spxMax_(bank) { return bank.parts.reduce(function (s, p) { return s + p.pts * p.items.length; }, 0); }
+/* bank = { exams: { prelim: {…}, midterm: {…}, prefinals: {…} } } — any subset; the others stay as they are */
 function adminSpecialBank_(ss, req) {
-  var bank = spBankCheck_(req.bank);
-  if (!bank) return { ok: false, error: 'bank' };
-  var sh = ss.getSheetByName(SP_BANK) || ss.insertSheet(SP_BANK);
+  var src = req.bank && req.bank.exams;
+  if (!src || typeof src !== 'object') return { ok: false, error: 'bank' };
+  var all = spxBankAll_(ss), saved = [];
+  for (var key in src) {
+    var e = spxExam_(key);
+    if (!e) return { ok: false, error: 'bank' };
+    var b = spxBankCheck_(src[key]);
+    if (!b) return { ok: false, error: 'bank', exam: e };
+    b.at = phText_(Date.now());
+    all[e] = b; saved.push(e);
+  }
+  if (!saved.length) return { ok: false, error: 'bank' };
+  var sh = ss.getSheetByName(SPX_BANK) || ss.insertSheet(SPX_BANK);
   sh.clear();
-  var text = JSON.stringify(bank), parts = [];
+  var text = JSON.stringify(all), parts = [];
   for (var i = 0; i < text.length; i += CHUNK) parts.push(text.slice(i, i + CHUNK));
   sh.getRange(1, 1, 1, 2).setValues([['Uploaded', phText_(Date.now())]]);
   sh.getRange(2, 1, 1, parts.length).setNumberFormat('@').setValues([parts]);
   try { sh.hideSheet(); } catch (e) {}
-  CacheService.getScriptCache().remove('SP_BANK');
-  log_(ss, 'ADMIN', 'specialBank', bank.items.length + ' items · sets ' + Object.keys(bank.sets).join(''));
-  return { ok: true, bank: { n: bank.items.length, sets: Object.keys(bank.sets), at: phText_(Date.now()) } };
+  CacheService.getScriptCache().remove('SPX_BANK');
+  log_(ss, 'ADMIN', 'specialBank', saved.map(function (x) { return spxLabel_(x) + ' ' + spxCount_(all[x]) + ' items'; }).join(' · '));
+  return { ok: true, banks: spxBankInfo_(all) };
+}
+function spxBankInfo_(all) {
+  var out = {};
+  SPX_EXAMS.forEach(function (x) { var b = all[x.id]; out[x.id] = b ? { n: spxCount_(b), max: spxMax_(b), at: b.at || '' } : null; });
+  return out;
 }
 
 /* ---- scoring ---- */
-function spAnswers_(raw, n) {
+function spxAnswers_(raw, n) {
   if (!Array.isArray(raw) || raw.length !== n) return null;
   var out = [];
   for (var i = 0; i < n; i++) { var a = raw[i] == null ? -1 : Number(raw[i]); if (!(a >= -1 && a <= 3) || a !== Math.floor(a)) return null; out.push(a); }
   return out;
 }
-/* answers are in the student's set order; returns score and the answers in item order (letters, '-' = blank) */
-function spScore_(bank, set, answers) {
-  var order = bank.sets[set], n = bank.items.length, byItem = [], score = 0, answered = 0;
-  for (var x = 0; x < n; x++) byItem.push('-');
-  for (var i = 0; i < n; i++) {
-    var item = order[i], a = answers[i];
-    if (a >= 0) { answered++; byItem[item] = LETTERS[a]; if (a === bank.items[item].k) score++; }
-  }
-  return { score: score, total: n, answered: answered, byItem: byItem.join('') };
+function spxBlocked_(raw, nParts) {
+  if (!Array.isArray(raw)) return [];
+  var out = [];
+  raw.forEach(function (x) { x = Number(x); if (x >= 0 && x < nParts && x === Math.floor(x) && out.indexOf(x) < 0) out.push(x); });
+  return out.sort(function (a, b) { return a - b; });
 }
-function spFinish_(sh, row, v, bank, answers, status, at, flags) {
-  var r = spScore_(bank, v[SP_C.set], answers);
-  v[SP_C.sub] = phText_(at); v[SP_C.score] = r.score; v[SP_C.total] = r.total; v[SP_C.answered] = r.answered;
-  if (flags != null) v[SP_C.flags] = flags;
-  v[SP_C.status] = status; v[SP_C.ans] = r.byItem; v[SP_C.prog] = JSON.stringify(answers);
-  spWrite_(sh, row, v);
+/* answers hold the original choice index (0–3, -1 blank) in item order. Blocked parts score 0.
+   Remember = parts worth 1 point per item; Analysis = parts worth more. */
+function spxScore_(bank, answers, blocked) {
+  var rem = 0, ana = 0, answered = 0, letters = [], i = 0;
+  bank.parts.forEach(function (p, pi) {
+    p.items.forEach(function (it) {
+      var a = answers[i++];
+      letters.push(a >= 0 ? LETTERS[a] : '-');
+      if (a >= 0) answered++;
+      if (a === it.k && blocked.indexOf(pi) < 0) { if (p.pts > 1) ana += p.pts; else rem += p.pts; }
+    });
+  });
+  return { rem: rem, ana: ana, score: rem + ana, max: spxMax_(bank), answered: answered, letters: letters.join('') };
+}
+function spxFinish_(sh, row, v, bank, prog, status, at) {
+  var r = spxScore_(bank, prog.answers, prog.blocked);
+  v[SPX_C.sub] = phText_(at); v[SPX_C.rem] = r.rem; v[SPX_C.ana] = r.ana; v[SPX_C.score] = r.score; v[SPX_C.max] = r.max;
+  v[SPX_C.answered] = r.answered; v[SPX_C.flags] = prog.flags || 0;
+  v[SPX_C.blocked] = prog.blocked.map(function (x) { return x + 1; }).join(',');
+  v[SPX_C.status] = status; v[SPX_C.ans] = r.letters; v[SPX_C.prog] = JSON.stringify(prog);
+  spxWrite_(sh, row, v);
+}
+function spxProg_(v, bank) {
+  var n = spxCount_(bank), p = null;
+  try { p = JSON.parse(String(v[SPX_C.prog] || 'null')); } catch (e) {}
+  p = p || {};
+  return { answers: spxAnswers_(p.answers, n) || bank.parts.reduce(function (a, x) { return a.concat(x.items.map(function () { return -1; })); }, []),
+    blocked: spxBlocked_(p.blocked, bank.parts.length), flags: Math.max(0, Math.floor(Number(p.flags) || 0)),
+    pos: p.pos && typeof p.pos === 'object' ? { part: Math.floor(Number(p.pos.part) || 0), q: Math.floor(Number(p.pos.q) || 0) } : { part: 0, q: 0 } };
 }
 /* A started exam whose time (plus the upload allowance) is over is scored from its last autosave. */
-function spOverdue_(sh, row, v, bank, now) {
-  if (!bank || spDone_(v) || !v[SP_C.set]) return v;
-  var ends = phMs_(v[SP_C.ends]);
-  if (!ends || now <= ends + SP_GRACE) return v;
-  var prog = null; try { prog = JSON.parse(String(v[SP_C.prog] || 'null')); } catch (e) {}
-  prog = spAnswers_(prog, bank.items.length) || bank.items.map(function () { return -1; });
-  spFinish_(sh, row, v, bank, prog, 'Auto-submitted (time over)', ends, null);
+function spxOverdue_(sh, row, v, bank, now) {
+  if (!bank || spxDone_(v) || !v[SPX_C.started]) return v;
+  var ends = phMs_(v[SPX_C.ends]);
+  if (!ends || now <= ends + SPX_GRACE) return v;
+  spxFinish_(sh, row, v, bank, spxProg_(v, bank), 'Auto-submitted (time over)', ends);
   return v;
 }
-function spState_(v, now) {
-  if (spDone_(v)) return 'done';
-  if (v[SP_C.set]) return now < phMs_(v[SP_C.ends]) + SP_GRACE ? 'started' : 'done';
-  var o = phMs_(v[SP_C.opens]), c = phMs_(v[SP_C.closes]);
-  if (o && now < o) return 'notyet';
-  if (c && now >= c) return 'closed';
+function spxState_(v, bank, now) {
+  if (v && spxDone_(v)) return 'done';
+  if (v && v[SPX_C.started]) return now < phMs_(v[SPX_C.ends]) + SPX_GRACE ? 'started' : 'done';
+  if (now >= phMs_(SPX_CLOSES)) return 'closed';
+  if (!bank) return 'notready';
   return 'open';
 }
 
@@ -868,110 +914,110 @@ function special_(ss, req, pin, action) {
   if (auth.locked) return { ok: false, error: 'locked', until: auth.until };
   if (auth.bad) return { ok: false, error: 'pin', left: auth.left };
 
-  var sh = spSheet_(ss), row = findRow_(sh, id), now = Date.now();
-  if (!row) return { ok: true, assigned: false, now: now };
-  var bank = spBank_(ss);
-  var v = spOverdue_(sh, row, spRead_(sh, row), bank, now);
-  var state = spState_(v, now);
-  var info = { ok: true, assigned: true, state: state, now: now, opens: phMs_(v[SP_C.opens]), closes: phMs_(v[SP_C.closes]),
-    minutes: Number(v[SP_C.min]) || 0, ends: phMs_(v[SP_C.ends]), set: String(v[SP_C.set] || '') };
-  if (action === 'specialStatus') return info;
-  if (!bank) return { ok: false, error: 'nobank' };
-  var n = bank.items.length;
+  var sh = spxSheet_(ss), now = Date.now(), all = spxBankAll_(ss);
+  var closes = phMs_(SPX_CLOSES);
+
+  if (action === 'specialStatus') {
+    var exams = {};
+    SPX_EXAMS.forEach(function (x) {
+      var b = all[x.id] || null, row = spxFind_(sh, id, x.id), v = null;
+      if (row) v = spxOverdue_(sh, row, spxRead_(sh, row), b, now);
+      exams[x.id] = { state: spxState_(v, b, now), ends: v ? phMs_(v[SPX_C.ends]) : 0 };
+    });
+    return { ok: true, now: now, closes: closes, minutes: SPX_MINUTES, exams: exams };
+  }
+
+  var exam = spxExam_(req.exam);
+  if (!exam) return { ok: false, error: 'bad' };
+  var bank = all[exam] || null;
+  var row = spxFind_(sh, id, exam);
+  var v = row ? spxOverdue_(sh, row, spxRead_(sh, row), bank, now) : null;
+  var state = spxState_(v, bank, now);
 
   if (action === 'specialStart') {
     if (state === 'done') return { ok: false, error: 'done' };
-    if (state === 'notyet') return { ok: false, error: 'notyet', opens: info.opens };
     if (state === 'closed') return { ok: false, error: 'closed' };
+    if (state === 'notready' || !bank) return { ok: false, error: 'nobank' };
     if (state === 'open') {
-      var letters = Object.keys(bank.sets).sort();
-      v[SP_C.set] = letters[Math.floor(Math.random() * letters.length)];
-      var mins = Number(v[SP_C.min]) || 60, close = phMs_(v[SP_C.closes]);
-      var ends = now + mins * 60000;
-      if (close && close < ends) ends = close;
-      v[SP_C.started] = phText_(now); v[SP_C.ends] = phText_(ends); v[SP_C.status] = 'In progress';
-      spWrite_(sh, row, v);
-      log_(ss, id, 'specialStart', 'set ' + v[SP_C.set]);
+      var reason = spxReason_(req.reason);
+      if (!reason) return { ok: false, error: 'reason' };
+      var ends = Math.min(now + SPX_MINUTES * 60000, closes);
+      v = SPX_HEAD.map(function () { return ''; });
+      v[SPX_C.code] = id; v[SPX_C.exam] = exam; v[SPX_C.reason] = reason;
+      v[SPX_C.started] = phText_(now); v[SPX_C.ends] = phText_(ends); v[SPX_C.status] = 'In progress';
+      v[SPX_C.max] = spxMax_(bank);
+      if (!row) row = sh.getLastRow() + 1;
+      spxWrite_(sh, row, v);
+      log_(ss, id, 'specialStart', spxLabel_(exam));
     }
-    var set = String(v[SP_C.set]);
-    var prog = null; try { prog = JSON.parse(String(v[SP_C.prog] || 'null')); } catch (e) {}
-    return { ok: true, set: set, ends: phMs_(v[SP_C.ends]), now: now, title: bank.title,
-      items: bank.sets[set].map(function (x) { return { q: bank.items[x].q, c: bank.items[x].c }; }),
-      progress: spAnswers_(prog, n) };
+    var prog = spxProg_(v, bank);
+    return { ok: true, exam: exam, ends: phMs_(v[SPX_C.ends]), now: now, title: bank.title, max: spxMax_(bank),
+      parts: bank.parts.map(function (p) { return { title: p.title, text: p.text, pts: p.pts, items: p.items.map(function (it) { return { q: it.q, c: it.c }; }) }; }),
+      progress: prog };
   }
 
-  var answers = spAnswers_(req.answers, n);
+  if (!v || !v[SPX_C.started]) return { ok: false, error: 'notstarted' };
+  if (!bank) return { ok: false, error: 'nobank' };
+  var answers = spxAnswers_(req.answers, spxCount_(bank));
   if (!answers) return { ok: false, error: 'bad' };
-  if (!v[SP_C.set]) return { ok: false, error: 'notstarted' };
-  var flags = Math.max(0, Math.min(9999, Math.floor(Number(req.flags) || 0)));
+  var next = { answers: answers, blocked: spxBlocked_(req.blocked, bank.parts.length),
+    flags: Math.max(0, Math.min(9999, Math.floor(Number(req.flags) || 0))),
+    pos: req.pos && typeof req.pos === 'object' ? { part: Math.floor(Number(req.pos.part) || 0), q: Math.floor(Number(req.pos.q) || 0) } : { part: 0, q: 0 } };
 
   if (action === 'specialSave') {
-    if (spDone_(v)) return { ok: true, done: true };
-    v[SP_C.prog] = JSON.stringify(answers);
-    v[SP_C.answered] = answers.filter(function (a) { return a >= 0; }).length;
-    v[SP_C.flags] = flags;
-    spWrite_(sh, row, v);
-    return { ok: true, ends: phMs_(v[SP_C.ends]), now: now };
+    if (spxDone_(v)) return { ok: true, done: true };
+    v[SPX_C.prog] = JSON.stringify(next);
+    v[SPX_C.answered] = answers.filter(function (a) { return a >= 0; }).length;
+    v[SPX_C.flags] = next.flags;
+    spxWrite_(sh, row, v);
+    return { ok: true, ends: phMs_(v[SPX_C.ends]), now: now };
   }
   if (action === 'specialSubmit') {
-    var st = String(v[SP_C.status]);
+    var st = String(v[SPX_C.status]);
     if (/^Submitted/.test(st)) return { ok: true, done: true };
-    var late = now > phMs_(v[SP_C.ends]) + SP_GRACE;
+    var late = now > phMs_(v[SPX_C.ends]) + SPX_GRACE;
     if (/^Auto-submitted/.test(st)) {
       /* the phone's own answers arrive after the time-over scoring: keep them if they hold at least as many answers */
-      var had = Number(v[SP_C.answered]) || 0;
+      var had = Number(v[SPX_C.answered]) || 0;
       if (answers.filter(function (a) { return a >= 0; }).length < had) return { ok: true, done: true };
       late = true;
     }
-    spFinish_(sh, row, v, bank, answers, late ? 'Submitted (uploaded late)' : 'Submitted', now, flags);
-    log_(ss, id, 'specialSubmit', late ? 'late' : 'ok');
+    spxFinish_(sh, row, v, bank, next, late ? 'Submitted (uploaded late)' : 'Submitted', now);
+    log_(ss, id, 'specialSubmit', spxLabel_(exam) + (late ? ' late' : ''));
     return { ok: true, done: true };
   }
   return { ok: false, error: 'bad' };
 }
 
 /* ---- master console ---- */
+/* { remove: [{ code, exam }] } deletes those attempts (the student may take that exam again). */
 function adminSpecial_(ss, req) {
-  var sh = spSheet_(ss), now = Date.now(), msg = {};
-  if (req.assign) {
-    var a = req.assign;
-    var opens = Date.parse(String(a.opens || '')), closes = Date.parse(String(a.closes || ''));
-    var mins = Math.floor(Number(a.minutes) || 0);
-    if (isNaN(opens) || isNaN(closes) || closes <= opens || !(mins >= 1 && mins <= 600)) return { ok: false, error: 'window' };
-    var codes = (Array.isArray(a.codes) ? a.codes : []).map(codeNorm_).filter(function (c, i, arr) { return c && arr.indexOf(c) === i; });
-    if (!codes.length) return { ok: false, error: 'code' };
-    var auth = ss.getSheetByName(SHEET.auth);
-    var added = [], updated = [], missing = [];
-    codes.forEach(function (c) {
-      if (!findRow_(auth, c)) { missing.push(c); return; }
-      var row = findRow_(sh, c), v;
-      if (row) { v = spRead_(sh, row); updated.push(c); }
-      else { row = sh.getLastRow() + 1; v = SP_HEAD.map(function () { return ''; }); v[SP_C.code] = c; added.push(c); }
-      v[SP_C.opens] = phText_(opens); v[SP_C.closes] = phText_(closes); v[SP_C.min] = mins;
-      spWrite_(sh, row, v);
-    });
-    log_(ss, 'ADMIN', 'specialAssign', added.length + ' added · ' + updated.length + ' updated · ' + missing.length + ' not found');
-    msg = { added: added, updated: updated, missing: missing };
-  }
+  var sh = spxSheet_(ss), now = Date.now(), all = spxBankAll_(ss), msg = {};
   if (Array.isArray(req.remove)) {
     var gone = [];
-    req.remove.map(codeNorm_).forEach(function (c) { if (c && findRow_(sh, c)) { deleteRowsFor_(sh, c); gone.push(c); } });
+    req.remove.forEach(function (x) {
+      var c = codeNorm_(x && x.code), e = spxExam_(x && x.exam);
+      if (!c || !e) return;
+      for (var r = spxFind_(sh, c, e); r; r = spxFind_(sh, c, e)) delRow_(sh, r);
+      gone.push(c + ' ' + spxLabel_(e));
+    });
     log_(ss, 'ADMIN', 'specialRemove', gone.join(','));
     msg.removed = gone;
   }
-  var bank = spBank_(ss), rows = [], last = sh.getLastRow();
+  var rows = [], last = sh.getLastRow();
   for (var r = 2; r <= last; r++) {
-    var v = spRead_(sh, r);
-    if (!CODE_RE.test(String(v[SP_C.code]).trim())) continue;
-    v = spOverdue_(sh, r, v, bank, now);
-    rows.push({ code: String(v[SP_C.code]), opens: phMs_(v[SP_C.opens]), closes: phMs_(v[SP_C.closes]), minutes: Number(v[SP_C.min]) || 0,
-      set: String(v[SP_C.set] || ''), started: phMs_(v[SP_C.started]), ends: phMs_(v[SP_C.ends]), submitted: phMs_(v[SP_C.sub]),
-      score: v[SP_C.score] === '' ? null : Number(v[SP_C.score]), total: Number(v[SP_C.total]) || 0, answered: Number(v[SP_C.answered]) || 0,
-      flags: Number(v[SP_C.flags]) || 0, status: String(v[SP_C.status] || ''), state: spState_(v, now) });
+    var v = spxRead_(sh, r), e = spxExam_(v[SPX_C.exam]);
+    if (!CODE_RE.test(String(v[SPX_C.code]).trim()) || !e) continue;
+    v = spxOverdue_(sh, r, v, all[e] || null, now);
+    rows.push({ code: String(v[SPX_C.code]), exam: e, reason: String(v[SPX_C.reason] || ''),
+      started: phMs_(v[SPX_C.started]), ends: phMs_(v[SPX_C.ends]), submitted: phMs_(v[SPX_C.sub]),
+      rem: v[SPX_C.rem] === '' ? null : Number(v[SPX_C.rem]), ana: v[SPX_C.ana] === '' ? null : Number(v[SPX_C.ana]),
+      score: v[SPX_C.score] === '' ? null : Number(v[SPX_C.score]), max: Number(v[SPX_C.max]) || 0,
+      answered: Number(v[SPX_C.answered]) || 0, flags: Number(v[SPX_C.flags]) || 0, blocked: String(v[SPX_C.blocked] || ''),
+      status: String(v[SPX_C.status] || ''), state: spxState_(v, all[e] || null, now) });
   }
-  var bsh = ss.getSheetByName(SP_BANK);
-  return { ok: true, rows: rows, now: now, msg: msg,
-    bank: bank ? { n: bank.items.length, sets: Object.keys(bank.sets), at: bsh ? String(bsh.getRange(1, 2).getDisplayValue()) : '' } : null };
+  return { ok: true, rows: rows, now: now, msg: msg, closes: phMs_(SPX_CLOSES), minutes: SPX_MINUTES,
+    exams: SPX_EXAMS, banks: spxBankInfo_(all) };
 }
 
 function json_(o) {
