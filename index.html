@@ -764,7 +764,7 @@ const EXAMS = [
     paper: true, opensBySched: () => PREFINAL_OPENS },   // questionnaire only: answers go on the bubble sheet; unlock per schedule
   // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
 ];
-/* Special examinations: online, open to every logged-in class code until Nov 8, 6:00 AM (Philippine time) */
+/* Special examinations: online, open to every logged-in class code until Nov 17, 2026, 11:59 PM (Philippine time) */
 const SPECIALS = [
   { id: 'spxPrelim',    exam: 'prelim',    label: 'Special Prelim',    href: 'special_exam_ITEra.html?exam=prelim' },
   { id: 'spxMidterm',   exam: 'midterm',   label: 'Special Midterm',   href: 'special_exam_ITEra.html?exam=midterm' },
@@ -988,7 +988,7 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: '', body: '' };   // no announcement (set body to show one)
+const EXAM_NOTICE = { head: 'Special Examinations — Deadline', body: 'The Special Prelim, Special Midterm and Special Prefinals are open until <b>Tuesday, November 17, 2026, 11:59 PM</b> (Philippine time). One attempt per examination. After the deadline the examinations close and cannot be taken.' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;

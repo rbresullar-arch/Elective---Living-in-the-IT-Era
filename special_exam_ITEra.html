@@ -158,7 +158,7 @@ const ERR = {
   locked: 'Your account is locked for now. Tell your instructor.',
   nouser: 'Your class code was not found. Log in again on the hub.',
   nobank: 'This examination is not ready yet. Try again later.',
-  closed: 'The special examinations closed on November 8 at 6:00 AM.',
+  closed: 'The special examinations closed on November 17, 2026 at 11:59 PM.',
   done: 'You already submitted this examination.',
   reason: 'State your reason first.',
   busy: 'The server is busy. Try again in a moment.'
@@ -205,7 +205,7 @@ function vLobby(r){
     body = '<p class="muted" style="margin:12px 0 0">You already submitted this examination. Your instructor will release the results.</p>';
   } else if (st === 'closed') {
     state = `<div class="state"><b>Closed</b><span class="muted">${esc(fmtWhen(r.closes))}</span></div>`;
-    body = '<p class="muted" style="margin:12px 0 0">The special examinations closed on November 8 at 6:00 AM.</p>';
+    body = '<p class="muted" style="margin:12px 0 0">The special examinations closed on November 17, 2026 at 11:59 PM.</p>';
   } else if (st === 'notready') {
     state = `<div class="state"><b>Not ready yet</b></div>`;
     body = '<p class="muted" style="margin:12px 0 0">This examination is not ready yet. Try again later.</p><button type="button" class="ghost" id="retry">Check again</button>';

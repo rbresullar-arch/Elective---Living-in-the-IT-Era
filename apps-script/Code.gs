@@ -731,7 +731,7 @@ function setGate_(inc) {
    Tab "Special Exams bank" (hidden): questions + answer key per exam, uploaded from the master console.
    The key is never in the site's code (the repository is public). */
 var SPX_TAB = 'Special Exams', SPX_BANK = 'Special Exams bank';
-var SPX_CLOSES = '2026-11-08 06:00';   // Philippine time
+var SPX_CLOSES = '2026-11-17 23:59';   // Philippine time
 var SPX_MINUTES = 45;
 var SPX_EXAMS = [{ id: 'prelim', label: 'Prelim' }, { id: 'midterm', label: 'Midterm' }, { id: 'prefinals', label: 'Prefinals' }];
 var SPX_HEAD = ['Code', 'Exam', 'Reason', 'Started', 'Ends', 'Submitted', 'Remember', 'Analysis', 'Score', 'Max',
