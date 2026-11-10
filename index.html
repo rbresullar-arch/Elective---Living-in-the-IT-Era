@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.10.5';
+const APP_VERSION = '2026.11.10.6';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1947,6 +1947,15 @@ const ATT_NAME_KEY = 'itict_att_name', ATT_CODE_KEY = 'itict_att_code', ATT_QUEU
    (on open, on the 'online' event, when the app comes back to the screen, and every minute). */
 const ATT_LOG_KEY = 'itict_att_log', ATT_LOG_MAX = 120;
 const ATT_QR_RE = /^ITERA-ATT:1:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):([0-9a-f]{16})$/;
+/* Printed QR for a whole class period: ITERA-ATT:2:<sched|ALL>:<session>:<from>:<until>:<sig> */
+const ATT_QR_RE2 = /^ITERA-ATT:2:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):(\d{9,11}):([0-9a-f]{16})$/;
+function attParse(text) {
+  let m = ATT_QR_RE.exec(text);
+  if (m) return { fmt: 1, sched: m[1], session: m[2], t: +m[3] };
+  m = ATT_QR_RE2.exec(text);
+  if (m) return { fmt: 2, sched: m[1], session: m[2], t: +m[3], until: +m[4] };
+  return null;
+}
 const att = { stream: null, raf: 0, det: null, busy: false, canvas: null };
 function attEl(id) { return document.getElementById(id); }
 function attLog() {
@@ -1955,7 +1964,7 @@ function attLog() {
   try {   // scans queued by version 2026.11.10.4
     const old = JSON.parse(localStorage.getItem(ATT_QUEUE_KEY) || '[]') || [];
     if (old.length) {
-      old.forEach(o => { const m = ATT_QR_RE.exec(o.qr || ''); if (m) L.push({ qr: o.qr, session: m[2], sched: m[1], t: +m[3], scannedAt: o.scannedAt, id: o.id, status: 'pending' }); });
+      old.forEach(o => { const m = attParse(o.qr || ''); if (m) L.push({ qr: o.qr, session: m.session, sched: m.sched, t: m.t, scannedAt: o.scannedAt, id: o.id, status: 'pending' }); });
       localStorage.removeItem(ATT_QUEUE_KEY); attLogSet(L);
     }
   } catch (e) {}
@@ -2050,7 +2059,8 @@ async function attStart() {
 function attErrText(r, qrSched) {
   switch (r && r.error) {
     case 'qr': return ['bad', 'Not the attendance QR', 'Scan the QR on your instructor\'s screen.'];
-    case 'expired': return ['bad', 'This QR has expired', 'Scan the QR on the screen now, not a photo of it.'];
+    case 'expired': return ['bad', 'This QR has expired', 'Scan the QR your instructor shows now, not an old photo of it.'];
+    case 'early': return ['bad', 'Not open yet', r.from ? 'This QR opens ' + attFmt(r.from * 1000) + '.' : 'This QR is not open yet.'];
     case 'sched': return ['bad', 'Wrong class', `This QR is for schedule ${r.sched || qrSched}. Your code is ${cloudCode()}.`];
     case 'pin': case 'locked': return ['bad', 'Not recorded', 'Your account needs your instructor (PIN problem).'];
     case 'nouser': return ['bad', 'Not recorded', 'Your class code was not found. Log in again.'];
@@ -2063,7 +2073,7 @@ async function attSend(item) {
   return cloudCall({ action: 'attend', id: acct.id, pin: acct.pin, qr: item.qr, scannedAt: item.scannedAt });
 }
 const ATT_RETRY = ['offline', 'busy', 'server', 'bad'];
-function attWhy(r) { const e = attErrText(r); return r.error === 'expired' ? 'Expired' : r.error === 'sched' ? 'Wrong class' : r.error === 'qr' ? 'Not valid' : e[1]; }
+function attWhy(r) { const e = attErrText(r); return r.error === 'early' ? 'Too early' : r.error === 'expired' ? 'Expired' : r.error === 'sched' ? 'Wrong class' : r.error === 'qr' ? 'Not valid' : e[1]; }
 /* Send one row and store the answer. Returns the server reply. */
 async function attPush(row) {
   const r = await attSend(row);
@@ -2080,7 +2090,8 @@ async function attPush(row) {
 async function attGot(text) {
   if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
   attStop(); attEl('attHint').hidden = true;
-  const m = ATT_QR_RE.exec(text), code = cloudCode();
+  const q = attParse(text), code = cloudCode();
+  const m = q && [text, q.sched, q.session, String(q.t)];
   if (!m) { const e = attErrText({ error: 'qr' }); attShow(e[0], e[1], e[2]); attEl('attScan').hidden = false; return; }
   if (m[1] !== 'ALL' && m[1] !== code.slice(0, 5)) { const e = attErrText({ error: 'sched', sched: m[1] }); attShow(e[0], e[1], e[2]); attEl('attScan').hidden = false; return; }
   const L = attLog(), same = L.find(x => x.id === code && x.session === m[2] && x.status !== 'bad');

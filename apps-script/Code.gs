@@ -39,6 +39,7 @@
  *   { action: 'adminLogin', pin }               → { ok }
  *   { action: 'adminLookup', pin, id }          → { ok, id, activities: [{ n, pct, at }] }
  *   { action: 'adminScores', pin }              → { ok, head, rows } the Scores tab as shown (read only);
+ *   { action: 'adminAttendance', pin }          → { ok, head, rows } the Attendance tab as shown (read only)
  *                                                 used by the instructor's offline grading system
  *   { action: 'adminReset', pin, id, list }     → resets activities in `list` (numbers) at once
  *   { action: 'adminExamGate', pin }            → { ok, gate, now }  (read)
@@ -139,8 +140,10 @@ function doPost(e) {
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
       if (action === 'adminAttKey') return json_({ ok: true, key: attSecret_() });
+      if (action === 'adminAttCheck') return json_(attCheck_(req));
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
       if (action === 'adminScores') return json_(adminScores_(as));
+      if (action === 'adminAttendance') return json_(adminAttendance_(as));
       if (action === 'adminExamGate') {
         if (!req.gate) return json_({ ok: true, gate: gate_(), now: Date.now() });
         var g = setGate_(req.gate);
@@ -261,6 +264,12 @@ function saveRestore_(ss, req, pin, action) {
 var ATT_TAB = 'Attendance', ATT_WINDOW_S = 90, ATT_QUEUE_S = 7 * 86400;
 var ATT_HEAD = ['Time (PH)', 'Code', 'Name tag', 'Schedule', 'Session', 'QR time (PH)', 'Note'];
 var ATT_RE = /^ITERA-ATT:1:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):([0-9a-f]{16})$/;
+/* Printed QR for a class period (made by the instructor's grading system):
+     ITERA-ATT:2:<sched|ALL>:<session>:<from>:<until>:<sig>   (from/until = unix seconds, same key and signature rule)
+   Accepted when the phone scanned it between from and until (ATT_PERIOD_GRACE_S either side); a window may be at
+   most ATT_PERIOD_MAX_S long. A scan saved on an offline phone inside the window is accepted later (ATT_QUEUE_S). */
+var ATT_RE2 = /^ITERA-ATT:2:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):(\d{9,11}):([0-9a-f]{16})$/;
+var ATT_PERIOD_GRACE_S = 120, ATT_PERIOD_MAX_S = 12 * 3600;
 function attSecret_() {
   var props = PropertiesService.getScriptProperties();
   var k = props.getProperty('ATT_SECRET');
@@ -279,10 +288,21 @@ function attSheet_(ss) {
   }
   return sh;
 }
+/* Admin: is this QR text valid (signature, format, window)? Records nothing. */
+function attCheck_(req) {
+  var q = String(req.qr || '').trim(), a = ATT_RE.exec(q), b = ATT_RE2.exec(q);
+  if (!a && !b) return { ok: true, valid: false, why: 'format' };
+  var sigOk = attSig_(q.slice(0, -17)) === (a ? a[4] : b[5]);
+  var from = Number(a ? a[3] : b[3]), until = b ? Number(b[4]) : from + ATT_WINDOW_S;
+  return { ok: true, valid: sigOk, why: sigOk ? '' : 'signature', format: a ? 1 : 2, sched: (a || b)[1],
+           session: (a || b)[2], from: from, until: until, now: Math.floor(Date.now() / 1000) };
+}
 function attend_(ss, req, pin) {
   var id = String(req.id || '').trim();
   if (!CODE_RE.test(id)) return { ok: false, error: 'bad' };
-  var m = ATT_RE.exec(String(req.qr || '').trim());
+  var qrText = String(req.qr || '').trim();
+  var m = ATT_RE.exec(qrText), p = m ? null : ATT_RE2.exec(qrText);
+  if (p) m = [p[0], p[1], p[2], p[3], p[5]];          // format 2: m[3] = valid from, m[4] = signature
   if (!m) return { ok: false, error: 'qr' };
   var auth = checkPin_(ss, id, hashFor_(id, pin));
   if (auth === 'nouser') return { ok: false, error: 'nouser' };
@@ -294,10 +314,21 @@ function attend_(ss, req, pin) {
   var now = Math.floor(Date.now() / 1000);
   var scanned = Math.floor(Number(req.scannedAt) / 1000) || now;
   if (scanned > now + 60) scanned = now;
-  var note = '';
-  if (Math.abs(now - t) > ATT_WINDOW_S) {
+  var note = '', late = false;
+  if (p) {
+    var from = Number(p[3]), until = Number(p[4]), g = ATT_PERIOD_GRACE_S;
+    if (until <= from || until - from > ATT_PERIOD_MAX_S) return { ok: false, error: 'qr' };
+    var inWin = function (s) { return s >= from - g && s <= until + g; };
+    if (!inWin(now)) {
+      if (now < from - g) return { ok: false, error: 'early', from: from };
+      if (now - until > ATT_QUEUE_S || !inWin(scanned)) return { ok: false, error: 'expired' };
+      late = true;
+    }
+    note = (late ? 'Sent later (phone was offline); ' : '') + 'printed QR';
+  } else if (Math.abs(now - t) > ATT_WINDOW_S) {
     if (now - t > ATT_QUEUE_S || Math.abs(scanned - t) > ATT_WINDOW_S) return { ok: false, error: 'expired' };
     note = 'Sent later (phone was offline)';
+    late = true;
   }
   var sh = attSheet_(ss), last = sh.getLastRow();
   if (last > 1) {
@@ -310,11 +341,11 @@ function attend_(ss, req, pin) {
   }
   var doc = readDoc_(ss, id) || {};
   var fmt = function (sec) { return Utilities.formatDate(new Date(sec * 1000), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss'); };
-  var whenTxt = fmt(note ? scanned : now);
+  var whenTxt = fmt(late ? scanned : now);
   sh.appendRow([whenTxt, id, doc.nameTag || '', id.slice(0, 5), session, fmt(t), note]);
   sh.getRange(sh.getLastRow(), 1, 1, ATT_HEAD.length).setNumberFormat('@');
   sh.getRange(sh.getLastRow(), 1, 1, ATT_HEAD.length).setValues([[whenTxt, id, doc.nameTag || '', id.slice(0, 5), session, fmt(t), note]]);
-  log_(ss, id, 'attend', session + (note ? ' (offline)' : ''));
+  log_(ss, id, 'attend', session + (late ? ' (offline)' : '') + (p ? ' (printed)' : ''));
   return { ok: true, session: session, at: whenTxt, note: note };
 }
 
@@ -809,6 +840,16 @@ function adminReset_(ss, req) {
 
 /* The Scores tab exactly as displayed (header + rows), for the instructor's offline grading system.
    Read only: nothing in the Sheet changes. Each export is written to the Log tab. */
+/* The Attendance tab as displayed (header + rows), for the instructor's offline grading system. Read only. */
+function adminAttendance_(ss) {
+  var sh = ss.getSheetByName(ATT_TAB);
+  if (!sh || sh.getLastRow() < 1) return { ok: true, head: ATT_HEAD, rows: [] };
+  var vals = sh.getRange(1, 1, sh.getLastRow(), Math.max(sh.getLastColumn(), 1)).getDisplayValues();
+  var rows = vals.slice(1).filter(function (r) { return String(r[1] || '').trim(); });
+  log_(ss, 'ADMIN', 'attendance export', rows.length + ' rows');
+  return { ok: true, head: vals[0], rows: rows, now: Date.now() };
+}
+
 function adminScores_(ss) {
   var sh = ss.getSheetByName(SHEET.scores);
   var last = sh.getLastRow(), width = sh.getLastColumn();
