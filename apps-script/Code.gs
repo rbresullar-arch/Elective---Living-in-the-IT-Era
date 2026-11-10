@@ -285,7 +285,7 @@ function migrate_(ss, req, pin) {
    Header check: once per version of this file (HEAD_SIG), not on every request.
    Reset tab: read at most once a minute.  Schedules: cached 10 minutes.
    setup() clears all three. */
-function headSig_() { return 'v3|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
+function headSig_() { return 'v4-nametag|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
 function ensureSheetsOnce_(ss) {
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('HEAD_SIG') === headSig_() && ss.getSheetByName(SHEET.sched)) return;
