@@ -220,6 +220,23 @@
   #privacyPanel, #codePanel { z-index:60; }
   #logoutPanel { z-index:55; }
   #namePanel { z-index:58; }
+  #profilePanel { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:52;
+    background:rgba(0,0,0,.3); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); }
+  #profilePanel.show { display:flex; }
+  .prof-btn { position:fixed; top:calc(env(safe-area-inset-top, 0px) + 12px); right:16px; z-index:45; width:42px; height:42px; border-radius:50%;
+    border:1px solid var(--glass-edge); background:rgba(29,29,31,.55); color:#fff; font:600 15px/1 inherit; letter-spacing:.02em; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 4px 14px rgba(0,0,0,.18); }
+  .prof-btn[hidden] { display:none; }
+  .prof-btn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; }
+  .prof-btn:active { opacity:.75; }
+  .pf-sec { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.02em; margin:16px 4px 6px; }
+  .pf-code { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--fill); border-radius:14px; padding:12px 14px; }
+  .pf-code b { font-family:var(--mono); font-size:22px; letter-spacing:.02em; }
+  .pf-code small { display:block; color:var(--muted); font-size:13px; margin-top:2px; }
+  .pf-copy { border:none; background:none; color:var(--blue); font:inherit; font-size:15px; font-weight:600; cursor:pointer; padding:6px; }
+  #pfSched { margin-bottom:6px; }
+  .pf-note { font-size:12.5px; color:var(--muted); margin:0 4px 6px; line-height:1.35; }
+  .pf-out { display:block; margin:10px auto 0; border:none; background:none; color:var(--red); font:inherit; font-size:15px; cursor:pointer; padding:8px; }
   #privacyPanel.show, #qrPanel.show, #attPanel.show, #unlockPanel.show, #cloudPanel.show, #logoutPanel.show, #codePanel.show, #namePanel.show { display:flex; }
   .greeting.named { cursor:pointer; }
   .greeting .gname { font-weight:600; }
@@ -623,6 +640,30 @@
   </div>
 </div>
 
+<!-- Profile (top right): name on this device, schedule, class code -->
+<button type="button" class="prof-btn" id="profBtn" aria-label="Profile" hidden></button>
+<div id="profilePanel" role="dialog" aria-modal="true" aria-labelledby="pfTitle">
+  <div class="box ul-card">
+    <strong id="pfTitle">Profile</strong>
+    <div class="pf-sec">Class code</div>
+    <div class="pf-code"><div><b id="pfCode">—</b><small id="pfSchedText"></small></div><button type="button" class="pf-copy" id="pfCopy">Copy</button></div>
+    <div class="pf-note">Use this code with your 6-digit PIN to log in on another device.</div>
+    <div class="pf-sec">Name</div>
+    <input type="text" id="pfFirst" autocomplete="given-name" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="First name">
+    <input type="text" id="pfLast" autocomplete="family-name" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="Last name">
+    <div class="pf-note">Your full name stays on this phone only. Your instructor's record gets only the tag <span class="nm-tag" id="pfTag">—</span>.</div>
+    <div class="pf-sec">Class schedule</div>
+    <select id="pfSched" class="sched-select"></select>
+    <div class="pf-note" id="pfSchedNote">Changing your schedule gives you a new class code. Your scores and PIN stay the same.</div>
+    <div class="ul-msg" id="pfMsg" role="status"></div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn" id="pfClose">Close</button>
+      <button type="button" class="box small-btn primary" id="pfSave">Save</button>
+    </div>
+    <button type="button" class="pf-out" id="pfLogout">Log out</button>
+  </div>
+</div>
+
 <!-- Log out -->
 <div id="logoutPanel" role="dialog" aria-modal="true" aria-labelledby="loTitle">
   <div class="box ul-card">
@@ -799,7 +840,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.10.2';
+const APP_VERSION = '2026.11.10.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -993,6 +1034,7 @@ function showScreen(id) {
   const color = SCREEN_COLORS[id] || 'blue';
   panel.className = 'panel ' + color;
   if (id !== 'name') { try { sessionStorage.setItem(SCREEN_KEY, id); } catch (e) {} }
+  const pb = document.getElementById('profBtn'); if (pb) pb.hidden = id === 'name' || !localStorage.getItem(NAME_KEY);
   try { renderExamNotice(); } catch (e) {}
 }
 
@@ -1388,7 +1430,8 @@ function paintGreeting(id) {
   const g = document.getElementById('greeting'), n = realName();
   g.textContent = '';
   g.classList.add('named');
-  g.title = 'Tap to change your name';
+  g.title = 'Tap to open your profile';
+  paintProfBtn();
   if (n) {
     const b = document.createElement('span'); b.className = 'gname'; b.textContent = `Hello, ${n.first} ${n.last}!`;
     g.appendChild(b);
@@ -1427,7 +1470,7 @@ nm.first.addEventListener('keydown', e => { if (e.key === 'Enter') nm.last.focus
 nm.last.addEventListener('keydown', e => { if (e.key === 'Enter') nameSave(); });
 nm.ok.addEventListener('click', nameSave);
 nm.cancel.addEventListener('click', () => nm.panel.classList.remove('show'));
-document.getElementById('greeting').addEventListener('click', () => { if (localStorage.getItem(NAME_KEY)) nameOpen(false); });
+document.getElementById('greeting').addEventListener('click', () => { if (localStorage.getItem(NAME_KEY)) profileOpen(); });
 
 function enterActivities(name) {
   paintGreeting(name);
@@ -2599,6 +2642,113 @@ async function logoutRun() {
   location.replace(location.pathname);
 }
 document.getElementById('logoutBtn').addEventListener('click', logoutOpen);
+
+/* ===== Profile (top-right button) =====
+   Name: this device only (REAL_NAME_KEY); the server gets nameTag.
+   Schedule: a class code starts with its schedule, so a change asks the server for a new code
+   (action changeSched); scores and PIN move with it. Without a cloud account only itict_sched changes. */
+const pf = {
+  btn: document.getElementById('profBtn'), panel: document.getElementById('profilePanel'),
+  code: document.getElementById('pfCode'), schedText: document.getElementById('pfSchedText'), copy: document.getElementById('pfCopy'),
+  first: document.getElementById('pfFirst'), last: document.getElementById('pfLast'), tag: document.getElementById('pfTag'),
+  sched: document.getElementById('pfSched'), schedNote: document.getElementById('pfSchedNote'),
+  msg: document.getElementById('pfMsg'), save: document.getElementById('pfSave'), close: document.getElementById('pfClose'),
+  armed: '', busy: false
+};
+const PF_SCHED_NOTE = 'Changing your schedule gives you a new class code. Your scores and PIN stay the same.';
+function paintProfBtn() {
+  const n = realName();
+  const ini = n ? (nameLetters(n.first)[0] || '') + (nameLetters(n.last)[0] || '') : '';
+  const btn = document.getElementById('profBtn');
+  if (ini) btn.textContent = ini; else btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
+  btn.hidden = !localStorage.getItem(NAME_KEY) || document.getElementById('screen-name').classList.contains('active');
+}
+function pfSchedLabel(v) {
+  const o = document.querySelector(`#qrSched option[value="${v}"]`);
+  return o ? o.textContent.replace(/^\d{5}\s*·\s*/, '') : '';
+}
+function pfCurSched() { const c = cloudCode(); return c ? c.slice(0, 5) : (localStorage.getItem('itict_sched') || ''); }
+function profileOpen() {
+  const c = cloudCode(), cur = pfCurSched(), n = realName();
+  pf.code.textContent = c || 'No class code yet';
+  pf.copy.hidden = !c;
+  pf.schedText.textContent = cur ? `${cur} · ${pfSchedLabel(cur)}` : '';
+  pf.first.value = n ? n.first : ''; pf.last.value = n ? n.last : '';
+  pf.sched.innerHTML = '';
+  if (!cur) { const o = document.createElement('option'); o.value = ''; o.textContent = 'Choose your schedule'; pf.sched.append(o); }
+  document.querySelectorAll('#qrSched option').forEach(o => { if (o.value) pf.sched.append(o.cloneNode(true)); });
+  pf.sched.value = cur;
+  pf.armed = ''; pf.save.textContent = 'Save'; pf.schedNote.textContent = PF_SCHED_NOTE;
+  pfTag(); pf.msg.textContent = ''; pf.msg.style.color = '';
+  pf.panel.classList.add('show');
+}
+function pfTag() { pf.tag.textContent = nameTagFor(pf.first.value, pf.last.value) || '—'; }
+function pfSay(t, ok) { pf.msg.textContent = t; pf.msg.style.color = ok ? 'var(--green, #34C759)' : ''; }
+async function profileSave() {
+  if (pf.busy) return;
+  const first = cleanNamePart(pf.first.value), last = cleanNamePart(pf.last.value);
+  if (!nameLetters(first) || !nameLetters(last)) { pfSay('Enter your first name and last name.'); return; }
+  const cur = pfCurSched(), want = pf.sched.value, code = cloudCode();
+  const schedChange = want && want !== cur;
+  if (schedChange && code && pf.armed !== want) {
+    pf.armed = want;
+    pf.save.textContent = 'Confirm new schedule';
+    pf.schedNote.textContent = `Your class code ${code} will be replaced by a new ${want}-… code. Tap "Confirm new schedule" to continue.`;
+    pfSay('');
+    return;
+  }
+  const old = realName(), nameChanged = !old || old.first !== first || old.last !== last;
+  try { localStorage.setItem(REAL_NAME_KEY, JSON.stringify({ first, last })); } catch (e) {}
+  try { if (!localStorage.getItem(ATT_NAME_KEY) || (old && localStorage.getItem(ATT_NAME_KEY) === old.first + ' ' + old.last)) localStorage.setItem(ATT_NAME_KEY, first + ' ' + last); } catch (e) {}
+  if (!schedChange) {
+    paintGreeting(localStorage.getItem(NAME_KEY) || '');
+    pfSay('Saved.', true);
+    if (nameChanged && CLOUD_URL && code) cloudSync({ noRetry: true }).catch(() => {});
+    return;
+  }
+  if (!code) {   // no online account: the schedule is only a local choice
+    cloudSetSched(want);
+    paintGreeting(localStorage.getItem(NAME_KEY) || '');
+    profileOpen(); pfSay('Saved.', true);
+    return;
+  }
+  pf.busy = true; pf.save.disabled = true; pfSay('Moving your account to the new schedule…', true);
+  const acct = cloudAcct();
+  const res = await cloudCall({ action: 'changeSched', id: code, pin: acct.pin, sched: want, data: await cloudCollect() });
+  pf.busy = false; pf.save.disabled = false;
+  if (!res || !res.ok) {
+    pf.armed = ''; pf.save.textContent = 'Save'; pf.schedNote.textContent = PF_SCHED_NOTE;
+    pfSay(res && res.error === 'offline' ? 'Name saved. The schedule needs internet: connect and try again.'
+      : res && res.error === 'pin' ? 'Name saved. Schedule not changed: the PIN on this device does not match. Ask your instructor.'
+      : res && res.error === 'locked' ? 'Name saved. Schedule not changed: this account is locked for now.'
+      : res && res.error === 'sched' ? 'Name saved. That schedule is not open. Ask your instructor.'
+      : 'Name saved. Schedule not changed: the server is busy. Try again in a moment.');
+    paintGreeting(localStorage.getItem(NAME_KEY) || '');
+    return;
+  }
+  const remembered = knownGet().includes(code);
+  await cloudAdopt(res.code, acct.pin, res.data);
+  if (remembered) { knownRemove(code); knownAdd(res.code); }
+  try { if (localStorage.getItem(ATT_CODE_KEY) === code) localStorage.setItem(ATT_CODE_KEY, res.code); } catch (e) {}
+  paintGreeting(res.code);
+  refreshAll();
+  profileOpen();
+  pfSay(`Schedule changed. Your new class code is ${res.code}. Write it down.`, true);
+  codeShow(res.code);
+}
+pf.btn.addEventListener('click', profileOpen);
+pf.first.addEventListener('input', pfTag);
+pf.last.addEventListener('input', pfTag);
+pf.sched.addEventListener('change', () => { pf.armed = ''; pf.save.textContent = 'Save'; pf.schedNote.textContent = PF_SCHED_NOTE; });
+pf.save.addEventListener('click', profileSave);
+pf.close.addEventListener('click', () => pf.panel.classList.remove('show'));
+pf.panel.addEventListener('click', e => { if (e.target === pf.panel) pf.panel.classList.remove('show'); });
+pf.copy.addEventListener('click', async () => {
+  const c = cloudCode(); if (!c) return;
+  try { await navigator.clipboard.writeText(c); pf.copy.textContent = 'Copied'; } catch (e) { pf.copy.textContent = c; }
+  setTimeout(() => { pf.copy.textContent = 'Copy'; }, 1500);
+});
+document.getElementById('pfLogout').addEventListener('click', () => { pf.panel.classList.remove('show'); logoutOpen(); });
 lo.cancel.addEventListener('click', logoutClose);
 lo.ok.addEventListener('click', logoutRun);
 

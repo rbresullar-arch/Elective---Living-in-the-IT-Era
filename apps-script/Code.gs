@@ -38,6 +38,8 @@
  *   5 wrong passwords lock the console for 15 minutes.
  *   { action: 'adminLogin', pin }               → { ok }
  *   { action: 'adminLookup', pin, id }          → { ok, id, activities: [{ n, pct, at }] }
+ *   { action: 'adminScores', pin }              → { ok, head, rows } the Scores tab as shown (read only);
+ *                                                 used by the instructor's offline grading system
  *   { action: 'adminReset', pin, id, list }     → resets activities in `list` (numbers) at once
  *   { action: 'adminExamGate', pin }            → { ok, gate, now }  (read)
  *   { action: 'adminExamGate', pin, gate }      → saves which examinations are open; returns { ok, gate, now }
@@ -137,6 +139,7 @@ function doPost(e) {
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
+      if (action === 'adminScores') return json_(adminScores_(as));
       if (action === 'adminExamGate') {
         if (!req.gate) return json_({ ok: true, gate: gate_(), now: Date.now() });
         var g = setGate_(req.gate);
@@ -194,6 +197,7 @@ function doPost(e) {
     applyResetsSoon_(ss);
     if (action === 'register') return json_(register_(ss, req, pin));
     if (action === 'migrate') return json_(migrate_(ss, req, pin));
+    if (action === 'changeSched') return json_(changeSched_(ss, req, pin));
     if (action === 'save' || action === 'restore') return json_(saveRestore_(ss, req, pin, action));
     return json_({ ok: false, error: 'bad' });
   } catch (err) {
@@ -238,6 +242,49 @@ function saveRestore_(ss, req, pin, action) {
   writeScores_(ss, id, merged);
   log_(ss, id, 'save', 'ok');
   return { ok: true, data: merged };
+}
+
+/* Profile → change schedule. The first 5 digits of a class code are the schedule, so the
+   account moves to the next free code of the new schedule: Auth, Data, Scores, Special Exams
+   and Log rows are renamed; scores and PIN stay. */
+function changeSched_(ss, req, pin) {
+  var id = String(req.id || '').trim();
+  if (!CODE_RE.test(id)) return { ok: false, error: 'bad' };
+  var sched = String(req.sched || '').trim();
+  if (!schedOk_(ss, sched)) return { ok: false, error: 'sched' };
+  if (sched === id.slice(0, 5)) return { ok: false, error: 'same' };
+  var auth = checkPin_(ss, id, hashFor_(id, pin));
+  if (auth === 'nouser') { log_(ss, id, 'change schedule', 'nouser'); return { ok: false, error: 'nouser' }; }
+  if (auth.locked) return { ok: false, error: 'locked', until: auth.until };
+  if (auth.bad) { log_(ss, id, 'change schedule', 'pin (' + auth.left + ' left)'); return { ok: false, error: 'pin', left: auth.left }; }
+
+  var code = nextCode_(ss, sched);
+  var stored = readDoc_(ss, id) || {};
+  var incoming = cleanIncoming_(req.data);
+  delete incoming.sched;
+  var merged = merge_(stored, incoming);
+  merged.sched = sched;
+  merged.movedFrom = (merged.movedFrom ? merged.movedFrom + ', ' : '') + id;
+
+  var ash = ss.getSheetByName(SHEET.auth);
+  var arow = findRow_(ash, id);
+  ash.getRange(arow, 1, 1, 2).setNumberFormat('@').setValues([[code, hashFor_(code, pin)]]);
+
+  deleteRowsFor_(ss.getSheetByName(SHEET.data), id);
+  deleteRowsFor_(ss.getSheetByName(SHEET.scores), id);
+  writeDoc_(ss, code, merged);
+  writeScores_(ss, code, merged);
+
+  [SPX_TAB, SHEET.log].forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh || sh.getLastRow() < 2) return;
+    var col = name === SHEET.log ? 2 : 1;
+    var rng = sh.getRange(2, col, sh.getLastRow() - 1, 1), v = rng.getDisplayValues(), hit = false;
+    v.forEach(function (r) { if (String(r[0]).trim().toUpperCase() === id) { r[0] = code; hit = true; } });
+    if (hit) rng.setNumberFormat('@').setValues(v);
+  });
+  log_(ss, code, 'change schedule', id + ' → ' + code);
+  return { ok: true, code: code, data: merged };
 }
 
 function migrate_(ss, req, pin) {
@@ -687,6 +734,18 @@ function adminReset_(ss, req) {
   if (!doc) return { ok: false, error: 'notfound', id: id };
   resetDoc_(ss, id, doc, list, 'admin reset');
   return adminLookup_(ss, { id: id });
+}
+
+/* The Scores tab exactly as displayed (header + rows), for the instructor's offline grading system.
+   Read only: nothing in the Sheet changes. Each export is written to the Log tab. */
+function adminScores_(ss) {
+  var sh = ss.getSheetByName(SHEET.scores);
+  var last = sh.getLastRow(), width = sh.getLastColumn();
+  if (last < 1 || width < 1) return { ok: true, head: [], rows: [] };
+  var vals = sh.getRange(1, 1, last, width).getDisplayValues();
+  var rows = vals.slice(1).filter(function (r) { return String(r[0] || '').trim(); });
+  log_(ss, 'ADMIN', 'scores export', rows.length + ' rows');
+  return { ok: true, head: vals[0], rows: rows, now: Date.now() };
 }
 
 /* Set one activity's score (percent). The record is rescaled so the hub and the Sheet agree;
