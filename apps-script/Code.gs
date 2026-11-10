@@ -257,8 +257,8 @@ function saveRestore_(ss, req, pin, action) {
      sig     first 16 hex chars (lowercase) of HMAC-SHA256(key = ATT_SECRET, message = everything before ":<sig>")
    ATT_SECRET is a Script Property, made on first use; the master console shows it (Attendance key).
    Accepted when the signature matches, the code's schedule matches (or ALL), and the phone scanned it
-   within ATT_WINDOW_S of t. A scan sent later from an offline phone is accepted up to ATT_QUEUE_S and marked. */
-var ATT_TAB = 'Attendance', ATT_WINDOW_S = 90, ATT_QUEUE_S = 12 * 3600;
+   within ATT_WINDOW_S of t. A scan sent later from an offline phone is accepted up to ATT_QUEUE_S (7 days) and marked. */
+var ATT_TAB = 'Attendance', ATT_WINDOW_S = 90, ATT_QUEUE_S = 7 * 86400;
 var ATT_HEAD = ['Time (PH)', 'Code', 'Name tag', 'Schedule', 'Session', 'QR time (PH)', 'Note'];
 var ATT_RE = /^ITERA-ATT:1:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):([0-9a-f]{16})$/;
 function attSecret_() {
