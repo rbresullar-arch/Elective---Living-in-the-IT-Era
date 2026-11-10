@@ -214,12 +214,17 @@
   #blockOverlay strong { display:block; font-size:20px; margin-bottom:10px; }
 
   /* ===== Sheets (modals) ===== */
-  #privacyPanel, #qrPanel, #attPanel, #unlockPanel, #cloudPanel, #logoutPanel, #codePanel {
+  #privacyPanel, #qrPanel, #attPanel, #unlockPanel, #cloudPanel, #logoutPanel, #codePanel, #namePanel {
     position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:50;
     background:rgba(0,0,0,.3); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); }
   #privacyPanel, #codePanel { z-index:60; }
   #logoutPanel { z-index:55; }
-  #privacyPanel.show, #qrPanel.show, #attPanel.show, #unlockPanel.show, #cloudPanel.show, #logoutPanel.show, #codePanel.show { display:flex; }
+  #namePanel { z-index:58; }
+  #privacyPanel.show, #qrPanel.show, #attPanel.show, #unlockPanel.show, #cloudPanel.show, #logoutPanel.show, #codePanel.show, #namePanel.show { display:flex; }
+  .greeting.named { cursor:pointer; }
+  .greeting .gname { font-weight:600; }
+  .greeting .gcode { opacity:.8; font-size:14px; }
+  .nm-tag { font-family:var(--mono); font-weight:600; }
   .ul-card, .qr-card, .pv-card { background:var(--surface); width:100%; max-width:400px; border-radius:22px; box-shadow:0 24px 64px rgba(0,0,0,.3); }
   .ul-card, .qr-card { padding:22px 18px 18px; max-height:90vh; overflow-y:auto; }
   .qr-card { text-align:center; }
@@ -603,6 +608,21 @@
   </div>
 </div>
 
+<!-- Student name: kept on this device only; the server gets only the short tag -->
+<div id="namePanel" role="dialog" aria-modal="true" aria-labelledby="nmTitle">
+  <div class="box ul-card">
+    <strong id="nmTitle">Your name</strong>
+    <div class="ul-note">Your full name stays on this phone only. The class record gets only a short tag: <span class="nm-tag" id="nmTag">—</span></div>
+    <input type="text" id="nmFirst" autocomplete="given-name" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="First name">
+    <input type="text" id="nmLast" autocomplete="family-name" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="Last name">
+    <div class="ul-msg" id="nmMsg" role="status"></div>
+    <div class="ul-row">
+      <button type="button" class="box small-btn" id="nmCancel">Cancel</button>
+      <button type="button" class="box small-btn primary" id="nmOk">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Log out -->
 <div id="logoutPanel" role="dialog" aria-modal="true" aria-labelledby="loTitle">
   <div class="box ul-card">
@@ -779,7 +799,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.05.1';
+const APP_VERSION = '2026.11.10.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1349,8 +1369,68 @@ function refreshAll() {
 }
 
 function greetText(id) { return isCode(id) ? `Class code ${id}` : `Hello, ${id}!`; }
+/* ===== Student name (this device only) =====
+   REAL_NAME_KEY holds { first, last } in localStorage and is never sent online.
+   The sync data carries only nameTag: first 2 letters of the first name + first letter
+   of the last name + last 2 letters of the last name (e.g. Juan Dela Cruz → JUDUZ). */
+const REAL_NAME_KEY = 'itict_real_name';
+function realName() {
+  try { const v = JSON.parse(localStorage.getItem(REAL_NAME_KEY) || 'null'); return v && v.first && v.last ? v : null; } catch (e) { return null; }
+}
+function nameLetters(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, ''); }
+function nameTagFor(first, last) {
+  const f = nameLetters(first), l = nameLetters(last);
+  return f && l ? f.slice(0, 2) + l[0] + l.slice(-2) : '';
+}
+function cleanNamePart(s) { return String(s || '').replace(/\s+/g, ' ').trim().slice(0, 40); }
+function paintGreeting(id) {
+  const g = document.getElementById('greeting'), n = realName();
+  g.textContent = '';
+  g.classList.add('named');
+  g.title = 'Tap to change your name';
+  if (n) {
+    const b = document.createElement('span'); b.className = 'gname'; b.textContent = `Hello, ${n.first} ${n.last}!`;
+    g.appendChild(b);
+    if (isCode(id)) { const c = document.createElement('span'); c.className = 'gcode'; c.textContent = ` · ${id}`; g.appendChild(c); }
+  } else {
+    g.textContent = greetText(id) + ' · Tap to add your name';
+  }
+}
+const nm = {
+  panel: document.getElementById('namePanel'), first: document.getElementById('nmFirst'), last: document.getElementById('nmLast'),
+  tag: document.getElementById('nmTag'), msg: document.getElementById('nmMsg'), ok: document.getElementById('nmOk'), cancel: document.getElementById('nmCancel')
+};
+function nameOpen(required) {
+  const n = realName();
+  nm.first.value = n ? n.first : '';
+  nm.last.value = n ? n.last : '';
+  nm.msg.textContent = '';
+  nm.cancel.hidden = !!required;
+  namePreview();
+  nm.panel.classList.add('show');
+  setTimeout(() => (nm.first.value ? nm.last : nm.first).focus(), 50);
+}
+function namePreview() { nm.tag.textContent = nameTagFor(nm.first.value, nm.last.value) || '—'; }
+function nameSave() {
+  const first = cleanNamePart(nm.first.value), last = cleanNamePart(nm.last.value);
+  if (!nameLetters(first) || !nameLetters(last)) { nm.msg.textContent = 'Enter your first name and last name.'; return; }
+  try { localStorage.setItem(REAL_NAME_KEY, JSON.stringify({ first, last })); } catch (e) {}
+  try { if (!localStorage.getItem(ATT_NAME_KEY)) localStorage.setItem(ATT_NAME_KEY, first + ' ' + last); } catch (e) {}
+  nm.panel.classList.remove('show');
+  paintGreeting(localStorage.getItem(NAME_KEY) || '');
+  if (CLOUD_URL && cloudCode()) cloudSync({ noRetry: true }).catch(() => {});
+}
+nm.first.addEventListener('input', namePreview);
+nm.last.addEventListener('input', namePreview);
+nm.first.addEventListener('keydown', e => { if (e.key === 'Enter') nm.last.focus(); });
+nm.last.addEventListener('keydown', e => { if (e.key === 'Enter') nameSave(); });
+nm.ok.addEventListener('click', nameSave);
+nm.cancel.addEventListener('click', () => nm.panel.classList.remove('show'));
+document.getElementById('greeting').addEventListener('click', () => { if (localStorage.getItem(NAME_KEY)) nameOpen(false); });
+
 function enterActivities(name) {
-  document.getElementById('greeting').textContent = greetText(name);
+  paintGreeting(name);
+  if (!realName()) nameOpen(true);
   let last = 'home';
   try { last = sessionStorage.getItem(SCREEN_KEY) || 'home'; } catch (e) {}
   if (!SCREEN_COLORS[last] || last === 'name') last = 'home';
@@ -1384,6 +1464,7 @@ async function collectSyncData_base() {
   const data = {
     name: localStorage.getItem(NAME_KEY),
     sched: localStorage.getItem('itict_sched') || '',
+    nameTag: (() => { const n = realName(); return n ? nameTagFor(n.first, n.last) : ''; })(),
     createdDate: localStorage.getItem(DATE_KEY),
     redoUsed: FIRST_REDO ? localStorage.getItem(FIRST_REDO.redo.flagKey) === '1' : false,
     redoFlags: {},

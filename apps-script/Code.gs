@@ -339,6 +339,11 @@ function nextCode_(ss, sched) {
 function scrub_(doc) {
   if (!doc || typeof doc !== 'object') return {};
   delete doc.name;
+  /* only the short name tag is kept: 2 letters of the first name + 1st + last 2 letters of the last name */
+  if (doc.nameTag != null) {
+    var tg = String(doc.nameTag).toUpperCase().replace(/[^A-Z]/g, '');
+    if (tg && tg.length <= 5) doc.nameTag = tg; else delete doc.nameTag;
+  }
   for (var n = 1; n <= ACTIVITY_COUNT; n++) {
     var r = doc['activity' + n];
     if (r && typeof r === 'object') delete r.name;
@@ -368,6 +373,7 @@ function merge_(s, inc) {
   var out = JSON.parse(JSON.stringify(s));
   if (inc.sched && SCHED_RE.test(String(inc.sched))) out.sched = String(inc.sched);   // latest choice wins
   if (inc.createdDate && (!out.createdDate || inc.createdDate < out.createdDate)) out.createdDate = inc.createdDate;
+  if (inc.nameTag) out.nameTag = inc.nameTag;                     // latest tag wins (already validated)
 
   out.resets = out.resets || {};      // written only by applyResets_
 
@@ -469,7 +475,7 @@ function legacyHash_(clientHash) { return sha_(salt_() + '|' + clientHash); }
 /* ---------------- storage ---------------- */
 function ensureSheets_(ss) {
   var heads = {};
-  heads[SHEET.scores] = ['Code', 'Schedule'];
+  heads[SHEET.scores] = ['Code', 'Schedule', 'Name tag'];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) heads[SHEET.scores].push('A' + n + ' %');
   EXAMS.forEach(function (x) {
     if (x.paper) heads[SHEET.scores].push(x.label + ' set', x.label + ' start', x.label + ' end', x.label + ' flags');
@@ -541,7 +547,7 @@ function writeScores_(ss, id, doc) {
   var sh = ss.getSheetByName(SHEET.scores);
   var row = findRow_(sh, id) || sh.getLastRow() + 1;
   var skipped = (doc.unlock && doc.unlock.skipped) || [];
-  var vals = [id, doc.sched || ''];
+  var vals = [id, doc.sched || '', doc.nameTag || ''];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) {
     var r = doc['activity' + n];
     vals.push(r ? pct_(r) : (skipped.indexOf(n) >= 0 ? 'Skipped' : ''));
@@ -558,7 +564,7 @@ function writeScores_(ss, id, doc) {
     vals.push(res && res.total ? res.score + '/' + res.total : (e && e.session && e.session.submitted ? 'Submitted' : (e && e.session ? 'In progress' : '')));
   });
   vals.push(new Date(), flags_(doc));
-  sh.getRange(row, 1, 1, 2).setNumberFormat('@');
+  sh.getRange(row, 1, 1, 3).setNumberFormat('@');
   sh.getRange(row, 1, 1, vals.length).setValues([vals]);
 }
 /* Epoch ms → "2026-10-15 13:52:07" in Philippine time (text, so Sheets does not reformat it). */
