@@ -799,7 +799,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.10.1';
+const APP_VERSION = '2026.11.10.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1126,6 +1126,7 @@ async function clearActivity(a) {
 
 /* ===== Activity statuses ===== */
 function pctOf(r) {
+  if (r.adminEdit && r.percentage != null) return r.percentage;   // set by the instructor
   if (r.totalScore != null && r.totalMax) return Math.round((r.totalScore / r.totalMax) * 100);
   if (r.percentage != null) return r.percentage;
   const max = r.maxScore || 100;

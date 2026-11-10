@@ -42,6 +42,8 @@
   #code { font-family:var(--mono); font-size:20px; letter-spacing:.04em; }
   .row { display:flex; gap:10px; }
   .row input { flex:1; }
+  .edit-box { margin-top:18px; padding-top:14px; border-top:1px solid var(--field); }
+  .edit-h { display:block; font-size:16px; margin-bottom:10px; }
   .btn { border:none; border-radius:10px; padding:12px 18px; font-weight:600; cursor:pointer; background:var(--blue); color:#fff; }
   .btn.ghost { background:var(--fill); color:var(--ink); }
   .btn.danger { background:var(--red); color:#fff; width:100%; }
@@ -134,6 +136,15 @@
     <div class="list" id="list"></div>
     <button class="btn danger" id="resetBtn" type="button" disabled>Reset</button>
     <p class="msg" id="resetMsg"></p>
+    <div class="edit-box">
+      <strong class="edit-h">Edit score</strong>
+      <select id="editAct" aria-label="Activity"></select>
+      <div class="row">
+        <input id="editPct" type="number" inputmode="numeric" min="0" max="500" step="1" placeholder="Score in %" aria-label="Score in percent">
+        <button class="btn" id="editBtn" type="button">Save score</button>
+      </div>
+      <p class="msg" id="editMsg"></p>
+    </div>
   </section>
 
   <!-- Examinations: open / close and opening times (read by exam_gate.js on every exam page) -->
@@ -216,7 +227,7 @@ async function call(body) {
 const ERR = {
   auth: 'Wrong password.', locked: 'Too many wrong passwords. Locked for 15 minutes.',
   noadmin: 'No master password set. Add ADMIN_PASSWORD in Apps Script → Project Settings → Script properties.',
-  code: 'Invalid ID. Format: 12030-07.', notfound: 'ID not found in the Sheet.', list: 'Select at least one activity.',
+  code: 'Invalid ID. Format: 12030-07.', pct: 'Enter a score from 0 to 100 (A4 up to 300, Summative up to 100).', act: 'Pick an activity.', notfound: 'ID not found in the Sheet.', list: 'Select at least one activity.',
   offline: 'No connection.', busy: 'Server busy. Try again.', server: 'Server error.', bad: 'Server rejected the request. Redeploy the Apps Script (new version).'
 };
 function setMsg(el, text, kind) { el.textContent = text || ''; el.className = 'msg' + (kind ? ' ' + kind : ''); }
@@ -277,7 +288,32 @@ function render(r) {
     b.addEventListener('click', () => toggle(a.n, b));
     list.append(b);
   });
+  const ea = $('editAct'), keep = ea.value;
+  ea.innerHTML = '';
+  r.activities.forEach(a => {
+    const o = document.createElement('option'); o.value = a.n;
+    o.textContent = `A${a.n} · ${NAMES[a.n - 1] || ''} — ${a.pct != null ? a.pct + '%' : 'no score'}${a.edited ? ' (edited)' : ''}`;
+    ea.append(o);
+  });
+  if (keep) ea.value = keep;
+  fillEdit();
   $('resultCard').hidden = false; updateBtn();
+}
+function fillEdit() {
+  const a = current && current.activities.find(x => x.n === Number($('editAct').value));
+  $('editPct').value = a && a.pct != null ? a.pct : '';
+}
+async function saveEdit() {
+  const n = Number($('editAct').value), v = $('editPct').value.trim(), pct = Number(v);
+  if (!current || !n) { setMsg($('editMsg'), ERR.act, 'err'); return; }
+  if (v === '' || !Number.isFinite(pct) || pct < 0 || pct > (n === 4 ? 300 : 100)) { setMsg($('editMsg'), ERR.pct, 'err'); return; }
+  $('editBtn').disabled = true; setMsg($('editMsg'), 'Saving…');
+  const r = await call({ action: 'adminEdit', id: current.id, n, pct: Math.round(pct) });
+  $('editBtn').disabled = false;
+  if (!r.ok) { if (!authFail(r)) setMsg($('editMsg'), ERR[r.error] || 'Save failed.', 'err'); return; }
+  render(r);
+  $('editAct').value = n; fillEdit();
+  setMsg($('editMsg'), `Saved. A${n} = ${Math.round(pct)}% for ${r.id}. The Sheet is updated; the student's device shows it on its next sync.`, 'ok');
 }
 function toggle(n, b) { if (sel.has(n)) sel.delete(n); else sel.add(n); b.classList.toggle('sel', sel.has(n)); updateBtn(); }
 function updateBtn() {
@@ -448,6 +484,9 @@ $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 $('findBtn').addEventListener('click', find);
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') find(); });
 $('resetBtn').addEventListener('click', askReset);
+$('editAct').addEventListener('change', () => { fillEdit(); setMsg($('editMsg'), ''); });
+$('editBtn').addEventListener('click', saveEdit);
+$('editPct').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
 $('confirmYes').addEventListener('click', doReset);
 $('confirmNo').addEventListener('click', () => { $('confirm').hidden = true; });
 $('selAll').addEventListener('click', () => selectAll(true));

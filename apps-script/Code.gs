@@ -148,6 +148,11 @@ function doPost(e) {
         try { sl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
         try { return json_(action === 'adminSpecial' ? adminSpecial_(as, req) : adminSpecialBank_(as, req)); } finally { sl.releaseLock(); }
       }
+      if (action === 'adminEdit') {
+        var el = LockService.getScriptLock();
+        try { el.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminEdit_(as, req)); } finally { el.releaseLock(); }
+      }
       if (action === 'adminReset') {
         var al = LockService.getScriptLock();
         try { al.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
@@ -382,6 +387,7 @@ function merge_(s, inc) {
     if (!r || typeof r !== 'object') continue;
     var t = recTime_(r);
     if (out.resets[k] && t && t < out.resets[k]) continue;
+    if (out[k] && out[k].adminEdit && !(t && t > out[k].adminEdit)) continue;   // instructor's edit wins over older copies
     if (!out[k] || pct_(r) > pct_(out[k])) out[k] = r;
   }
 
@@ -416,6 +422,7 @@ function merge_(s, inc) {
 
 function pct_(r) {
   if (!r) return -1;
+  if (r.adminEdit && r.percentage != null) return Number(r.percentage) || 0;
   if (r.totalScore != null && r.totalMax) return Math.round(r.totalScore / r.totalMax * 100);
   if (r.percentage != null) return Number(r.percentage) || 0;
   return Math.round((r.score || 0) / (r.maxScore || 100) * 100);
@@ -666,7 +673,7 @@ function adminLookup_(ss, req) {
   var acts = [];
   for (var n = 1; n <= ACTIVITY_COUNT; n++) {
     var r = doc['activity' + n];
-    acts.push({ n: n, pct: r ? pct_(r) : null, at: r ? recTime_(r) : '', reset: (doc.resets || {})['activity' + n] || '' });
+    acts.push({ n: n, pct: r ? pct_(r) : null, at: r ? recTime_(r) : '', reset: (doc.resets || {})['activity' + n] || '', edited: !!(r && r.adminEdit) });
   }
   return { ok: true, id: id, activities: acts };
 }
@@ -679,6 +686,32 @@ function adminReset_(ss, req) {
   var doc = readDoc_(ss, id);
   if (!doc) return { ok: false, error: 'notfound', id: id };
   resetDoc_(ss, id, doc, list, 'admin reset');
+  return adminLookup_(ss, { id: id });
+}
+
+/* Set one activity's score (percent). The record is rescaled so the hub and the Sheet agree;
+   adminEdit (time) makes merge_ refuse older copies still on the student's phone. */
+function adminEdit_(ss, req) {
+  var id = codeNorm_(req.id);
+  if (!id) return { ok: false, error: 'code' };
+  var n = Number(req.n), pct = Math.round(Number(req.pct));
+  if (!(n >= 1 && n <= ACTIVITY_COUNT)) return { ok: false, error: 'act' };
+  if (!isFinite(pct) || pct < 0 || pct > (n === 4 ? 300 : 100)) return { ok: false, error: 'pct' };
+  var doc = readDoc_(ss, id);
+  if (!doc) return { ok: false, error: 'notfound', id: id };
+  var k = 'activity' + n, now = new Date().toISOString();
+  var old = doc[k], r = old ? JSON.parse(JSON.stringify(old)) : { score: 0, maxScore: 100, endTime: now };
+  var before = old ? pct_(old) : null;
+  if (r.totalMax) r.totalScore = Math.round(pct * r.totalMax / 100);
+  if (r.maxScore || r.score != null) r.score = Math.round(pct * (r.maxScore || 100) / 100);
+  r.percentage = pct;
+  r.adminEdit = now;
+  r.adminFrom = before;
+  doc[k] = r;
+  doc.updatedAt = now;
+  writeDoc_(ss, id, doc);
+  writeScores_(ss, id, doc);
+  log_(ss, id, 'admin edit', 'A' + n + ' ' + (before == null ? 'none' : before + '%') + ' → ' + pct + '%');
   return adminLookup_(ss, { id: id });
 }
 
