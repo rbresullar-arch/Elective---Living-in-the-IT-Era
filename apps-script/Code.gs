@@ -138,6 +138,7 @@ function doPost(e) {
       var as = SpreadsheetApp.openById(SHEET_ID);
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
+      if (action === 'adminAttKey') return json_({ ok: true, key: attSecret_() });
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
       if (action === 'adminScores') return json_(adminScores_(as));
       if (action === 'adminExamGate') {
@@ -198,6 +199,7 @@ function doPost(e) {
     if (action === 'register') return json_(register_(ss, req, pin));
     if (action === 'migrate') return json_(migrate_(ss, req, pin));
     if (action === 'changeSched') return json_(changeSched_(ss, req, pin));
+    if (action === 'attend') return json_(attend_(ss, req, pin));
     if (action === 'save' || action === 'restore') return json_(saveRestore_(ss, req, pin, action));
     return json_({ ok: false, error: 'bad' });
   } catch (err) {
@@ -247,6 +249,75 @@ function saveRestore_(ss, req, pin, action) {
 /* Profile → change schedule. The first 5 digits of a class code are the schedule, so the
    account moves to the next free code of the new schedule: Auth, Data, Scores, Special Exams
    and Log rows are renamed; scores and PIN stay. */
+/* ---------------- attendance (student scans the instructor's QR) ----------------
+   QR text: ITERA-ATT:1:<sched|ALL>:<session>:<t>:<sig>
+     sched   5-digit schedule, or ALL
+     session 1–24 chars [A-Za-z0-9-] chosen by the generator (e.g. 20261110 or 20261110-AM)
+     t       unix seconds when this QR was drawn (the generator redraws every 10 s)
+     sig     first 16 hex chars (lowercase) of HMAC-SHA256(key = ATT_SECRET, message = everything before ":<sig>")
+   ATT_SECRET is a Script Property, made on first use; the master console shows it (Attendance key).
+   Accepted when the signature matches, the code's schedule matches (or ALL), and the phone scanned it
+   within ATT_WINDOW_S of t. A scan sent later from an offline phone is accepted up to ATT_QUEUE_S and marked. */
+var ATT_TAB = 'Attendance', ATT_WINDOW_S = 90, ATT_QUEUE_S = 12 * 3600;
+var ATT_HEAD = ['Time (PH)', 'Code', 'Name tag', 'Schedule', 'Session', 'QR time (PH)', 'Note'];
+var ATT_RE = /^ITERA-ATT:1:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):([0-9a-f]{16})$/;
+function attSecret_() {
+  var props = PropertiesService.getScriptProperties();
+  var k = props.getProperty('ATT_SECRET');
+  if (!k) { k = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, ''); props.setProperty('ATT_SECRET', k); }
+  return k;
+}
+function attSig_(msg) {
+  var raw = Utilities.computeHmacSha256Signature(msg, attSecret_(), Utilities.Charset.UTF_8);
+  return raw.map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('').slice(0, 16);
+}
+function attSheet_(ss) {
+  var sh = ss.getSheetByName(ATT_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(ATT_TAB); sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, ATT_HEAD.length).setValues([ATT_HEAD]).setFontWeight('bold');
+  }
+  return sh;
+}
+function attend_(ss, req, pin) {
+  var id = String(req.id || '').trim();
+  if (!CODE_RE.test(id)) return { ok: false, error: 'bad' };
+  var m = ATT_RE.exec(String(req.qr || '').trim());
+  if (!m) return { ok: false, error: 'qr' };
+  var auth = checkPin_(ss, id, hashFor_(id, pin));
+  if (auth === 'nouser') return { ok: false, error: 'nouser' };
+  if (auth.locked) return { ok: false, error: 'locked', until: auth.until };
+  if (auth.bad) return { ok: false, error: 'pin', left: auth.left };
+  var sched = m[1], session = m[2], t = Number(m[3]);
+  if (attSig_(String(req.qr).trim().slice(0, -17)) !== m[4]) { log_(ss, id, 'attend', 'bad signature'); return { ok: false, error: 'qr' }; }
+  if (sched !== 'ALL' && sched !== id.slice(0, 5)) return { ok: false, error: 'sched', sched: sched };
+  var now = Math.floor(Date.now() / 1000);
+  var scanned = Math.floor(Number(req.scannedAt) / 1000) || now;
+  if (scanned > now + 60) scanned = now;
+  var note = '';
+  if (Math.abs(now - t) > ATT_WINDOW_S) {
+    if (now - t > ATT_QUEUE_S || Math.abs(scanned - t) > ATT_WINDOW_S) return { ok: false, error: 'expired' };
+    note = 'Sent later (phone was offline)';
+  }
+  var sh = attSheet_(ss), last = sh.getLastRow();
+  if (last > 1) {
+    var rows = sh.getRange(2, 2, last - 1, 4).getDisplayValues();
+    for (var i = rows.length - 1; i >= 0; i--) {
+      if (String(rows[i][0]).trim().toUpperCase() === id && String(rows[i][3]) === session) {
+        return { ok: true, already: true, session: session, at: sh.getRange(i + 2, 1).getDisplayValue() };
+      }
+    }
+  }
+  var doc = readDoc_(ss, id) || {};
+  var fmt = function (sec) { return Utilities.formatDate(new Date(sec * 1000), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss'); };
+  var whenTxt = fmt(note ? scanned : now);
+  sh.appendRow([whenTxt, id, doc.nameTag || '', id.slice(0, 5), session, fmt(t), note]);
+  sh.getRange(sh.getLastRow(), 1, 1, ATT_HEAD.length).setNumberFormat('@');
+  sh.getRange(sh.getLastRow(), 1, 1, ATT_HEAD.length).setValues([[whenTxt, id, doc.nameTag || '', id.slice(0, 5), session, fmt(t), note]]);
+  log_(ss, id, 'attend', session + (note ? ' (offline)' : ''));
+  return { ok: true, session: session, at: whenTxt, note: note };
+}
+
 function changeSched_(ss, req, pin) {
   var id = String(req.id || '').trim();
   if (!CODE_RE.test(id)) return { ok: false, error: 'bad' };
@@ -275,10 +346,10 @@ function changeSched_(ss, req, pin) {
   writeDoc_(ss, code, merged);
   writeScores_(ss, code, merged);
 
-  [SPX_TAB, SHEET.log].forEach(function (name) {
+  [SPX_TAB, SHEET.log, ATT_TAB].forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (!sh || sh.getLastRow() < 2) return;
-    var col = name === SHEET.log ? 2 : 1;
+    var col = name === SPX_TAB ? 1 : 2;
     var rng = sh.getRange(2, col, sh.getLastRow() - 1, 1), v = rng.getDisplayValues(), hit = false;
     v.forEach(function (r) { if (String(r[0]).trim().toUpperCase() === id) { r[0] = code; hit = true; } });
     if (hit) rng.setNumberFormat('@').setValues(v);

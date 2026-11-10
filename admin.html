@@ -147,6 +147,16 @@
     </div>
   </section>
 
+  <!-- Attendance key: the secret the attendance QR generator signs with -->
+  <section class="card" id="attCard" hidden>
+    <div class="head"><strong style="font-family:var(--sans)">Attendance key</strong>
+      <div class="tools"><button class="link" id="attKeyShow" type="button">Show</button><button class="link" id="attKeyCopy" type="button">Copy</button></div>
+    </div>
+    <p class="exam-state">Paste this key into the attendance QR generator once. Keep it private: anyone with it can make valid attendance QRs.</p>
+    <input id="attKey" type="password" readonly value="" placeholder="Tap Show" style="font-family:var(--mono);font-size:13px">
+    <p class="msg" id="attKeyMsg"></p>
+  </section>
+
   <!-- Examinations: open / close and opening times (read by exam_gate.js on every exam page) -->
   <section class="card" id="examCard" hidden>
     <div class="head"><strong style="font-family:var(--sans)">Examinations</strong>
@@ -237,7 +247,7 @@ function authFail(r) {
 }
 
 function showSignedIn(on) {
-  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on; $('examCard').hidden = !on; $('spCard').hidden = !on;
+  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on; $('examCard').hidden = !on; $('spCard').hidden = !on; $('attCard').hidden = !on;
   if (!on) $('resultCard').hidden = true;
   if (on) { loadGate(); loadSpecial(); }
   if (on) setTimeout(() => $('code').focus(), 30);
@@ -245,7 +255,7 @@ function showSignedIn(on) {
 function signOut() {
   adminHash = ''; current = null;
   try { sessionStorage.removeItem(SS_KEY); } catch (e) {}
-  $('pw').value = ''; showSignedIn(false);
+  $('pw').value = ''; $('attKey').value = ''; $('attKey').type = 'password'; showSignedIn(false);
 }
 
 async function login() {
@@ -492,6 +502,23 @@ $('confirmNo').addEventListener('click', () => { $('confirm').hidden = true; });
 $('selAll').addEventListener('click', () => selectAll(true));
 $('selNone').addEventListener('click', () => selectAll(false));
 $('signOut').addEventListener('click', signOut);
+async function attKeyLoad() {
+  if ($('attKey').value) return true;
+  setMsg($('attKeyMsg'), 'Loading…');
+  const r = await call({ action: 'adminAttKey' });
+  if (!r.ok) { if (!authFail(r)) setMsg($('attKeyMsg'), ERR[r.error] || 'Could not load the key.', 'err'); return false; }
+  $('attKey').value = r.key; setMsg($('attKeyMsg'), ''); return true;
+}
+$('attKeyShow').addEventListener('click', async () => {
+  if (!(await attKeyLoad())) return;
+  const show = $('attKey').type === 'password';
+  $('attKey').type = show ? 'text' : 'password'; $('attKeyShow').textContent = show ? 'Hide' : 'Show';
+});
+$('attKeyCopy').addEventListener('click', async () => {
+  if (!(await attKeyLoad())) return;
+  try { await navigator.clipboard.writeText($('attKey').value); setMsg($('attKeyMsg'), 'Copied.', 'ok'); }
+  catch (e) { $('attKey').type = 'text'; $('attKey').select(); setMsg($('attKeyMsg'), 'Select and copy the key above.'); }
+});
 $('ver').textContent = 'Version ' + VERSION;
 showSignedIn(!!adminHash);
 </script>

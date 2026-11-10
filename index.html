@@ -220,6 +220,17 @@
   #privacyPanel, #codePanel { z-index:60; }
   #logoutPanel { z-index:55; }
   #namePanel { z-index:58; }
+  .att-who { font-size:14px; color:var(--muted); margin:-4px 0 12px; }
+  .att-cam { position:relative; width:100%; aspect-ratio:1/1; border-radius:18px; overflow:hidden; background:#000; margin:0 0 10px; }
+  .att-cam video { width:100%; height:100%; object-fit:cover; display:block; }
+  .att-frame { position:absolute; inset:14%; border:3px solid rgba(255,255,255,.85); border-radius:16px; box-shadow:0 0 0 999px rgba(0,0,0,.25); }
+  .att-result { padding:22px 12px; border-radius:18px; background:rgba(52,199,89,.12); margin:0 0 10px; }
+  .att-result b { display:block; font-size:22px; color:#248A3D; margin-bottom:4px; }
+  .att-result.bad { background:rgba(255,59,48,.1); } .att-result.bad b { color:var(--red); }
+  .att-result.wait { background:rgba(255,159,10,.12); } .att-result.wait b { color:#C93400; }
+  .att-result span { font-size:14px; color:var(--muted); }
+  .att-hint { text-align:center; }
+  #attScan[hidden] { display:none; }
   #profilePanel { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; z-index:52;
     background:rgba(0,0,0,.3); -webkit-backdrop-filter:blur(16px) saturate(140%); backdrop-filter:blur(16px) saturate(140%); }
   #profilePanel.show { display:flex; }
@@ -330,7 +341,7 @@
       <div class="hero"><span class="mark">IT</span><h1>Living in the IT Era.</h1><p>GEEL 1 · Activities, examinations and reads</p></div>
     </div>
     <div class="exam-notice" data-exam-notice></div>
-    <button type="button" class="att-open" data-att-open>ATTENDANCE QR</button>
+    <button type="button" class="att-open" data-att-open>SCAN ATTENDANCE</button>
     <div class="auth-tabs" role="tablist">
       <button type="button" class="box auth-tab on" id="tabLogin" role="tab" aria-selected="true">Log in</button>
       <button type="button" class="box auth-tab" id="tabCreate" role="tab" aria-selected="false">Create account</button>
@@ -394,7 +405,7 @@
         <span class="chipbar" id="homeProg"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><span class="ptext">Activities</span></span></div>
     </div>
     <div class="exam-notice" data-exam-notice></div>
-    <button type="button" class="att-open" data-att-open>ATTENDANCE QR</button>
+    <button type="button" class="att-open" data-att-open>SCAN ATTENDANCE</button>
     <div id="cloudStatus" role="status"></div>
 
     <div class="group menu">
@@ -578,21 +589,19 @@
 <!-- Attendance QR panel -->
 <div id="attPanel" role="dialog" aria-modal="true" aria-labelledby="attTitle">
   <div class="box qr-card">
-    <strong id="attTitle">Attendance QR</strong>
-    <label for="attName">Your full name</label>
-    <input type="text" id="attName" autocomplete="name" autocapitalize="words">
-    <div class="qr-note">Name and code are saved on this device only, so you do not retype them. They are not sent online.</div>
-    <label for="attCode">Class code</label>
-    <input type="text" id="attCode" inputmode="numeric" autocomplete="off" placeholder="e.g. 12030-07">
-    <div class="qr-note" id="attSchedNote">Your class code is on Home, or from your instructor.</div>
-    <button type="button" class="box small-btn" id="attMake">Make Attendance QR</button>
-    <div class="qr-msg" id="attMsg"></div>
-    <div class="qr-box" id="attBox"></div>
-    <div class="qr-cap" id="attCap"></div>
-    <div class="qr-sum" id="attSum"></div>
+    <strong id="attTitle">Attendance</strong>
+    <div class="att-who" id="attWho"></div>
+    <div class="att-cam" id="attCam" hidden>
+      <video id="attVideo" playsinline muted autoplay></video>
+      <span class="att-frame" aria-hidden="true"></span>
+    </div>
+    <div class="att-result" id="attResult" hidden></div>
+    <div class="qr-msg" id="attMsg" role="status"></div>
+    <div class="qr-note att-hint" id="attHint">Point the camera at the attendance QR on your instructor's screen.</div>
+    <div class="qr-note att-hint" id="attQueue" hidden></div>
     <div class="ul-row">
-      <button type="button" class="box small-btn" id="attDl" disabled>Save image</button>
-      <button type="button" class="box small-btn primary" id="attClose">Close</button>
+      <button type="button" class="box small-btn" id="attClose">Close</button>
+      <button type="button" class="box small-btn primary" id="attScan">Scan again</button>
     </div>
   </div>
 </div>
@@ -840,7 +849,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.10.3';
+const APP_VERSION = '2026.11.10.4';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1475,6 +1484,7 @@ document.getElementById('greeting').addEventListener('click', () => { if (localS
 function enterActivities(name) {
   paintGreeting(name);
   if (!realName()) nameOpen(true);
+  setTimeout(() => { try { attFlush(); } catch (e) {} }, 2500);
   let last = 'home';
   try { last = sessionStorage.getItem(SCREEN_KEY) || 'home'; } catch (e) {}
   if (!SCREEN_COLORS[last] || last === 'name') last = 'home';
@@ -1915,72 +1925,163 @@ document.getElementById('qrDl').addEventListener('click', () => {
   document.body.appendChild(a); a.click(); a.remove();
 });
 
-/* ===== Attendance QR =====
-   Same encoding as the Score QR: JSON -> XOR (key "2026") -> Base64.
-   Payload: { v:1, t:"att", n:name, k:class code, c:schedule (first 5 digits of the code), at:unix seconds }
-   Name and code are kept on this device (ATT_NAME_KEY, ATT_CODE_KEY) so students type them once.
-   The code comes from the logged-in account when there is one (then it cannot be edited).
-   Read by tools/attendance_scanner.py, which logs one row per student per day. */
-const ATT_NAME_KEY = 'itict_att_name', ATT_CODE_KEY = 'itict_att_code';
-let attLastPNG = null;
+/* ===== Attendance (scan the instructor's QR) =====
+   The instructor's screen shows a signed QR that changes every 10 s:
+     ITERA-ATT:1:<sched|ALL>:<session>:<t>:<sig>
+   The phone reads it with the camera (BarcodeDetector, else jsqr.js) and sends
+   { action:'attend', id, pin, qr, scannedAt } to the Apps Script, which checks the signature and time
+   and writes the Attendance tab (code + name tag only). Offline scans wait in ATT_QUEUE_KEY and are
+   sent when the phone is back online (the server accepts them for 12 h and marks them).
+   ATT_NAME_KEY / ATT_CODE_KEY are kept from the old QR maker (used by the profile). */
+const ATT_NAME_KEY = 'itict_att_name', ATT_CODE_KEY = 'itict_att_code', ATT_QUEUE_KEY = 'itict_att_queue';
+const ATT_QR_RE = /^ITERA-ATT:1:(\d{5}|ALL):([A-Za-z0-9-]{1,24}):(\d{9,11}):([0-9a-f]{16})$/;
+const att = { stream: null, raf: 0, det: null, busy: false, canvas: null };
 function attEl(id) { return document.getElementById(id); }
-function attClear() {
-  ['attBox', 'attCap', 'attSum', 'attMsg'].forEach(id => { attEl(id).textContent = ''; });
-  attEl('attDl').disabled = true; attLastPNG = null;
+function attQueue() { try { return JSON.parse(localStorage.getItem(ATT_QUEUE_KEY) || '[]') || []; } catch (e) { return []; } }
+function attQueueSet(q) { try { if (q.length) localStorage.setItem(ATT_QUEUE_KEY, JSON.stringify(q)); else localStorage.removeItem(ATT_QUEUE_KEY); } catch (e) {} }
+function attPaintQueue() {
+  const n = attQueue().length, el = attEl('attQueue');
+  el.hidden = !n;
+  el.textContent = n ? `${n} scan${n > 1 ? 's' : ''} waiting for internet. ${n > 1 ? 'They are' : 'It is'} sent automatically.` : '';
 }
-function attSchedLabel(code) {
-  const o = attEl('qrSched').querySelector(`option[value="${code.slice(0, 5)}"]`);
-  return o ? o.textContent : '';
+function attShow(kind, title, sub) {
+  const r = attEl('attResult');
+  r.className = 'att-result' + (kind === 'ok' ? '' : ' ' + kind);
+  r.innerHTML = ''; const b = document.createElement('b'); b.textContent = title; const sp = document.createElement('span'); sp.textContent = sub || '';
+  r.append(b, sp); r.hidden = false;
 }
-function attPaintSched() {
-  const code = codeNorm(attEl('attCode').value);
-  attEl('attSchedNote').textContent = code ? (attSchedLabel(code) || 'Schedule ' + code.slice(0, 5) + ' is not a class schedule.') : 'Your class code is on Home, or from your instructor.';
+function attStop() {
+  cancelAnimationFrame(att.raf); att.raf = 0;
+  if (att.stream) { att.stream.getTracks().forEach(t => t.stop()); att.stream = null; }
+  const v = attEl('attVideo'); v.srcObject = null;
+  attEl('attCam').hidden = true;
+}
+function attLoadJsQR() {
+  if (window.jsQR) return Promise.resolve();
+  return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'jsqr.js'; sc.onload = res; sc.onerror = rej; document.head.append(sc); });
+}
+async function attDetector() {
+  if (att.det) return att.det;
+  try {
+    if ('BarcodeDetector' in window && (await BarcodeDetector.getSupportedFormats()).includes('qr_code')) {
+      const bd = new BarcodeDetector({ formats: ['qr_code'] });
+      att.det = async v => { const r = await bd.detect(v); return r.length ? r[0].rawValue : ''; };
+      return att.det;
+    }
+  } catch (e) {}
+  await attLoadJsQR();
+  att.canvas = att.canvas || document.createElement('canvas');
+  const ctx = att.canvas.getContext('2d', { willReadFrequently: true });
+  att.det = async v => {
+    const w = v.videoWidth, h = v.videoHeight; if (!w || !h) return '';
+    const k = Math.min(1, 720 / Math.max(w, h));
+    att.canvas.width = Math.round(w * k); att.canvas.height = Math.round(h * k);
+    ctx.drawImage(v, 0, 0, att.canvas.width, att.canvas.height);
+    const img = ctx.getImageData(0, 0, att.canvas.width, att.canvas.height);
+    const r = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    return r ? r.data : '';
+  };
+  return att.det;
+}
+async function attStart() {
+  attEl('attResult').hidden = true; attEl('attMsg').textContent = ''; attEl('attScan').hidden = true;
+  attEl('attHint').hidden = false;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { attEl('attMsg').textContent = 'This browser cannot use the camera. Open the site in Chrome or Safari.'; attEl('attScan').hidden = false; return; }
+  try {
+    att.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (e) {
+    attEl('attMsg').textContent = e && e.name === 'NotAllowedError' ? 'Camera blocked. Allow the camera for this site in your browser settings, then tap Scan again.' : 'Could not open the camera.';
+    attEl('attScan').hidden = false; return;
+  }
+  if (!attEl('attPanel').classList.contains('show')) { attStop(); return; }
+  const v = attEl('attVideo'); v.srcObject = att.stream; attEl('attCam').hidden = false;
+  try { await v.play(); } catch (e) {}
+  let det;
+  try { det = await attDetector(); } catch (e) { attEl('attMsg').textContent = 'The QR reader did not load. Check your internet and tap Scan again.'; attStop(); attEl('attScan').hidden = false; return; }
+  let last = 0;
+  const loop = async ts => {
+    if (!att.stream) return;
+    if (ts - last > 180 && !att.busy) {
+      last = ts; att.busy = true;
+      let text = '';
+      try { text = await det(v); } catch (e) {}
+      att.busy = false;
+      if (text && att.stream) { attGot(String(text).trim()); return; }
+    }
+    att.raf = requestAnimationFrame(loop);
+  };
+  att.raf = requestAnimationFrame(loop);
+}
+function attErrText(r, qrSched) {
+  switch (r && r.error) {
+    case 'qr': return ['bad', 'Not the attendance QR', 'Scan the QR on your instructor\'s screen.'];
+    case 'expired': return ['bad', 'This QR has expired', 'Scan the QR on the screen now, not a photo of it.'];
+    case 'sched': return ['bad', 'Wrong class', `This QR is for schedule ${r.sched || qrSched}. Your code is ${cloudCode()}.`];
+    case 'pin': case 'locked': return ['bad', 'Not recorded', 'Your account needs your instructor (PIN problem).'];
+    case 'nouser': return ['bad', 'Not recorded', 'Your class code was not found. Log in again.'];
+    default: return ['bad', 'Not recorded', 'The server is busy. Tap Scan again.'];
+  }
+}
+async function attSend(item) {
+  const acct = cloudAcct();
+  if (!acct || !isCode(acct.id)) return { ok: false, error: 'nouser' };
+  return cloudCall({ action: 'attend', id: acct.id, pin: acct.pin, qr: item.qr, scannedAt: item.scannedAt });
+}
+async function attGot(text) {
+  if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} }
+  attStop(); attEl('attHint').hidden = true;
+  const m = ATT_QR_RE.exec(text);
+  if (!m) { const e = attErrText({ error: 'qr' }); attShow(e[0], e[1], e[2]); attEl('attScan').hidden = false; return; }
+  if (m[1] !== 'ALL' && m[1] !== cloudCode().slice(0, 5)) { const e = attErrText({ error: 'sched', sched: m[1] }); attShow(e[0], e[1], e[2]); attEl('attScan').hidden = false; return; }
+  const item = { qr: text, scannedAt: Date.now(), id: cloudCode() };
+  attShow('wait', 'Sending…', 'Session ' + m[2]);
+  const r = await attSend(item);
+  if (r.ok) {
+    attShow('ok', r.already ? 'Already recorded' : 'Present ✓', `Session ${r.session} · ${r.at || ''}`);
+  } else if (r.error === 'offline') {
+    const q = attQueue().filter(x => x.qr.split(':')[3] !== m[2] || x.id !== item.id); q.push(item); attQueueSet(q);
+    attShow('wait', 'Saved on this phone', 'No internet. It is sent automatically when you are back online (within 12 hours).');
+  } else {
+    const e = attErrText(r, m[1]); attShow(e[0], e[1], e[2]);
+  }
+  attPaintQueue();
+  attEl('attScan').hidden = false;
+}
+let attFlushing = false;
+async function attFlush() {
+  if (attFlushing || !navigator.onLine) return;
+  const q = attQueue(); if (!q.length || !cloudCode()) return;
+  attFlushing = true;
+  const keep = [];
+  for (const it of q) {
+    if (it.id !== cloudCode()) continue;
+    const r = await attSend(it);
+    if (!r.ok && (r.error === 'offline' || r.error === 'busy' || r.error === 'server')) keep.push(it);
+  }
+  attQueueSet(keep); attFlushing = false;
+  if (attEl('attPanel').classList.contains('show')) attPaintQueue();
 }
 function attOpen() {
-  const acct = cloudCode();
-  let saved = '';
-  try { saved = localStorage.getItem(ATT_CODE_KEY) || ''; } catch (e) {}
-  const code = acct || (isCode(saved) ? saved : '') || knownGet()[0] || '';
-  attEl('attCode').value = code;
-  attEl('attCode').readOnly = !!acct;
-  try { attEl('attName').value = localStorage.getItem(ATT_NAME_KEY) || ''; } catch (e) { attEl('attName').value = ''; }
-  attPaintSched(); attClear();
+  const code = cloudCode(), n = realName();
+  attEl('attWho').textContent = code ? (n ? `${n.first} ${n.last} · ${code}` : code) : '';
+  attEl('attResult').hidden = true; attEl('attMsg').textContent = '';
   attEl('attPanel').classList.add('show');
-  setTimeout(() => attEl(attEl('attName').value ? 'attCode' : 'attName').focus(), 50);
+  attPaintQueue();
+  if (!code) {
+    attEl('attHint').hidden = true; attEl('attScan').hidden = true;
+    attShow('bad', 'Log in first', 'Attendance is recorded under your class code. Log in or create your account, then scan.');
+    return;
+  }
+  attFlush();
+  attStart();
 }
-function attRender() {
-  attClear();
-  const msg = attEl('attMsg');
-  const name = String(attEl('attName').value || '').replace(/\s+/g, ' ').trim();
-  const code = codeNorm(attEl('attCode').value);
-  if (!cloudNameOk(name) || !/\p{L}{2}/u.test(name)) { msg.textContent = 'Type your full name (at least 3 letters).'; attEl('attName').focus(); return; }
-  if (!code) { msg.textContent = 'Type your class code, e.g. 12030-07.'; attEl('attCode').focus(); return; }
-  const sched = code.slice(0, 5);
-  if (!QR_SCHEDULES.includes(sched)) { msg.textContent = 'Schedule ' + sched + ' is not one of the class schedules. Check your code.'; attEl('attCode').focus(); return; }
-  attEl('attCode').value = code;
-  try { localStorage.setItem(ATT_NAME_KEY, name); localStorage.setItem(ATT_CODE_KEY, code); } catch (e) {}
-  const at = Math.floor(Date.now() / 1000);
-  const cv = qrMakeCanvas(qrEncrypt(JSON.stringify({ v: 1, t: 'att', n: name, k: code, c: sched, at })));
-  attEl('attBox').append(cv);
-  attEl('attCap').textContent = name + ' · ' + code;
-  attEl('attSum').textContent = 'Made ' + new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(at * 1000) + '. Show this to your instructor. A QR from another day is not accepted.';
-  try { attLastPNG = cv.toDataURL('image/png'); attEl('attDl').disabled = false; } catch (e) {}
-}
-function attCloseAll() { attEl('attPanel').classList.remove('show'); attClear(); }
+function attCloseAll() { attStop(); attEl('attPanel').classList.remove('show'); }
 document.querySelectorAll('[data-att-open]').forEach(b => b.addEventListener('click', attOpen));
-attEl('attMake').addEventListener('click', attRender);
 attEl('attClose').addEventListener('click', attCloseAll);
+attEl('attScan').addEventListener('click', attStart);
 attEl('attPanel').addEventListener('click', e => { if (e.target.id === 'attPanel') attCloseAll(); });
-attEl('attName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attRender(); } });
-attEl('attName').addEventListener('input', attClear);
-attEl('attCode').addEventListener('input', () => { attClear(); attPaintSched(); });
-attEl('attCode').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attRender(); } });
-attEl('attDl').addEventListener('click', () => {
-  if (!attLastPNG) return;
-  const d = new Date().toISOString().slice(0, 10);
-  const a = document.createElement('a'); a.href = attLastPNG; a.download = 'GEEL1_Attendance_' + d + '.png';
-  document.body.appendChild(a); a.click(); a.remove();
-});
+window.addEventListener('online', () => attFlush());
+document.addEventListener('visibilitychange', () => { if (document.hidden && att.stream) attCloseAll(); else if (!document.hidden) attFlush(); });
 
 /* ===== Cloud backup (instructor's Google Sheet via Apps Script) =====
    Identity (version 2): a class code assigned by the instructor's Sheet,
