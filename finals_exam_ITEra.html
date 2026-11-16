@@ -236,7 +236,7 @@ const ERR = {
   img: 'That photo could not be used. Choose the photo again.',
   busy: 'The server is busy. Try again in a moment.'
 };
-const errText = r => ERR[r && r.error] || 'Something went wrong. Try again.';
+const errText = r => ERR[r && r.error] || ('Something went wrong (' + ((r && r.error) || 'no reply') + (r && r.detail ? ': ' + String(r.detail).slice(0, 140) : '') + '). Try again.');
 
 /* ===================== HELPERS ===================== */
 const view = () => $('view');
