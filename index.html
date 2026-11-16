@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.10.6';
+const APP_VERSION = '2026.11.16.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1066,7 +1066,7 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: 'Special Examinations — Deadline', body: 'The Special Prelim, Special Midterm and Special Prefinals are open until <b>Tuesday, November 17, 2026, 11:59 PM</b> (Philippine time). One attempt per examination. After the deadline the examinations close and cannot be taken.' };
+const EXAM_NOTICE = { head: 'Finals Examination — Today', body: 'The Finals Examination is open until <b>8:00 PM today</b> (Philippine time). To begin, you upload a photo of your examination permit for your instructor to approve — so <b>take a clear photo of your permit now</b> and keep it ready. One attempt. <span style="opacity:.8">· Special Prelim, Midterm and Prefinals still close Nov 17, 11:59 PM.</span>' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
