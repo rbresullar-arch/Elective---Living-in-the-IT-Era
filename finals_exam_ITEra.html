@@ -88,7 +88,7 @@ p{margin:0 0 10px}
 <script src="pwa.js" defer></script>
 </head>
 <body>
-<script src="exam_gate.js" data-exam="examFinals" data-prefix="itict_finals"></script>
+<script src="exam_gate.js"></script><!-- API only: the permit step works while the exam is closed; Start checks the gate here and on the server -->
 <div class="gate card" id="gate" hidden></div>
 <main id="app">
   <div class="top" id="topRow"><a href="index.html" id="homeLink">‹ Home</a><span class="tag" id="topTag">Finals Examination</span></div>
@@ -270,11 +270,14 @@ function toPermitJpeg(file){
     im.src = url;
   });
 }
+let gateOpen = false;
 function vPermit(st, note){
   clearTimeout(pollT);
   $('topTag').textContent = 'Finals Examination';
   const head = `<span class="tag">GEEL 1 · Living in the IT Era</span><h1>Finals Examination</h1><p class="muted" style="margin:0 0 14px">Class code ${esc(ACCT.id)}</p>`;
   if (st === 'allowed') { vRules(head); return; }
+  if (st === 'started') { message('Already started', 'You already started the Finals Examination on another phone or browser. There is one attempt only. Tell your instructor.'); return; }
+  if (st === 'submitted') { message('Already submitted', 'Your Finals Examination was already submitted. There is one attempt only. Your instructor will release the results.'); return; }
   if (st === 'pending') {
     view().innerHTML = `<section class="card">${head}
       <div class="state wait"><b>Waiting for approval</b><span class="muted">permit sent</span></div>
@@ -287,8 +290,8 @@ function vPermit(st, note){
   }
   view().innerHTML = `<section class="card">${head}
     ${st === 'denied' ? '<div class="state bad"><b>Permit not accepted</b><span class="muted">send a new photo</span></div><p class="muted">Your instructor did not accept the photo. Take a clear photo of your own examination permit and send it again.</p>' :
-      '<div class="state"><b>Step 1 · Examination permit</b></div><p class="muted">Upload a clear photo of your examination permit. Your instructor allows or denies it; the photo is deleted right after. The examination timer starts only after you are allowed and tap Start.</p>'}
-    <div class="ghost pick" role="button">Choose permit photo<input type="file" id="pfile" accept="image/*" aria-label="Choose permit photo"></div>
+      '<div class="state"><b>Step 1 · Examination permit</b></div><p class="muted">Take a clear photo of your examination permit. When your instructor allows it, the Finals is unlocked for you: take it any time while it is open, once. The photo is deleted right after your instructor decides.</p>'}
+    <div class="ghost pick" role="button">Open camera<input type="file" id="pfile" accept="image/*" capture="environment" aria-label="Take a photo of your permit"></div>
     <img id="pprev" class="permit-prev" alt="Permit photo preview" hidden>
     <p class="msg" id="perr">${esc(note || '')}</p>
     <button type="button" class="btn" id="psend" disabled>Send to my instructor</button></section>`;
@@ -323,6 +326,7 @@ async function checkPermit(){
     view().innerHTML = `<section class="card"><h2>Finals Examination</h2><p class="msg" style="text-align:left">${esc(errText(r))}</p><button type="button" class="ghost" id="retry">Try again</button></section>`;
     $('retry').onclick = checkPermit; return;
   }
+  gateOpen = !!r.open;
   vPermit(r.status === 'none' ? 'none' : r.status);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && $('recheck')) checkPermit(); });
@@ -330,8 +334,19 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ===================== RULES + START ===================== */
 function vRules(head){
   const mins = Math.round(BLOCKS.reduce((s, b) => s + itemCount(b) * b.sec, 0) / 60);
+  if (!gateOpen) {
+    const g = window.ExamGate ? ExamGate.read() : null;
+    view().innerHTML = `<section class="card">${head}
+      <div class="state ok"><b>Permit accepted · Finals unlocked</b></div>
+      <p class="muted">${esc(((t) => /wait/.test(t) || !t ? 'The Finals is not open yet' : t)(window.ExamGate ? ExamGate.closedText(g, EXAM_ID) : ''))}. Come back while it is open; you can start any time during that window, once.</p>
+      <button type="button" class="ghost" id="recheck2">Check again</button></section>`;
+    $('recheck2').onclick = checkPermit;
+    if (window.ExamGate) ExamGate.fetch(8000);
+    clearTimeout(pollT); pollT = setTimeout(checkPermit, 30000);
+    return;
+  }
   view().innerHTML = `<section class="card">${head}
-    <div class="state ok"><b>Permit accepted</b><span class="muted">you may start</span></div>
+    <div class="state ok"><b>Permit accepted · Finals unlocked</b></div>
     <ul class="rules">
       <li><b>60 items, 1 point each</b>, in 9 parts. The parts come in a random order.</li>
       <li><b>Every item has its own timer</b> (30, 45 or 60 seconds). When it reaches 0 the item locks and the next one opens. About ${mins} minutes in all.</li>
@@ -341,7 +356,20 @@ function vRules(head){
       <li><b>One attempt only.</b> Your score is not shown; your instructor releases the results.</li>
     </ul>
     <button type="button" class="btn" id="start">Start the examination</button></section>`;
-  $('start').onclick = () => ask('Start now? The first item’s timer starts at once and items cannot be paused or repeated.', 'Start', startExam);
+  $('start').onclick = () => ask('Start now? You have one attempt. The first item’s timer starts at once and items cannot be paused or repeated.', 'Start', serverStart);
+}
+let starting = false;
+async function serverStart(){
+  if (starting) return;
+  starting = true;
+  const btn = $('start'); if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
+  const r = await call({ action: 'finalsStart' }, 20000);
+  starting = false;
+  if (r.ok) { startExam(); return; }
+  if (r.error === 'started' || r.error === 'submitted') { vPermit(r.error); return; }
+  if (r.error === 'closed' || r.error === 'permit') { checkPermit(); return; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Start the examination'; }
+  ask(errText(r), 'OK', () => {});
 }
 function startExam(){
   const order = shuffle(BLOCKS.map(b => b.id));

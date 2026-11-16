@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.17.1';
+const APP_VERSION = '2026.11.17.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1066,7 +1066,7 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: 'Finals Examination — Today', body: 'The Finals Examination is open until <b>8:00 PM today</b> (Philippine time). To begin, you upload a photo of your examination permit for your instructor to approve — so <b>take a clear photo of your permit now</b> and keep it ready. One attempt. <span style="opacity:.8">· Special Prelim, Midterm and Prefinals still close Nov 17, 11:59 PM.</span>' };
+const EXAM_NOTICE = { head: 'Finals Examination — Today', body: 'Have your examination permit with you. Tap <b>Finals</b> under Examination to open the camera and photograph it. When your instructor allows it, the Finals is unlocked: take it any time until <b>8:00 PM today</b> (Philippine time). One attempt only. <span style="opacity:.8">· Special Prelim, Midterm and Prefinals close tonight, 11:59 PM.</span>' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
@@ -1363,6 +1363,10 @@ async function refreshExam(e) {
   if (result || (session && session.submitted)) {
     setRow(e, e.noQR ? { score: '✓', note: 'Submitted · your instructor releases the results', done: true } : { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
+  }
+  if (e.noQR && !session) {   // Finals: the permit photo can be sent while the exam is closed
+    const g = window.ExamGate ? ExamGate.read() : null;
+    if (!(window.ExamGate && ExamGate.isOpen(g, e.id))) { const ct = window.ExamGate ? ExamGate.closedText(g, e.id) : ''; setRow(e, { score: '', note: (/^(Opens|Closed \w)/.test(ct) && !/wait/.test(ct) ? ct : 'Not open yet') + ' · tap to send your permit photo' }); return; }
   }
   if (examGateClosed(e)) return;
   if (session) {

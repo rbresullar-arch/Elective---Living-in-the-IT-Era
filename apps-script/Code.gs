@@ -220,6 +220,7 @@ function doPost(e) {
     if (action === 'changeSched') return json_(changeSched_(ss, req, pin));
     if (action === 'attend') return json_(attend_(ss, req, pin));
     if (action === 'permitSubmit') return json_(permitSubmit_(ss, req, pin));
+    if (action === 'finalsStart') return json_(finalsStart_(ss, req, pin));
     if (action === 'save' || action === 'restore') return json_(saveRestore_(ss, req, pin, action));
     return json_({ ok: false, error: 'bad' });
   } catch (err) {
@@ -262,6 +263,10 @@ function saveRestore_(ss, req, pin, action) {
   var merged = merge_(stored || {}, incoming);
   writeDoc_(ss, id, merged);
   writeScores_(ss, id, merged);
+  if (incoming.exams && incoming.exams.examFinals && incoming.exams.examFinals.result) {
+    try { var fs = ss.getSheetByName(PERMIT_TAB), fr = fs ? permitRow_(fs, id, 'finals') : 0;
+      if (fr && String(fs.getRange(fr, 4).getDisplayValue()) !== 'Submitted') permitMark_(ss, id, 'finals', 'Submitted', 8); } catch (e) {}
+  }
   log_(ss, id, 'save', 'ok');
   return { ok: true, data: merged };
 }
@@ -369,16 +374,33 @@ function attend_(ss, req, pin) {
 /* ---------------- exam permits (Finals) ----------------
    The student uploads a 144p JPEG of the examination permit; the instructor allows or denies it
    in the master console. The photo is deleted the moment a decision is made; only the decision stays.
-   Permits tab: Code | Exam | Submitted | Status (Pending/Allowed/Denied) | Decided | Image */
+   An allowed permit unlocks the examination: the student may start it any time the exam gate is open, once.
+   Permits tab: Code | Exam | Sent | Status | Decided | Image | Started | Finished
+   Status: Pending → Allowed / Denied → Started (finalsStart) → Submitted (the result reached the Sheet).
+   To give a student a fresh attempt, set Status back to Allowed (their phone must not still hold the old result). */
 var PERMIT_TAB = 'Permits', PERMIT_EXAMS = ['finals'], PERMIT_IMG_MAX = 45000;
-var PERMIT_HEAD = ['Code', 'Exam', 'Submitted (PH)', 'Status', 'Decided (PH)', 'Image (deleted after the decision)'];
+var PERMIT_HEAD = ['Code', 'Exam', 'Photo sent (PH)', 'Status', 'Decided (PH)', 'Image (deleted after the decision)', 'Started (PH)', 'Finished (PH)'];
 function permitSheet_(ss) {
   var sh = ss.getSheetByName(PERMIT_TAB);
-  if (!sh) {
-    sh = ss.insertSheet(PERMIT_TAB); sh.setFrozenRows(1);
-    sh.getRange(1, 1, 1, PERMIT_HEAD.length).setValues([PERMIT_HEAD]).setFontWeight('bold');
-  }
+  if (!sh) { sh = ss.insertSheet(PERMIT_TAB); sh.setFrozenRows(1); }
+  var h = sh.getRange(1, 1, 1, PERMIT_HEAD.length);
+  if (h.getValues()[0].join('|') !== PERMIT_HEAD.join('|')) h.setValues([PERMIT_HEAD]).setFontWeight('bold');
   return sh;
+}
+/* Exam gate check on the server (same rule as exam_gate.js). */
+function gateOpen_(examId) {
+  var v = gate_()[examId], now = Date.now();
+  if (!v || !v.open) return false;
+  if (v.from && now < Date.parse(v.from)) return false;
+  if (v.until && now >= Date.parse(v.until)) return false;
+  return true;
+}
+var PERMIT_GATE = { finals: 'examFinals' };
+function permitMark_(ss, id, exam, status, col) {
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, exam) : 0;
+  if (!row) return;
+  sh.getRange(row, 4).setValue(status);
+  sh.getRange(row, col).setNumberFormat('@').setValue(phNow_());
 }
 function permitRow_(sh, id, exam) {
   var last = sh.getLastRow();
@@ -403,16 +425,30 @@ function permitStatus_(ss, req, pin) {
   var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
   var sh = ss.getSheetByName(PERMIT_TAB);
   var row = sh ? permitRow_(sh, a.id, a.exam) : 0;
-  if (!row) return { ok: true, status: 'none' };
-  var v = sh.getRange(row, 1, 1, 5).getDisplayValues()[0];
-  return { ok: true, status: String(v[3]).toLowerCase() || 'pending', submitted: v[2], decided: v[4] };
+  if (!row) return { ok: true, status: 'none', open: gateOpen_(PERMIT_GATE[a.exam]) };
+  var v = sh.getRange(row, 1, 1, 8).getDisplayValues()[0];
+  return { ok: true, status: String(v[3]).toLowerCase() || 'pending', sent: v[2], decided: v[4], started: v[6], open: gateOpen_(PERMIT_GATE[a.exam]) };
+}
+/* The student taps Start: allowed permit + open gate → Started (one attempt). */
+function finalsStart_(ss, req, pin) {
+  req.exam = 'finals';
+  var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, a.id, a.exam) : 0;
+  var st = row ? String(sh.getRange(row, 4).getDisplayValue()) : '';
+  if (st === 'Started' || st === 'Submitted') return { ok: false, error: st.toLowerCase() };
+  if (st !== 'Allowed') return { ok: false, error: 'permit', status: (st || 'none').toLowerCase() };
+  if (!gateOpen_('examFinals')) return { ok: false, error: 'closed' };
+  permitMark_(ss, a.id, a.exam, 'Started', 7);
+  log_(ss, a.id, 'finals', 'started');
+  return { ok: true, status: 'started', now: Date.now() };
 }
 function permitSubmit_(ss, req, pin) {
   var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
   var img = String(req.img || '');
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(img) || img.length > PERMIT_IMG_MAX) return { ok: false, error: 'img' };
   var sh = permitSheet_(ss), row = permitRow_(sh, a.id, a.exam);
-  if (row && String(sh.getRange(row, 4).getDisplayValue()) === 'Allowed') return { ok: true, status: 'allowed' };
+  var cur = row ? String(sh.getRange(row, 4).getDisplayValue()) : '';
+  if (cur === 'Allowed' || cur === 'Started' || cur === 'Submitted') return { ok: true, status: cur.toLowerCase() };
   var vals = [a.id, a.exam, phNow_(), 'Pending', '', img];
   if (!row) row = sh.getLastRow() + 1;
   sh.getRange(row, 1, 1, vals.length).setNumberFormat('@').setValues([vals]);
@@ -421,14 +457,14 @@ function permitSubmit_(ss, req, pin) {
 }
 function adminPermits_(ss) {
   var sh = ss.getSheetByName(PERMIT_TAB);
-  if (!sh || sh.getLastRow() < 2) return { ok: true, pending: [], counts: { allowed: 0, denied: 0 } };
-  var v = sh.getRange(2, 1, sh.getLastRow() - 1, PERMIT_HEAD.length).getDisplayValues();
-  var pending = [], counts = { allowed: 0, denied: 0 };
+  var counts = { allowed: 0, denied: 0, started: 0, submitted: 0 };
+  if (!sh || sh.getLastRow() < 2) return { ok: true, pending: [], counts: counts };
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 6).getDisplayValues();
+  var pending = [];
   v.forEach(function (r) {
     var st = String(r[3]);
     if (st === 'Pending' && r[5]) pending.push({ code: r[0], exam: r[1], submitted: r[2], img: r[5] });
-    else if (st === 'Allowed') counts.allowed++;
-    else if (st === 'Denied') counts.denied++;
+    else if (counts[st.toLowerCase()] != null) counts[st.toLowerCase()]++;
   });
   return { ok: true, pending: pending, counts: counts };
 }
@@ -437,6 +473,7 @@ function adminPermitDecide_(ss, req) {
   if (!id || PERMIT_EXAMS.indexOf(exam) < 0) return { ok: false, error: 'bad' };
   var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, exam) : 0;
   if (!row) return { ok: false, error: 'notfound' };
+  if (String(sh.getRange(row, 4).getDisplayValue()) !== 'Pending') return adminPermits_(ss);   // already decided
   var st = req.allow ? 'Allowed' : 'Denied';
   sh.getRange(row, 4, 1, 3).setNumberFormat('@').setValues([[st, phNow_(), '']]);   // the photo is deleted here
   log_(ss, id, 'permit', exam + ' ' + st.toLowerCase());
