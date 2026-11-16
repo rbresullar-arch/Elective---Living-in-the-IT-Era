@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Finals Examination</title>
+<style>
+/* Finals Examination — GEEL 1 Living in the IT Era (finals_exam_ITEra.html, prefix itict_finals, gate examFinals)
+   1. Log in on the hub (class code + PIN).  2. Upload a photo of the examination permit (144p JPEG, no blur);
+   the instructor allows or denies it in the master console and the photo is then deleted.  3. Start.
+   60 items, 1 point each, in 9 blocks. The blocks come in a random order per student; the items inside a block
+   keep their order. Every item has its own timer; at 0 it locks and the next item opens. No going back.
+   Copying or a screen capture ends the current block with 0 points; leaving the page is counted.
+   Scored on this phone; the result uploads to the instructor's Sheet (exams.examFinals). The score is not shown. */
+:root{
+  color-scheme:light dark;
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ground:#F5F5F7; --paper:#FFFFFF; --ink:#1D1D1F; --muted:#6E6E73; --hair:rgba(60,60,67,.16); --fill:rgba(118,118,128,.12);
+  --blue:#0071E3; --blue-soft:rgba(0,113,227,.10); --green:#248A3D; --green-soft:rgba(52,199,89,.14); --red:#D70015; --orange:#C93400;
+  --wood:#8B5A2B; --bead:#C0392B; --bead-on:#E67E22; --rod:#5D4037;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme:dark){ :root{
+  --ground:#000; --paper:#1C1C1E; --ink:#F5F5F7; --muted:#98989D; --hair:rgba(84,84,88,.6); --fill:rgba(118,118,128,.24);
+  --blue:#0A84FF; --blue-soft:rgba(10,132,255,.2); --green:#30D158; --green-soft:rgba(48,209,88,.18); --red:#FF453A; --orange:#FF9F0A;
+  --rod:#A1887F; --sh-1:0 0 0 .5px rgba(255,255,255,.06),0 4px 14px rgba(0,0,0,.5); } }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ground)}
+body{margin:0;color:var(--ink);font-family:var(--sf);font-size:17px;line-height:1.5;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,label:focus-within{outline:3px solid var(--blue-soft);outline-offset:2px}
+main{max-width:640px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));display:grid;gap:16px}
+#view{display:grid;gap:16px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top a{color:var(--blue);text-decoration:none}
+.tag{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.card{background:var(--paper);border-radius:18px;box-shadow:var(--sh-1);padding:18px}
+h1{font-size:28px;line-height:1.15;letter-spacing:-.03em;margin:4px 0 8px}
+h2{font-size:22px;line-height:1.2;letter-spacing:-.02em;margin:2px 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+.rules{display:grid;gap:8px;margin:12px 0 10px;padding:0;list-style:none;font-size:16px}
+.rules li{padding-left:22px;position:relative}
+.rules li::before{content:"";position:absolute;left:6px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.btn{display:block;border:none;border-radius:999px;background:var(--blue);color:#fff;font-weight:600;font-size:17px;padding:15px 20px;width:100%;text-align:center;text-decoration:none}
+.btn:disabled{opacity:.45;cursor:default}
+.ghost{display:block;width:100%;border:none;border-radius:999px;background:var(--fill);font-weight:600;font-size:16px;padding:13px 18px;text-align:center;text-decoration:none;color:var(--ink)}
+.state{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:var(--fill);font-size:15px;margin:0 0 12px}
+.state b{font-size:17px}
+.state.ok{background:var(--green-soft)} .state.bad{background:rgba(255,59,48,.12)} .state.wait{background:rgba(255,159,10,.14)}
+.msg{min-height:1.3em;margin:8px 0 0;text-align:center;font-size:15px;color:var(--red)}
+.check{display:block;font-size:52px;line-height:1;text-align:center;margin:6px 0;color:var(--green)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:end center;padding:16px;z-index:10}
+.sheet .card{width:100%;max-width:420px;display:grid;gap:10px}
+.gate{max-width:420px;margin:20vh auto;text-align:center}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:15px;text-align:left}
+.facts dt{color:var(--muted)} .facts dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* permit */
+.permit-prev{display:block;margin:10px auto 6px;max-width:100%;border-radius:10px;border:1px solid var(--hair);image-rendering:auto}
+.pick{position:relative;overflow:hidden}
+.pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* exam */
+.clock{position:sticky;top:0;z-index:6;margin:0 -16px;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;background:color-mix(in srgb,var(--ground) 88%,transparent);
+  -webkit-backdrop-filter:saturate(160%) blur(12px);backdrop-filter:saturate(160%) blur(12px);display:grid;gap:6px}
+.clock .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.clock .t{font-variant-numeric:tabular-nums;font-weight:700;font-size:24px;letter-spacing:-.01em}
+.clock .t.low{color:var(--orange)}
+.clock .s{font-size:13px;color:var(--muted);font-weight:600}
+.tbar{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
+.tbar i{display:block;height:100%;width:100%;background:var(--blue);border-radius:3px;transition:width .25s linear}
+.tbar i.low{background:var(--orange)}
+.stem{font-weight:600;font-size:18px;margin:0 0 4px}
+.stem b{color:var(--muted);margin-right:6px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;border-radius:12px;background:var(--fill);cursor:pointer;border:2px solid transparent;font-size:16px;line-height:1.4}
+.opt input{margin:2px 0 0;width:18px;height:18px;accent-color:var(--blue);flex:none}
+.opt:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.code{font-family:var(--mono);font-size:15px;line-height:1.55;background:#1E1E1E;color:#D4D4D4;border-radius:12px;padding:14px 16px;white-space:pre-wrap;word-break:break-word;margin:6px 0 4px}
+.defs{display:grid;gap:12px}
+.def{border-radius:14px;padding:14px;background:var(--fill)}
+.def b{display:block;font-size:18px;margin-bottom:4px}
+.def .code{margin:8px 0 0;font-size:14px}
+
+/* binary */
+.big{font-size:56px;font-weight:700;text-align:center;letter-spacing:-.02em;line-height:1.1;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.bits{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0 6px}
+.bit{display:grid;gap:4px;justify-items:center;border:none;background:none;padding:0}
+.bit small{font-size:13px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.bit span{display:grid;place-items:center;width:100%;aspect-ratio:1/1.15;border-radius:12px;background:var(--fill);font:700 26px/1 var(--mono);border:2px solid transparent}
+.bit.on span{background:var(--blue);color:#fff}
+.binline{text-align:center;font:600 18px/1.4 var(--mono);color:var(--muted);letter-spacing:.12em}
+
+/* abacus (soroban: 1 bead = 5 above the bar, 4 beads = 1 each below) */
+.adds{text-align:center;font:700 26px/1.4 var(--sf);font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.abacus{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:12px auto 4px;max-width:330px;border:8px solid var(--wood);border-radius:14px;background:color-mix(in srgb,var(--wood) 14%,var(--paper));position:relative}
+.rod{display:grid;grid-template-rows:auto 10px auto;justify-items:center;position:relative;padding:8px 0}
+.rod::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:var(--rod);opacity:.55}
+.heaven,.earth{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:1;width:100%}
+.heaven{height:84px;justify-content:flex-start}
+.heaven.on{justify-content:flex-end}
+.earth{height:192px;justify-content:flex-end}
+.beam{width:100%;height:10px;background:var(--wood);position:relative;z-index:1}
+.bead{width:72%;max-width:76px;height:36px;border-radius:50%;background:var(--bead);border:none;box-shadow:inset 0 -5px 8px rgba(0,0,0,.25),inset 0 4px 6px rgba(255,255,255,.25);touch-action:manipulation}
+.bead.on{background:var(--bead-on)}
+.earth .gap{flex:1}
+.rodlab{text-align:center;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-top:6px}
+.rodlabs{display:grid;grid-template-columns:repeat(3,1fr);max-width:330px;margin:0 auto}
+</style>
+<!-- pwa-head: installable app + offline (manifest.webmanifest, sw.js, pwa.js) -->
+<link rel="manifest" href="manifest.webmanifest" id="pwa-head">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IT Era">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<script src="pwa.js" defer></script>
+</head>
+<body>
+<script src="exam_gate.js" data-exam="examFinals" data-prefix="itict_finals"></script>
+<div class="gate card" id="gate" hidden></div>
+<main id="app">
+  <div class="top" id="topRow"><a href="index.html" id="homeLink">‹ Home</a><span class="tag" id="topTag">Finals Examination</span></div>
+  <div id="view"></div>
+</main>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="card">
+    <p id="confirmText"></p>
+    <button type="button" class="btn" id="confirmYes"></button>
+    <button type="button" class="ghost" id="confirmNo">Not yet</button>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyevEFI0NDS0zdTr5KpBCvfccALzKVlbqug-9PcFl_UM7hwG2Bsnow6FcVsK6RPQwEk/exec';
+const PREFIX = 'itict_finals', K_S = PREFIX + '_session', K_R = PREFIX + '_result', EXAM_ID = 'examFinals';
+const RETRY = [5000, 15000, 45000, 90000, 180000];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ===================== EXAM CONTENT =====================
+   Items in a block keep this order. Answer = index into the choices. */
+const BLOCKS = [
+  { id: 'inv', title: 'Inventions', sec: 60, kind: 'mcq', items: [
+    { q: 'Which ancient counting tool uses beads that slide on rods to add and subtract?', c: ['Abacus', 'Pascaline', 'Jacquard loom', 'ENIAC'], a: 0 },
+    { q: 'Blaise Pascal built this mechanical calculator that added and subtracted with turning gears. What is it called?', c: ['Step Reckoner', 'Napier’s Bones', 'Pascaline', 'Difference Engine'], a: 2 },
+    { q: 'Which invention used punched cards to control the pattern woven into cloth — an idea later used to give instructions to machines?', c: ['Analytical Engine', 'Jacquard loom', 'Abacus', 'Microprocessor'], a: 1 },
+    { q: 'Charles Babbage designed this general-purpose machine, and Ada Lovelace wrote what is called the first computer program for it. What is it?', c: ['Difference Engine', 'ENIAC', 'Pascaline', 'Analytical Engine'], a: 3 },
+    { q: 'Which early electronic computer used thousands of vacuum tubes and filled an entire room?', c: ['ENIAC', 'Microprocessor', 'ARPANET', 'Step Reckoner'], a: 0 }
+  ] },
+  { id: 'bin', title: 'Binary conversion', sec: 30, kind: 'bin', n: 5 },
+  { id: 'aba', title: 'Abacus addition', sec: 45, kind: 'aba', n: 5 },
+  { id: 'web', title: 'HTML, CSS or JavaScript?', sec: 30, kind: 'mcq', code: true, intro: 'defs',
+    choices: ['HTML', 'CSS', 'JavaScript'], items: [
+    { code: '<h1>Welcome to my page</h1>', a: 0 },
+    { code: 'p { color: blue; }', a: 1 },
+    { code: 'alert("Hello!");', a: 2 },
+    { code: '<img src="cat.jpg" alt="A cat">', a: 0 },
+    { code: 'let total = 5 + 3;', a: 2 },
+    { code: '<ul>\n  <li>Milk</li>\n  <li>Bread</li>\n</ul>', a: 0 },
+    { code: '<a href="about.html">About us</a>', a: 0 },
+    { code: 'function greet() {\n  return "Hi";\n}', a: 2 },
+    { code: 'h2 { font-size: 20px; }', a: 1 },
+    { code: 'if (score > 50) {\n  console.log("Pass");\n}', a: 2 }
+  ] },
+  { id: 'net', title: 'Netiquette', sec: 45, kind: 'mcq', items: [
+    { q: 'In your class group chat, a classmate posts an opinion you disagree with. What is the best response?', c: ['Reply in ALL CAPS so they notice', 'Reply politely with your view and your reasons, without insults', 'Screenshot it and make fun of it in another chat', 'Flood the chat with angry emojis'], a: 1 },
+    { q: 'You want to post a group photo from a class event. What should you do first?', c: ['Post it right away and tag everyone', 'Edit it so you look best, then post it', 'Ask the people in the photo if they are okay with it being posted', 'Post it publicly so more people see it'], a: 2 },
+    { q: 'You are emailing your instructor about a missed deadline. Which email is most appropriate?', c: ['A clear subject, a polite greeting, a short explanation, and your name and class', '“sir/maam pls extend” with no subject', 'A long message in all capital letters', 'A voice message sent at midnight with no text'], a: 0 },
+    { q: 'A friend forwards you an embarrassing private message from another person and asks you to share it. What should you do?', c: ['Share it only with close friends', 'Post it but hide the name', 'Share it, since it is already out', 'Do not share it — private messages should stay private'], a: 3 },
+    { q: 'During an online class meeting, while someone else is speaking, you should:', c: ['Unmute and talk over them so you are heard', 'Keep your microphone muted and use the raise-hand feature to speak', 'Type unrelated jokes in the chat', 'Play music in the background'], a: 1 }
+  ] },
+  { id: 'eco', title: 'B2B, B2C or C2C?', sec: 30, kind: 'mcq', choices: ['B2B', 'B2C', 'C2C'], items: [
+    { q: 'A company sells office printers in bulk to other companies.', a: 0 },
+    { q: 'A clothing brand sells shirts on its own website to individual shoppers.', a: 1 },
+    { q: 'A student sells used textbooks to another student through an online marketplace.', a: 2 },
+    { q: 'A farm supplies rice in large quantities to restaurants and hotels.', a: 0 },
+    { q: 'An online store sells phone cases directly to individual buyers.', a: 1 },
+    { q: 'A person sells a preloved bicycle to another person through an online auction.', a: 2 },
+    { q: 'A software company sells payroll systems to businesses.', a: 0 },
+    { q: 'A streaming service sells monthly subscriptions to viewers.', a: 1 },
+    { q: 'Neighbors buy and sell secondhand furniture with each other in an online buy-and-sell group.', a: 2 },
+    { q: 'A factory buys raw materials from a supplier company.', a: 0 }
+  ] },
+  { id: 'inf', title: 'Disinformation or misinformation?', sec: 30, kind: 'mcq', choices: ['Disinformation', 'Misinformation'], items: [
+    { q: 'A group creates fake news articles on purpose to make people distrust an election.', a: 0 },
+    { q: 'A relative shares a health tip she honestly believes, but it turns out to be false.', a: 1 },
+    { q: 'Someone edits a photo to make it look like a disaster happened, knowing it is fake, to earn money from views.', a: 0 },
+    { q: 'A student reposts an old storm warning, thinking it is about today’s weather.', a: 1 },
+    { q: 'A seller spreads false claims that a rival’s product is dangerous so people will buy theirs instead.', a: 0 },
+    { q: 'A classmate forwards a message saying class is cancelled, believing it is true, but it was wrong.', a: 1 },
+    { q: 'An account posts made-up quotes and pretends a public official said them, to make people angry.', a: 0 },
+    { q: 'Someone shares an article with a misleading headline without reading it, believing it is accurate.', a: 1 },
+    { q: 'A website copies the look of a real news site and publishes invented stories to trick readers into clicking ads.', a: 0 },
+    { q: 'A person repeats a wrong statistic they heard in a video, thinking it is correct.', a: 1 }
+  ] },
+  { id: 'pro', title: 'Which protection is used?', sec: 45, kind: 'mcq', choices: ['Encryption', 'Verification', 'Fraud detection'], items: [
+    { q: 'When you log in, the app sends a 6-digit code to your phone, and you must type it in before you can enter.', a: 1 },
+    { q: 'Your chat messages are scrambled so that only you and the person you are talking to can read them.', a: 0 },
+    { q: 'Minutes after you used your card at home, your bank sees a purchase with it in another country and blocks the payment.', a: 2 },
+    { q: 'An online store saves card numbers in a coded form, so stolen data cannot be read.', a: 0 },
+    { q: 'A buy-and-sell app checks a seller’s ID and a selfie before letting them post items.', a: 1 }
+  ] },
+  { id: 'ai', title: 'Bias in, bias out or hallucination?', sec: 45, kind: 'mcq', choices: ['Bias in, bias out', 'Hallucination'], items: [
+    { q: 'A chatbot confidently recommends a book and cites its author and page numbers, but the book does not exist.', a: 1 },
+    { q: 'A hiring AI was trained mostly on records of past hires from one group, and it now ranks applicants from other groups lower.', a: 0 },
+    { q: 'An AI summary of a lesson adds a “fact” that was never in the lesson and is false.', a: 1 },
+    { q: 'A photo app trained mostly on pictures of light-skinned faces does a poor job recognizing darker-skinned faces.', a: 0 },
+    { q: 'A loan AI learned from old records in which some neighborhoods were unfairly refused, and it keeps refusing applicants from those neighborhoods.', a: 0 }
+  ] }
+];
+const DEFS = [
+  { t: 'HTML', s: 'HyperText Markup Language', d: 'The structure and content of a web page: headings, paragraphs, images and links. It is written as tags inside angle brackets.', ex: '<p>This is a paragraph.</p>' },
+  { t: 'CSS', s: 'Cascading Style Sheets', d: 'The look of a web page: colors, fonts, sizes, spacing and layout. It is written as a selector followed by { property: value; }.', ex: 'h1 {\n  color: red;\n}' },
+  { t: 'JavaScript', s: 'Programming language of the web', d: 'The behavior of a web page: it reacts to clicks, does calculations, shows messages and changes content. It uses statements such as let, function and if.', ex: 'let x = 10;\nalert(x);' }
+];
+const itemCount = b => b.kind === 'mcq' ? b.items.length : b.n;
+const TOTAL = BLOCKS.reduce((s, b) => s + itemCount(b), 0);   // 60
+const byId = id => BLOCKS.find(b => b.id === id);
+
+/* ===================== ACCOUNT / STORAGE ===================== */
+function acct(){ try { const a = JSON.parse(localStorage.getItem('itict_cloud') || 'null'); return a && a.id && a.pin && /^\d{5}-\d{2,3}$/.test(a.id) ? a : null; } catch (e) { return null; } }
+const ACCT = acct();
+let dbp = null;
+function db(){ if (dbp) return dbp; dbp = new Promise((res, rej) => { try { const r = indexedDB.open('itict_exam', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); return dbp; }
+function idbSet(k, v){ return db().then(d => new Promise(res => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = res; })).catch(() => {}); }
+function idbGet(k){ return db().then(d => new Promise(res => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); })).catch(() => null); }
+function put(k, v){
+  v.updated = Date.now();
+  const s = JSON.stringify(v);
+  try { localStorage.setItem(k, s); } catch (e) {}
+  try { sessionStorage.setItem(k, s); } catch (e) {}
+  idbSet(k, v);
+}
+async function get(k){
+  const c = [];
+  try { const s = localStorage.getItem(k); if (s) c.push(JSON.parse(s)); } catch (e) {}
+  try { const s = sessionStorage.getItem(k); if (s) c.push(JSON.parse(s)); } catch (e) {}
+  const i = await idbGet(k); if (i) c.push(i);
+  let best = null; c.forEach(x => { if (x && (!best || (x.updated || 0) > (best.updated || 0))) best = x; });
+  return best;
+}
+let S = null;   // session
+const save = () => { if (S) put(K_S, S); };
+
+/* ===================== SERVER ===================== */
+function call(body, ms){
+  body.id = ACCT.id; body.pin = ACCT.pin;
+  const ctl = window.AbortController ? new AbortController() : null;
+  const t = setTimeout(() => { if (ctl) ctl.abort(); }, ms || 25000);
+  return fetch(CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
+    .then(r => r.json()).catch(() => ({ ok: false, error: 'offline' }))
+    .then(j => { clearTimeout(t); return j; });
+}
+const ERR = {
+  offline: 'No connection. Connect to the internet and try again.',
+  pin: 'Your log-in on this phone is out of date. Log in again on the hub.',
+  locked: 'Your account is locked for now. Tell your instructor.',
+  nouser: 'Your class code was not found. Log in again on the hub.',
+  img: 'That photo could not be used. Choose the photo again.',
+  busy: 'The server is busy. Try again in a moment.'
+};
+const errText = r => ERR[r && r.error] || 'Something went wrong. Try again.';
+
+/* ===================== HELPERS ===================== */
+const view = () => $('view');
+function ask(text, yes, fn){
+  $('confirmText').textContent = text; $('confirmYes').textContent = yes; $('confirm').hidden = false;
+  $('confirmYes').onclick = () => { $('confirm').hidden = true; fn(); };
+}
+$('confirmNo').onclick = () => { $('confirm').hidden = true; };
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const fmtWhen = ms => { try { return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(ms); } catch (e) { return new Date(ms).toLocaleString(); } };
+const active = () => !!S && !S.submitted && !!S.order;
+
+/* ===================== PERMIT ===================== */
+let pollT = 0, permitImg = '';
+/* A phone photo → JPEG whose short side is 144 px (no blur). Kept under the server's 45,000-character limit. */
+function toPermitJpeg(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const w = im.naturalWidth, h = im.naturalHeight, k = Math.min(1, 144 / Math.min(w, h));
+      const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.drawImage(im, 0, 0, cw, ch);
+      URL.revokeObjectURL(url);
+      let q = 0.8, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 44000 && q > 0.25) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      d.length > 44000 ? rej(new Error('big')) : res(d);
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('read')); };
+    im.src = url;
+  });
+}
+function vPermit(st, note){
+  clearTimeout(pollT);
+  $('topTag').textContent = 'Finals Examination';
+  const head = `<span class="tag">GEEL 1 · Living in the IT Era</span><h1>Finals Examination</h1><p class="muted" style="margin:0 0 14px">Class code ${esc(ACCT.id)}</p>`;
+  if (st === 'allowed') { vRules(head); return; }
+  if (st === 'pending') {
+    view().innerHTML = `<section class="card">${head}
+      <div class="state wait"><b>Waiting for approval</b><span class="muted">permit sent</span></div>
+      <p class="muted">Your instructor is checking your examination permit. This page checks again every few seconds — keep it open. The examination timer has <b>not</b> started.</p>
+      <p class="msg" id="perr" style="color:var(--muted)">${esc(note || '')}</p>
+      <button type="button" class="ghost" id="recheck">Check now</button></section>`;
+    $('recheck').onclick = checkPermit;
+    pollT = setTimeout(checkPermit, 8000);
+    return;
+  }
+  view().innerHTML = `<section class="card">${head}
+    ${st === 'denied' ? '<div class="state bad"><b>Permit not accepted</b><span class="muted">send a new photo</span></div><p class="muted">Your instructor did not accept the photo. Take a clear photo of your own examination permit and send it again.</p>' :
+      '<div class="state"><b>Step 1 · Examination permit</b></div><p class="muted">Upload a clear photo of your examination permit. Your instructor allows or denies it; the photo is deleted right after. The examination timer starts only after you are allowed and tap Start.</p>'}
+    <div class="ghost pick" role="button">Choose permit photo<input type="file" id="pfile" accept="image/*" aria-label="Choose permit photo"></div>
+    <img id="pprev" class="permit-prev" alt="Permit photo preview" hidden>
+    <p class="msg" id="perr">${esc(note || '')}</p>
+    <button type="button" class="btn" id="psend" disabled>Send to my instructor</button></section>`;
+  permitImg = '';
+  $('pfile').onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    $('perr').textContent = 'Preparing the photo…'; $('psend').disabled = true;
+    try {
+      permitImg = await toPermitJpeg(f);
+      $('pprev').src = permitImg; $('pprev').hidden = false;
+      $('perr').textContent = ''; $('psend').disabled = false;
+    } catch (x) { permitImg = ''; $('perr').textContent = ERR.img; }
+  };
+  $('psend').onclick = async () => {
+    if (!permitImg) return;
+    $('psend').disabled = true; $('perr').textContent = 'Sending…';
+    const r = await call({ action: 'permitSubmit', exam: 'finals', img: permitImg }, 30000);
+    if (!r.ok) { $('psend').disabled = false; $('perr').textContent = errText(r); return; }
+    vPermit(r.status === 'allowed' ? 'allowed' : 'pending');
+  };
+}
+let checking = false;
+async function checkPermit(){
+  if (checking || active() || (S && S.submitted)) return;
+  checking = true;
+  const r = await call({ action: 'permitStatus', exam: 'finals' }, 15000);
+  checking = false;
+  if (active() || (S && S.submitted)) return;
+  if (!r.ok) {
+    if (r.error === 'pin' || r.error === 'nouser' || r.error === 'locked') { message('Cannot continue', errText(r)); return; }
+    if ($('perr') && $('recheck')) { $('perr').textContent = errText(r); clearTimeout(pollT); pollT = setTimeout(checkPermit, 10000); return; }
+    view().innerHTML = `<section class="card"><h2>Finals Examination</h2><p class="msg" style="text-align:left">${esc(errText(r))}</p><button type="button" class="ghost" id="retry">Try again</button></section>`;
+    $('retry').onclick = checkPermit; return;
+  }
+  vPermit(r.status === 'none' ? 'none' : r.status);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && $('recheck')) checkPermit(); });
+
+/* ===================== RULES + START ===================== */
+function vRules(head){
+  const mins = Math.round(BLOCKS.reduce((s, b) => s + itemCount(b) * b.sec, 0) / 60);
+  view().innerHTML = `<section class="card">${head}
+    <div class="state ok"><b>Permit accepted</b><span class="muted">you may start</span></div>
+    <ul class="rules">
+      <li><b>60 items, 1 point each</b>, in 9 parts. The parts come in a random order.</li>
+      <li><b>Every item has its own timer</b> (30, 45 or 60 seconds). When it reaches 0 the item locks and the next one opens. About ${mins} minutes in all.</li>
+      <li>One item at a time. <b>You cannot go back.</b> Leaving an item blank scores 0.</li>
+      <li>Binary items: tap the place-value boxes to build the number in binary. Abacus items: add the four numbers and show the sum with the beads.</li>
+      <li>Copying text or capturing the screen ends that part at once with 0 points. Leaving this page is recorded, and the timer keeps running.</li>
+      <li><b>One attempt only.</b> Your score is not shown; your instructor releases the results.</li>
+    </ul>
+    <button type="button" class="btn" id="start">Start the examination</button></section>`;
+  $('start').onclick = () => ask('Start now? The first item’s timer starts at once and items cannot be paused or repeated.', 'Start', startExam);
+}
+function startExam(){
+  const order = shuffle(BLOCKS.map(b => b.id));
+  const gen = {
+    bin: (() => { const s = new Set(); while (s.size < 5) s.add(rnd(20, 50)); return [...s]; })(),
+    aba: Array.from({ length: 5 }, () => [rnd(20, 120), rnd(20, 120), rnd(20, 120), rnd(20, 120)])
+  };
+  const ans = {};
+  BLOCKS.forEach(b => { ans[b.id] = Array(itemCount(b)).fill(null); });
+  S = { v: 1, id: ACCT.id, startAt: Date.now(), order, gen, ans, pos: { b: 0, i: 0, intro: false }, itemEnds: 0,
+    blocked: [], flags: { leave: 0, copy: 0, capture: 0 }, submitted: false, total: TOTAL, cur: 0, items: TOTAL };
+  clearInterval(tickT); tickT = setInterval(tick, 250);
+  enterBlock(0);
+}
+
+/* ===================== EXAM FLOW ===================== */
+let tickT = 0;
+const curBlock = () => byId(S.order[S.pos.b]);
+const doneBefore = bi => S.order.slice(0, bi).reduce((s, id) => s + itemCount(byId(id)), 0);
+function enterBlock(bi){
+  if (bi >= S.order.length) { submit(false); return; }
+  const b = byId(S.order[bi]);
+  S.pos = { b: bi, i: 0, intro: !!b.intro };
+  if (b.intro) { S.itemEnds = 0; save(); renderIntro(); return; }
+  startItem();
+}
+function startItem(){
+  const b = curBlock();
+  S.pos.intro = false;
+  S.itemEnds = Date.now() + b.sec * 1000;
+  S.cur = doneBefore(S.pos.b) + S.pos.i;
+  save(); render();
+}
+function next(){
+  if (!active()) return;
+  const b = curBlock();
+  if (S.pos.i + 1 < itemCount(b)) { S.pos.i++; startItem(); }
+  else enterBlock(S.pos.b + 1);
+}
+function tick(){
+  if (!active() || S.pos.intro) return;
+  const left = S.itemEnds - Date.now(), b = curBlock();
+  const t = $('clockT'), bar = $('tbarI');
+  if (t) { t.textContent = Math.max(0, Math.ceil(left / 1000)) + 's'; t.classList.toggle('low', left < 10000); }
+  if (bar) { bar.style.width = Math.max(0, Math.min(100, left / (b.sec * 10))) + '%'; bar.classList.toggle('low', left < 10000); }
+  if (left <= 0) next();
+}
+function header(b){
+  const g = doneBefore(S.pos.b) + S.pos.i + 1;
+  return `<div class="clock"><div class="row"><span class="s">Part ${S.pos.b + 1} of ${S.order.length} · ${esc(b.title)} · Item ${g} of ${TOTAL}</span><span class="t" id="clockT"></span></div>
+    <div class="tbar" aria-hidden="true"><i id="tbarI"></i></div></div>`;
+}
+function renderIntro(){
+  const b = curBlock();
+  $('topTag').textContent = `Part ${S.pos.b + 1} of ${S.order.length}`;
+  view().innerHTML = `<section class="card">
+      <span class="tag">Part ${S.pos.b + 1} of ${S.order.length} · before the next ${itemCount(b)} items</span>
+      <h2>HTML, CSS and JavaScript</h2>
+      <p class="muted">Read these first. Then decide, for each piece of code, whether it is HTML, CSS or JavaScript. Each item has ${b.sec} seconds.</p>
+      <div class="defs">${DEFS.map(d => `<div class="def"><b>${esc(d.t)}</b><span class="muted" style="font-size:14px">${esc(d.s)}</span><p style="margin:6px 0 0">${esc(d.d)}</p><div class="code">${esc(d.ex)}</div></div>`).join('')}</div>
+    </section>
+    <button type="button" class="btn" id="goItems">I’ve read them — start the ${itemCount(b)} items</button>`;
+  window.scrollTo(0, 0);
+  $('goItems').onclick = startItem;
+}
+function render(){
+  if (!active()) return;
+  const b = curBlock(), i = S.pos.i, g = doneBefore(S.pos.b) + i + 1;
+  const lastItem = S.pos.b === S.order.length - 1 && i === itemCount(b) - 1;
+  $('topTag').textContent = `Part ${S.pos.b + 1} of ${S.order.length}`;
+  let body = '';
+  if (b.kind === 'mcq') {
+    const it = b.items[i], ch = it.c || b.choices, cur = S.ans[b.id][i];
+    body = `<section class="card">
+        <p class="stem"><b>${g}.</b>${b.code ? 'Is this HTML, CSS or JavaScript?' : esc(it.q)}</p>
+        ${b.code ? `<div class="code">${esc(it.code)}</div>` : ''}
+      </section>
+      <div class="card opts" role="radiogroup">${ch.map((c, k) => `<label class="opt"><input type="radio" name="ans" value="${k}"${cur === k ? ' checked' : ''}><span>${esc(c)}</span></label>`).join('')}</div>`;
+  } else if (b.kind === 'bin') {
+    const n = S.gen.bin[i], bits = S.ans.bin[i] || '000000';
+    body = `<section class="card">
+        <p class="stem"><b>${g}.</b>Write this number in binary.</p>
+        <div class="big">${n}</div>
+        <p class="muted" style="text-align:center;margin:0">Tap a box to switch it between 0 and 1. The numbers above the boxes are the place values.</p>
+        <div class="bits" id="bits">${[32, 16, 8, 4, 2, 1].map((pv, k) => `<button type="button" class="bit${bits[k] === '1' ? ' on' : ''}" data-k="${k}" aria-label="Place value ${pv}"><small>${pv}</small><span>${bits[k]}</span></button>`).join('')}</div>
+        <div class="binline" id="binline">${bits.replace(/^0+(?=\d)/, '')}</div>
+      </section>`;
+  } else {
+    const nums = S.gen.aba[i], st = S.ans.aba[i] || [[0, 0], [0, 0], [0, 0]];
+    body = `<section class="card">
+        <p class="stem"><b>${g}.</b>Add the four numbers. Show the sum on the abacus.</p>
+        <div class="adds">${nums.join(' + ')}</div>
+        <p class="muted" style="text-align:center;margin:0;font-size:14px">The top bead of a rod is worth 5, each bottom bead is worth 1. Tap beads to move them to the bar.</p>
+        <div class="abacus" id="abacus">${st.map((r, k) => rodHtml(k, r)).join('')}</div>
+        <div class="rodlabs"><span class="rodlab">Hundreds</span><span class="rodlab">Tens</span><span class="rodlab">Ones</span></div>
+      </section>`;
+  }
+  view().innerHTML = header(b) + body +
+    `<p class="muted" style="font-size:14px;text-align:center;margin:0">When the timer reaches 0 this item locks. You cannot go back.</p>
+     <button type="button" class="btn" id="nextQ">${lastItem ? 'Finish' : 'Next'}</button>`;
+  tick();
+  window.scrollTo(0, 0);
+  if (b.kind === 'mcq') {
+    view().querySelectorAll('input[name=ans]').forEach(r => r.addEventListener('change', e => { S.ans[b.id][i] = Number(e.target.value); save(); }));
+  } else if (b.kind === 'bin') {
+    $('bits').addEventListener('click', e => {
+      const btn = e.target.closest('.bit'); if (!btn) return;
+      const k = Number(btn.dataset.k), cur = (S.ans.bin[i] || '000000').split('');
+      cur[k] = cur[k] === '1' ? '0' : '1';
+      S.ans.bin[i] = cur.join(''); save();
+      btn.classList.toggle('on', cur[k] === '1'); btn.querySelector('span').textContent = cur[k];
+      $('binline').textContent = S.ans.bin[i].replace(/^0+(?=\d)/, '');
+    });
+  } else {
+    $('abacus').addEventListener('click', e => {
+      const bd = e.target.closest('.bead'); if (!bd) return;
+      const k = Number(bd.dataset.rod), st = (S.ans.aba[i] || [[0, 0], [0, 0], [0, 0]]).map(r => r.slice());
+      if (bd.dataset.h) st[k][0] = st[k][0] ? 0 : 1;
+      else { const j = Number(bd.dataset.e); st[k][1] = st[k][1] === j ? j - 1 : j; }
+      S.ans.aba[i] = st; save();
+      const rods = $('abacus').children; rods[k].outerHTML = rodHtml(k, st[k]);
+    });
+  }
+  $('nextQ').onclick = () => {
+    if (lastItem) ask('Finish the examination? Your answers are final.', 'Finish', next);
+    else next();
+  };
+}
+/* One rod: r = [heaven 0|1, earth 0..4]. Beads touching the bar count. Earth bead j = the j-th bead from the bar. */
+function rodHtml(k, r){
+  const earth = [];
+  for (let j = 1; j <= 4; j++) earth.push(`<button type="button" class="bead${j <= r[1] ? ' on' : ''}" data-rod="${k}" data-e="${j}" aria-label="Lower bead ${j}"></button>`);
+  const up = earth.slice(0, r[1]).join(''), down = earth.slice(r[1]).join('');
+  return `<div class="rod"><div class="heaven${r[0] ? ' on' : ''}"><button type="button" class="bead${r[0] ? ' on' : ''}" data-rod="${k}" data-h="1" aria-label="Upper bead, worth 5"></button></div>
+    <div class="beam"></div><div class="earth">${up}<span class="gap"></span>${down}</div></div>`;
+}
+
+/* ===================== SCORING / SUBMIT ===================== */
+function scoreBlock(b){
+  if (S.blocked.includes(b.id)) return 0;
+  const a = S.ans[b.id];
+  if (b.kind === 'mcq') return b.items.reduce((s, it, i) => s + (a[i] === it.a ? 1 : 0), 0);
+  if (b.kind === 'bin') return S.gen.bin.reduce((s, n, i) => s + (a[i] && parseInt(a[i], 2) === n ? 1 : 0), 0);
+  return S.gen.aba.reduce((s, nums, i) => {
+    const st = a[i]; if (!st) return s;
+    const val = st.reduce((v, r) => v * 10 + r[0] * 5 + r[1], 0);
+    return s + (val === nums.reduce((x, y) => x + y, 0) ? 1 : 0);
+  }, 0);
+}
+let R = null;
+function submit(auto){
+  if (!S || S.submitted) return;
+  clearInterval(tickT);
+  $('confirm').hidden = true;
+  const parts = {}; let score = 0;
+  BLOCKS.forEach(b => { parts[b.id] = scoreBlock(b); score += parts[b.id]; });
+  R = { v: 1, score, total: TOTAL, percentage: Math.round(score / TOTAL * 100), parts, order: S.order,
+    blocked: S.blocked, flags: (S.flags.leave || 0) + (S.flags.copy || 0) + (S.flags.capture || 0), flagDetail: S.flags,
+    startAt: S.startAt, endAt: Date.now(), auto: !!auto, uploaded: false };
+  S.submitted = true; S.cur = TOTAL; save();
+  put(K_R, R);
+  vDone(); upload(0);
+}
+function upload(attempt){
+  if (!R || R.uploaded) return;
+  paintSync({ pending: true });
+  const ex = {}; ex[EXAM_ID] = { prefix: PREFIX, result: R };
+  call({ action: 'save', data: { exams: ex } }).then(r => {
+    if (r.ok) { R.uploaded = true; put(K_R, R); paintSync(); return; }
+    paintSync(r);
+    if (RETRY[attempt] != null) setTimeout(() => upload(attempt + 1), RETRY[attempt]);
+  });
+}
+function paintSync(r){
+  const el = $('sync'); if (!el) return;
+  el.textContent = R.uploaded ? 'Uploaded to your instructor ✓'
+    : r && r.pending ? 'Uploading your result…'
+    : 'Saved on this phone. ' + (r && r.error === 'offline' ? 'It uploads when you are online — open this page again later.' : errText(r) + ' Retrying…');
+  el.style.color = R.uploaded ? 'var(--green)' : 'var(--muted)';
+}
+function vDone(){
+  $('topTag').textContent = 'Submitted';
+  view().innerHTML = `<section class="card" style="text-align:center">
+      <span class="tag">Finals Examination</span>
+      <span class="check" aria-hidden="true">✓</span>
+      <h2>Submitted</h2>
+      <p class="muted" style="margin:0">Your instructor will release the results.</p>
+      <dl class="facts">
+        <dt>Class code</dt><dd>${esc(ACCT.id)}</dd>
+        <dt>Items</dt><dd>${TOTAL}</dd>
+        <dt>Submitted</dt><dd>${esc(fmtWhen(R.endAt))}</dd>
+      </dl>
+      <p id="sync" style="margin:14px 0 0;font-size:15px;font-weight:600"></p>
+    </section>
+    <a class="btn" href="index.html">Back to Home</a>`;
+  paintSync();
+  window.scrollTo(0, 0);
+}
+window.addEventListener('online', () => { if (R && !R.uploaded) upload(0); });
+
+/* ===================== MONITORING =====================
+   Copy / cut / paste or a detected screen capture during an item → the current part scores 0 and the next part opens.
+   Leaving the page is only counted (the item timer keeps running). Phones give pages no screenshot signal. */
+function block(kind){
+  if (!active()) return;
+  S.flags[kind] = (S.flags[kind] || 0) + 1;
+  const id = S.order[S.pos.b];
+  if (!S.blocked.includes(id)) S.blocked.push(id);
+  $('confirm').hidden = true;
+  save();
+  enterBlock(S.pos.b + 1);
+}
+['copy', 'cut', 'paste'].forEach(ev => document.addEventListener(ev, e => { if (active()) { e.preventDefault(); block('copy'); } }));
+document.addEventListener('keydown', e => {
+  if (!active()) return;
+  const k = (e.key || '').toLowerCase();
+  if (k === 'printscreen') { block('capture'); return; }
+  if (e.metaKey && e.shiftKey && ['3', '4', '5', 's'].includes(k)) { block('capture'); return; }
+  if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(k)) { e.preventDefault(); block('copy'); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'p') { e.preventDefault(); block('capture'); }
+});
+document.addEventListener('keyup', e => { if ((e.key || '').toLowerCase() === 'printscreen') block('capture'); });
+window.addEventListener('beforeprint', () => block('capture'));
+let away = false;
+function leave(){ if (!active() || away) return; away = true; S.flags.leave = (S.flags.leave || 0) + 1; save(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else { away = false; if (active()) tick(); } });
+window.addEventListener('blur', leave);
+window.addEventListener('focus', () => { away = false; });
+window.addEventListener('pagehide', () => { if (S && !S.submitted) save(); });
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ===================== START ===================== */
+function message(title, text){
+  view().innerHTML = `<section class="card"><h2>${esc(title)}</h2><p class="muted">${esc(text)}</p><a class="btn" href="index.html">Go to the hub</a></section>`;
+}
+function inApp(){
+  if (!/FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|Bytedance|Twitter/i.test(navigator.userAgent || '')) return false;
+  $('gate').hidden = false; $('app').hidden = true;
+  $('gate').innerHTML = '<h2>Open this page in your browser</h2><p class="muted">This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X), where your answers cannot be saved. Tap the ⋮ or ••• menu and choose “Open in Browser”.</p>';
+  return true;
+}
+(async function init(){
+  if (inApp()) return;
+  if (!ACCT) { message('Log in first', 'Log in on the hub with your class code and PIN, then open the Finals Examination again.'); return; }
+  R = await get(K_R);
+  if (R) { vDone(); if (!R.uploaded) upload(0); return; }
+  S = await get(K_S);
+  if (S && S.submitted && S.order) { S.submitted = false; submit(true); return; }   // result copy lost: score again
+  if (S && S.order && S.id === ACCT.id) {
+    clearInterval(tickT); tickT = setInterval(tick, 250);
+    if (S.pos.intro) renderIntro();
+    else if (S.itemEnds && Date.now() >= S.itemEnds) next();   // the item ran out while the page was closed
+    else render();
+    return;
+  }
+  S = null;
+  view().innerHTML = '<section class="card"><p class="muted" style="margin:0">Checking your examination permit…</p></section>';
+  checkPermit();
+})();
+})();
+</script>
+</body>
+</html>

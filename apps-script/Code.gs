@@ -75,7 +75,7 @@ var LOCK_MS = 24 * 60 * 60 * 1000;
 var LOG_KEEP = 4000;
 var ACTIVITY_COUNT = 13;
 var EXAMS = [{ id: 'examPrelim', label: 'Prelim' }, { id: 'exam1', label: 'Midterm' },
-  { id: 'examPrefinal', label: 'Prefinal', paper: true }];   // paper: bubble-sheet exam → Set, Start, End, Flags columns
+  { id: 'examPrefinal', label: 'Prefinal', paper: true }, { id: 'examFinals', label: 'Finals' }];   // paper: bubble-sheet exam → Set, Start, End, Flags columns
 var CHUNK = 45000;          // chars per cell (cell limit is 50,000)
 var MAX_BODY = 600000;      // reject anything larger
 var CODE_RE = /^\d{5}-\d{2,3}$/;
@@ -139,6 +139,12 @@ function doPost(e) {
       var as = SpreadsheetApp.openById(SHEET_ID);
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
+      if (action === 'adminPermits') return json_(adminPermits_(as));
+      if (action === 'adminPermitDecide') {
+        var pl = LockService.getScriptLock();
+        try { pl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminPermitDecide_(as, req)); } finally { pl.releaseLock(); }
+      }
       if (action === 'adminAttKey') return json_({ ok: true, key: attSecret_() });
       if (action === 'adminAttCheck') return json_(attCheck_(req));
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
@@ -182,6 +188,16 @@ function doPost(e) {
     }
   }
 
+  /* Exam permit status: read only, polled while a student waits, so it skips the queue. */
+  if (action === 'permitStatus') {
+    try {
+      var ps = SpreadsheetApp.openById(SHEET_ID);
+      return json_(permitStatus_(ps, req, pin));
+    } catch (err) {
+      return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
+    }
+  }
+
   /* Log in (restore) only reads: it skips the queue so a class signing in together is not serialized. */
   if (action === 'restore') {
     try {
@@ -203,6 +219,7 @@ function doPost(e) {
     if (action === 'migrate') return json_(migrate_(ss, req, pin));
     if (action === 'changeSched') return json_(changeSched_(ss, req, pin));
     if (action === 'attend') return json_(attend_(ss, req, pin));
+    if (action === 'permitSubmit') return json_(permitSubmit_(ss, req, pin));
     if (action === 'save' || action === 'restore') return json_(saveRestore_(ss, req, pin, action));
     return json_({ ok: false, error: 'bad' });
   } catch (err) {
@@ -347,6 +364,83 @@ function attend_(ss, req, pin) {
   sh.getRange(sh.getLastRow(), 1, 1, ATT_HEAD.length).setValues([[whenTxt, id, doc.nameTag || '', id.slice(0, 5), session, fmt(t), note]]);
   log_(ss, id, 'attend', session + (late ? ' (offline)' : '') + (p ? ' (printed)' : ''));
   return { ok: true, session: session, at: whenTxt, note: note };
+}
+
+/* ---------------- exam permits (Finals) ----------------
+   The student uploads a 144p JPEG of the examination permit; the instructor allows or denies it
+   in the master console. The photo is deleted the moment a decision is made; only the decision stays.
+   Permits tab: Code | Exam | Submitted | Status (Pending/Allowed/Denied) | Decided | Image */
+var PERMIT_TAB = 'Permits', PERMIT_EXAMS = ['finals'], PERMIT_IMG_MAX = 45000;
+var PERMIT_HEAD = ['Code', 'Exam', 'Submitted (PH)', 'Status', 'Decided (PH)', 'Image (deleted after the decision)'];
+function permitSheet_(ss) {
+  var sh = ss.getSheetByName(PERMIT_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(PERMIT_TAB); sh.setFrozenRows(1);
+    sh.getRange(1, 1, 1, PERMIT_HEAD.length).setValues([PERMIT_HEAD]).setFontWeight('bold');
+  }
+  return sh;
+}
+function permitRow_(sh, id, exam) {
+  var last = sh.getLastRow();
+  if (last < 2) return 0;
+  var v = sh.getRange(2, 1, last - 1, 2).getDisplayValues();
+  for (var i = v.length - 1; i >= 0; i--) if (String(v[i][0]).trim().toUpperCase() === id && String(v[i][1]) === exam) return i + 2;
+  return 0;
+}
+function phNow_() { return Utilities.formatDate(new Date(), 'Asia/Manila', 'yyyy-MM-dd HH:mm:ss'); }
+function permitAuth_(ss, req, pin) {
+  var id = String(req.id || '').trim();
+  if (!CODE_RE.test(id)) return { err: { ok: false, error: 'bad' } };
+  var exam = String(req.exam || '');
+  if (PERMIT_EXAMS.indexOf(exam) < 0) return { err: { ok: false, error: 'bad' } };
+  var auth = checkPin_(ss, id, hashFor_(id, pin));
+  if (auth === 'nouser') return { err: { ok: false, error: 'nouser' } };
+  if (auth.locked) return { err: { ok: false, error: 'locked', until: auth.until } };
+  if (auth.bad) return { err: { ok: false, error: 'pin', left: auth.left } };
+  return { id: id, exam: exam };
+}
+function permitStatus_(ss, req, pin) {
+  var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
+  var sh = ss.getSheetByName(PERMIT_TAB);
+  var row = sh ? permitRow_(sh, a.id, a.exam) : 0;
+  if (!row) return { ok: true, status: 'none' };
+  var v = sh.getRange(row, 1, 1, 5).getDisplayValues()[0];
+  return { ok: true, status: String(v[3]).toLowerCase() || 'pending', submitted: v[2], decided: v[4] };
+}
+function permitSubmit_(ss, req, pin) {
+  var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
+  var img = String(req.img || '');
+  if (!/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(img) || img.length > PERMIT_IMG_MAX) return { ok: false, error: 'img' };
+  var sh = permitSheet_(ss), row = permitRow_(sh, a.id, a.exam);
+  if (row && String(sh.getRange(row, 4).getDisplayValue()) === 'Allowed') return { ok: true, status: 'allowed' };
+  var vals = [a.id, a.exam, phNow_(), 'Pending', '', img];
+  if (!row) row = sh.getLastRow() + 1;
+  sh.getRange(row, 1, 1, vals.length).setNumberFormat('@').setValues([vals]);
+  log_(ss, a.id, 'permit', a.exam + ' submitted');
+  return { ok: true, status: 'pending' };
+}
+function adminPermits_(ss) {
+  var sh = ss.getSheetByName(PERMIT_TAB);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, pending: [], counts: { allowed: 0, denied: 0 } };
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, PERMIT_HEAD.length).getDisplayValues();
+  var pending = [], counts = { allowed: 0, denied: 0 };
+  v.forEach(function (r) {
+    var st = String(r[3]);
+    if (st === 'Pending' && r[5]) pending.push({ code: r[0], exam: r[1], submitted: r[2], img: r[5] });
+    else if (st === 'Allowed') counts.allowed++;
+    else if (st === 'Denied') counts.denied++;
+  });
+  return { ok: true, pending: pending, counts: counts };
+}
+function adminPermitDecide_(ss, req) {
+  var id = codeNorm_(req.code), exam = String(req.exam || '');
+  if (!id || PERMIT_EXAMS.indexOf(exam) < 0) return { ok: false, error: 'bad' };
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, exam) : 0;
+  if (!row) return { ok: false, error: 'notfound' };
+  var st = req.allow ? 'Allowed' : 'Denied';
+  sh.getRange(row, 4, 1, 3).setNumberFormat('@').setValues([[st, phNow_(), '']]);   // the photo is deleted here
+  log_(ss, id, 'permit', exam + ' ' + st.toLowerCase());
+  return adminPermits_(ss);
 }
 
 function changeSched_(ss, req, pin) {

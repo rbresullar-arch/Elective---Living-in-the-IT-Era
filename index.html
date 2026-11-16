@@ -839,7 +839,7 @@ const EXAMS = [
   { id: 'exam1',      label: 'Midterm', href: 'midterm_exam_ITEra.html', prefix: 'itict_midterm', offline: true },  // id kept: existing sync files store the Midterm under 'exam1'
   { id: 'examPrefinal', label: 'Prefinal', href: 'prefinal_exam_ITEra.html', prefix: 'itict_prefinal',
     paper: true, opensBySched: () => PREFINAL_OPENS },   // questionnaire only: answers go on the bubble sheet; unlock per schedule
-  // { label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals' },
+  { id: 'examFinals', label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals', noQR: true },   // permit photo first; scored on the phone, no QR
 ];
 /* Special examinations: online, open to every logged-in class code until Nov 17, 2026, 11:59 PM (Philippine time) */
 const SPECIALS = [
@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.16.1';
+const APP_VERSION = '2026.11.17.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1361,12 +1361,12 @@ async function refreshExam(e) {
   const result = await loadExamRecord(e.prefix + '_result');
   const session = await loadExamRecord(e.prefix + '_session');
   if (result || (session && session.submitted)) {
-    setRow(e, { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
+    setRow(e, e.noQR ? { score: '✓', note: 'Submitted · your instructor releases the results', done: true } : { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
   }
   if (examGateClosed(e)) return;
   if (session) {
-    const total = (session.order && session.order.length) || '?';
+    const total = session.total || (session.order && session.order.length) || '?';
     const item = (session.cur || 0) + 1;
     const expired = session.endAt && Date.now() >= session.endAt;
     setRow(e, {
@@ -1375,7 +1375,7 @@ async function refreshExam(e) {
     });
     return;
   }
-  setRow(e, { note: 'Not yet taken' });
+  setRow(e, { note: e.noQR ? 'Not yet taken · have your permit photo ready' : 'Not yet taken' });
 }
 
 /* ===== Special examinations: shown to every logged-in class code (special_exam_ITEra.html) ===== */
