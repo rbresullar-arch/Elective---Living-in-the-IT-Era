@@ -71,7 +71,11 @@ p{margin:0 0 10px}
 .beam{width:100%;height:8px;background:var(--wood)}
 .earth{height:164px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;width:100%}
 .earth .gap{flex:1}
-.bead{width:64px;height:30px;border-radius:15px;border:0;background:var(--bead);margin-top:3px;touch-action:manipulation}
+.bead{display:block;width:64px;height:30px;border-radius:15px;background:var(--bead);margin-top:3px;pointer-events:none}
+.heaven,.earth{cursor:pointer;touch-action:none}
+.abacus.ro .heaven,.abacus.ro .earth{cursor:default}
+.sumin{display:block;width:100%;margin:12px 0 0;padding:12px;border-radius:10px;border:2px solid var(--fill);background:var(--bg);color:var(--ink);font:800 26px/1.2 ui-monospace,Menlo,monospace;text-align:center;-webkit-user-select:text;user-select:text}
+.sumin:focus{outline:none;border-color:var(--blue)}
 .bead.on{background:var(--on)}
 .rodlabs{display:grid;grid-template-columns:repeat(3,1fr);max-width:300px;margin:4px auto 0;text-align:center;font-size:12px;color:var(--muted);font-weight:700}
 </style>
@@ -351,7 +355,7 @@ function vRules(head){
       <li><b>60 items, 1 point each</b>, in 9 parts. The parts come in a random order.</li>
       <li><b>Every item has its own timer</b> (30, 45 or 60 seconds). When it reaches 0 the item locks and the next one opens. About ${mins} minutes in all.</li>
       <li>One item at a time. <b>You cannot go back.</b> Leaving an item blank scores 0.</li>
-      <li>Binary items: tap the place-value boxes to build the number in binary. Abacus items: add the four numbers and show the sum with the beads.</li>
+      <li>Binary items: tap the place-value boxes to build the number in binary.</li><li>Abacus: four numbers come one at a time. Add each one on the abacus (it carries by itself, like in the activity); the beads you leave are checked. Then type the sum.</li>
       <li>Copying text or capturing the screen ends that part at once with 0 points. Leaving this page is recorded, and the timer keeps running.</li>
       <li><b>One attempt only.</b> Your score is not shown; your instructor releases the results.</li>
     </ul>
@@ -375,12 +379,12 @@ function startExam(){
   const order = shuffle(BLOCKS.map(b => b.id));
   const gen = {
     bin: (() => { const s = new Set(); while (s.size < 5) s.add(rnd(20, 50)); return [...s]; })(),
-    aba: Array.from({ length: 5 }, () => [rnd(20, 120), rnd(20, 120), rnd(20, 120), rnd(20, 120)])
+    aba: [rnd(20, 120), rnd(20, 120), rnd(20, 120), rnd(20, 120)]   // items 1–4 add one each on the abacus; item 5 = type the sum
   };
   const ans = {};
   BLOCKS.forEach(b => { ans[b.id] = Array(itemCount(b)).fill(null); });
   S = { v: 1, id: ACCT.id, startAt: Date.now(), order, gen, ans, pos: { b: 0, i: 0, intro: false }, itemEnds: 0,
-    blocked: [], flags: { leave: 0, copy: 0, capture: 0 }, submitted: false, total: TOTAL, cur: 0, items: TOTAL };
+    abaDigits: [0, 0, 0], blocked: [], flags: { leave: 0, copy: 0, capture: 0 }, submitted: false, total: TOTAL, cur: 0, items: TOTAL };
   clearInterval(tickT); tickT = setInterval(tick, 500);
   enterBlock(0);
 }
@@ -456,14 +460,26 @@ function render(){
         <div class="binline" id="binline">${bits.replace(/^0+(?=\d)/, '')}</div>
       </section>`;
   } else {
-    const nums = S.gen.aba[i], st = S.ans.aba[i] || [[0, 0], [0, 0], [0, 0]];
-    body = `<section class="card">
-        <p class="stem"><b>${g}.</b>Add the four numbers. Show the sum on the abacus.</p>
-        <div class="adds">${nums.join(' + ')}</div>
-        <p class="muted" style="text-align:center;margin:0;font-size:14px">The top bead of a rod is worth 5, each bottom bead is worth 1. Tap beads to move them to the bar.</p>
-        <div class="abacus" id="abacus">${st.map((r, k) => rodHtml(k, r)).join('')}</div>
+    const nums = S.gen.aba, d = S.abaDigits || [0, 0, 0];
+    if (i < 4) {
+      if (S.ans.aba[i] == null) { S.ans.aba[i] = abaValue(d); save(); }   // the beads carry over from the previous number
+      body = `<section class="card">
+        <p class="stem"><b>${g}.</b>Number ${i + 1} of 4 \u2014 add it on the abacus.</p>
+        <div class="big">${nums[i]}</div>
+        <p class="muted" style="text-align:center;margin:0;font-size:14px">${i ? 'The abacus keeps your total so far. ' : ''}Tap a rod\u2019s lower part to add 1 (past 9 it carries to the next rod by itself). Swipe down there to take 1 away. Tap the top bead to add or remove 5.</p>
+        <div class="abacus" id="abacus">${d.map((v, k) => rodHtml(k, v)).join('')}</div>
         <div class="rodlabs"><span>Hundreds</span><span>Tens</span><span>Ones</span></div>
       </section>`;
+    } else {
+      const typed = S.ans.aba[4];
+      body = `<section class="card">
+        <p class="stem"><b>${g}.</b>Type the sum of the four numbers.</p>
+        <p class="muted" style="text-align:center;margin:0;font-size:14px">This is your abacus after the four numbers.</p>
+        <div class="abacus ro">${d.map((v, k) => rodHtml(k, v)).join('')}</div>
+        <div class="rodlabs"><span>Hundreds</span><span>Tens</span><span>Ones</span></div>
+        <input id="abaSum" class="sumin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Sum" value="${typed == null ? '' : esc(typed)}">
+      </section>`;
+    }
   }
   view().innerHTML = header(b) + body +
     `<p class="muted" style="font-size:14px;text-align:center;margin:0">When the timer reaches 0 this item locks. You cannot go back.</p>
@@ -484,14 +500,23 @@ function render(){
       btn.classList.toggle('on', cur[k] === '1'); btn.querySelector('span').textContent = cur[k];
       $('binline').textContent = S.ans.bin[i].replace(/^0+(?=\d)/, '');
     });
+  } else if (i < 4) {
+    const ab = $('abacus');
+    const set = d => { S.abaDigits = d; S.ans.aba[i] = abaValue(d); save(); [...ab.children].forEach((el, k) => { el.outerHTML = rodHtml(k, d[k]); }); };
+    let y0 = null, zone = null;
+    ab.addEventListener('pointerdown', e => { zone = e.target.closest('[data-z]'); y0 = zone ? e.clientY : null; if (zone) { e.preventDefault(); try { zone.setPointerCapture(e.pointerId); } catch (x) {} } });
+    ab.addEventListener('pointerup', e => {
+      if (!zone || y0 == null) return;
+      const k = Number(zone.dataset.rod), dy = e.clientY - y0, d = (S.abaDigits || [0, 0, 0]).slice();
+      if (zone.dataset.z === 'h') { d[k] = d[k] >= 5 ? d[k] - 5 : d[k] + 5; set(d); }
+      else set(abaStep(d, k, dy > 12 ? -1 : 1));
+      zone = null; y0 = null;
+    });
+    ab.addEventListener('pointercancel', () => { zone = null; y0 = null; });
   } else {
-    $('abacus').addEventListener('click', e => {
-      const bd = e.target.closest('.bead'); if (!bd) return;
-      const k = Number(bd.dataset.rod), st = (S.ans.aba[i] || [[0, 0], [0, 0], [0, 0]]).map(r => r.slice());
-      if (bd.dataset.h) st[k][0] = st[k][0] ? 0 : 1;
-      else { const j = Number(bd.dataset.e); st[k][1] = st[k][1] === j ? j - 1 : j; }
-      S.ans.aba[i] = st; save();
-      const rods = $('abacus').children; rods[k].outerHTML = rodHtml(k, st[k]);
+    $('abaSum').addEventListener('input', e => {
+      const v = e.target.value.replace(/\D/g, '').slice(0, 4); e.target.value = v;
+      S.ans.aba[4] = v === '' ? null : Number(v); save();
     });
   }
   $('nextQ').onclick = () => {
@@ -499,13 +524,22 @@ function render(){
     else next();
   };
 }
-/* One rod: r = [heaven 0|1, earth 0..4]. Beads touching the bar count. Earth bead j = the j-th bead from the bar. */
-function rodHtml(k, r){
-  const earth = [];
-  for (let j = 1; j <= 4; j++) earth.push(`<button type="button" class="bead${j <= r[1] ? ' on' : ''}" data-rod="${k}" data-e="${j}" aria-label="Lower bead ${j}"></button>`);
-  const up = earth.slice(0, r[1]).join(''), down = earth.slice(r[1]).join('');
-  return `<div class="rod"><div class="heaven${r[0] ? ' on' : ''}"><button type="button" class="bead${r[0] ? ' on' : ''}" data-rod="${k}" data-h="1" aria-label="Upper bead, worth 5"></button></div>
-    <div class="beam"></div><div class="earth">${up}<span class="gap"></span>${down}</div></div>`;
+/* Abacus (soroban, like the Abacus activity): one digit per rod; the top bead is 5, each lower bead 1.
+   Adding 1 to a 9 makes it 0 and carries 1 to the rod on the left; taking 1 from a 0 borrows. */
+const abaValue = d => d[0] * 100 + d[1] * 10 + d[2];
+function abaStep(d, k, delta){
+  d = d.slice();
+  d[k] += delta;
+  if (d[k] > 9) { d[k] -= 10; if (k > 0) return abaStep(d, k - 1, 1); d[k] = 9; }   // carry left (hundreds stop at 9)
+  if (d[k] < 0) { if (d.slice(0, k).some(x => x > 0)) { d[k] += 10; return abaStep(d, k - 1, -1); } d[k] = 0; }   // borrow from the left; nothing to borrow → stays 0
+  return d;
+}
+function rodHtml(k, v){
+  const h = v >= 5, e = v - (h ? 5 : 0);
+  const beads = n => Array.from({ length: n }, () => '<span class="bead on"></span>').join('');
+  const rest = n => Array.from({ length: n }, () => '<span class="bead"></span>').join('');
+  return `<div class="rod"><div class="heaven${h ? ' on' : ''}" data-z="h" data-rod="${k}"><span class="bead${h ? ' on' : ''}"></span></div>
+    <div class="beam"></div><div class="earth" data-z="e" data-rod="${k}">${beads(e)}<span class="gap"></span>${rest(4 - e)}</div></div>`;
 }
 
 /* ===================== SCORING / SUBMIT ===================== */
@@ -514,11 +548,10 @@ function scoreBlock(b){
   const a = S.ans[b.id];
   if (b.kind === 'mcq') return b.items.reduce((s, it, i) => s + (a[i] === it.a ? 1 : 0), 0);
   if (b.kind === 'bin') return S.gen.bin.reduce((s, n, i) => s + (a[i] && parseInt(a[i], 2) === n ? 1 : 0), 0);
-  return S.gen.aba.reduce((s, nums, i) => {
-    const st = a[i]; if (!st) return s;
-    const val = st.reduce((v, r) => v * 10 + r[0] * 5 + r[1], 0);
-    return s + (val === nums.reduce((x, y) => x + y, 0) ? 1 : 0);
-  }, 0);
+  let run = 0, pts = 0;   // items 1–4: the beads show the running total; item 5: the typed sum
+  S.gen.aba.forEach((n, i) => { run += n; if (a[i] === run) pts++; });
+  if (a[4] === run) pts++;
+  return pts;
 }
 let R = null;
 function submit(auto){
