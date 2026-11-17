@@ -56,6 +56,13 @@
   .btn.deny { background:var(--red, #D70015); }
   .btn.allow { background:#248A3D; }
   .pm-empty { text-align:center; color:var(--muted); padding:30px 10px; }
+  .pm-badge { position:absolute; top:10px; left:10px; padding:6px 10px; border-radius:8px; font-weight:700; font-size:14px; color:#fff; }
+  .pm-badge.a { background:#248A3D; } .pm-badge.d { background:#D70015; }
+  .pm-dots i.a { background:#248A3D; } .pm-dots i.d { background:#D70015; }
+  .pm-dots i.on { outline:2px solid var(--blue); outline-offset:1px; }
+  .btn.picked { outline:3px solid #000; outline-offset:2px; }
+  .pm-update { display:grid; gap:6px; margin-top:12px; justify-items:center; }
+  .pm-update .btn { width:100%; }
   .edit-box { margin-top:18px; padding-top:14px; border-top:1px solid var(--field); }
   .edit-h { display:block; font-size:16px; margin-bottom:10px; }
   .btn { border:none; border-radius:10px; padding:12px 18px; font-weight:600; cursor:pointer; background:var(--blue); color:#fff; }
@@ -161,7 +168,7 @@
     </div>
   </section>
 
-  <!-- Finals permits: carousel of pending photos, Allow / Deny at the bottom (the photo is deleted on decision) -->
+  <!-- Finals permits: carousel of pending photos; Allow / Deny mark them, Update saves all marks at once (photos deleted then) -->
   <section class="card" id="pmCard" hidden>
     <div class="head"><strong style="font-family:var(--sans)">Finals permits</strong>
       <div class="tools"><span class="exam-state" id="pmCount" style="margin:0"></span><button class="link" id="pmReload" type="button">Reload</button></div>
@@ -527,8 +534,10 @@ $('selAll').addEventListener('click', () => selectAll(true));
 $('selNone').addEventListener('click', () => selectAll(false));
 $('signOut').addEventListener('click', signOut);
 
-/* ===== Finals permits ===== */
-let pm = { list: [], i: 0, busy: false }, pmTimer = 0;
+/* ===== Finals permits =====
+   Allow / Deny only mark a permit on this page (and move to the next one). Update sends every mark
+   in one request (adminPermitBatch), so many students are decided with a single write. */
+let pm = { list: [], i: 0, busy: false, marks: {} }, pmTimer = 0;   // marks: code → true (allow) | false (deny)
 async function pmLoad(quiet) {
   clearInterval(pmTimer); pmTimer = setInterval(() => { if (!pm.busy && !document.hidden) pmLoad(true); }, 10000);
   if (!quiet) setMsg($('pmMsg'), 'Loading…');
@@ -539,43 +548,62 @@ async function pmLoad(quiet) {
 function pmApply(r) {
   const curCode = pm.list[pm.i] && pm.list[pm.i].code;
   pm.list = r.pending || [];
+  Object.keys(pm.marks).forEach(c => { if (!pm.list.some(x => x.code === c)) delete pm.marks[c]; });   // decided elsewhere
   const k = pm.list.findIndex(x => x.code === curCode);
   pm.i = k >= 0 ? k : Math.min(pm.i, Math.max(0, pm.list.length - 1));
   $('pmCount').textContent = `${pm.list.length} waiting · ${r.counts.allowed} allowed · ${r.counts.denied} denied`;
   pmRender();
 }
+const pmMarked = () => Object.keys(pm.marks).length;
 function pmRender() {
   const box = $('pmBox');
   if (!pm.list.length) { box.innerHTML = '<div class="pm-empty">No permits waiting. This list refreshes every 10 seconds.</div>'; return; }
-  const p = pm.list[pm.i];
+  const p = pm.list[pm.i], m = pm.marks[p.code];
+  const na = Object.values(pm.marks).filter(Boolean).length, nd = pmMarked() - na;
   box.innerHTML = `<div class="pm-stage" id="pmStage">
       <img src="${p.img}" alt="Permit photo from ${p.code}">
+      ${m != null ? `<span class="pm-badge ${m ? 'a' : 'd'}">${m ? 'Allow' : 'Deny'} · not saved yet</span>` : ''}
       <button class="pm-nav pm-prev" id="pmPrev" type="button" aria-label="Previous" ${pm.i === 0 ? 'disabled' : ''}>‹</button>
       <button class="pm-nav pm-next" id="pmNext" type="button" aria-label="Next" ${pm.i === pm.list.length - 1 ? 'disabled' : ''}>›</button>
     </div>
     <div class="pm-meta"><b>${p.code}</b><span class="exam-state" style="margin:0">${pm.i + 1} of ${pm.list.length} · sent ${p.submitted.slice(11, 16)}</span></div>
-    <div class="pm-dots">${pm.list.map((_, j) => `<i class="${j === pm.i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="pm-dots">${pm.list.map((x, j) => `<i class="${j === pm.i ? 'on' : ''}${pm.marks[x.code] === true ? ' a' : pm.marks[x.code] === false ? ' d' : ''}"></i>`).join('')}</div>
     <div class="pm-acts">
-      <button class="btn deny" id="pmDeny" type="button">Deny</button>
-      <button class="btn allow" id="pmAllow" type="button">Allow</button>
+      <button class="btn deny${m === false ? ' picked' : ''}" id="pmDeny" type="button">${m === false ? '✓ Deny' : 'Deny'}</button>
+      <button class="btn allow${m === true ? ' picked' : ''}" id="pmAllow" type="button">${m === true ? '✓ Allow' : 'Allow'}</button>
+    </div>
+    <div class="pm-update">
+      <button class="btn" id="pmUpdate" type="button" ${pmMarked() ? '' : 'disabled'}>Update${pmMarked() ? ` (${na} allow · ${nd} deny)` : ''}</button>
+      <button class="link" id="pmClear" type="button" ${pmMarked() ? '' : 'hidden'}>Clear marks</button>
     </div>`;
   $('pmPrev').onclick = () => pmGo(-1); $('pmNext').onclick = () => pmGo(1);
-  $('pmAllow').onclick = () => pmDecide(true); $('pmDeny').onclick = () => pmDecide(false);
+  $('pmAllow').onclick = () => pmMark(true); $('pmDeny').onclick = () => pmMark(false);
+  $('pmUpdate').onclick = pmUpdate; $('pmClear').onclick = () => { pm.marks = {}; pmRender(); };
   let x0 = null;
   const st = $('pmStage');
   st.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
   st.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) pmGo(dx < 0 ? 1 : -1); });
 }
 function pmGo(d) { const j = pm.i + d; if (j < 0 || j >= pm.list.length) return; pm.i = j; pmRender(); }
-async function pmDecide(allow) {
+/* Mark (or unmark with the same button) and move on to the next unmarked permit. */
+function pmMark(allow) {
   const p = pm.list[pm.i]; if (!p || pm.busy) return;
-  pm.busy = true; $('pmAllow').disabled = true; $('pmDeny').disabled = true;
-  setMsg($('pmMsg'), (allow ? 'Allowing ' : 'Denying ') + p.code + '…');
-  const r = await call({ action: 'adminPermitDecide', code: p.code, exam: p.exam, allow });
+  if (pm.marks[p.code] === allow) { delete pm.marks[p.code]; pmRender(); return; }
+  pm.marks[p.code] = allow;
+  const n = pm.list.length;
+  for (let k = 1; k <= n; k++) { const j = (pm.i + k) % n; if (pm.marks[pm.list[j].code] == null) { pm.i = j; break; } }
+  pmRender();
+}
+async function pmUpdate() {
+  const decisions = pm.list.filter(x => pm.marks[x.code] != null).map(x => ({ code: x.code, exam: x.exam, allow: pm.marks[x.code] }));
+  if (!decisions.length || pm.busy) return;
+  pm.busy = true; $('pmUpdate').disabled = true;
+  setMsg($('pmMsg'), `Saving ${decisions.length} decision${decisions.length === 1 ? '' : 's'}…`);
+  const r = await call({ action: 'adminPermitBatch', decisions });
   pm.busy = false;
-  if (!r.ok) { if (!authFail(r)) setMsg($('pmMsg'), ERR[r.error] || 'Not saved. Try again.', 'err'); pmRender(); return; }
-  setMsg($('pmMsg'), `${p.code} ${allow ? 'allowed' : 'denied'}. The photo was deleted.`, 'ok');
-  pm.list.splice(pm.i, 1);   // the next permit slides in at the same position
+  if (!r.ok) { if (!authFail(r)) setMsg($('pmMsg'), (ERR[r.error] || 'Not saved.') + ' Your marks are kept — press Update again.', 'err'); pmRender(); return; }
+  decisions.forEach(d => { delete pm.marks[d.code]; });
+  setMsg($('pmMsg'), `Saved ${r.applied} decision${r.applied === 1 ? '' : 's'}. Those photos were deleted.` + (r.applied < decisions.length ? ` ${decisions.length - r.applied} had already been decided.` : ''), 'ok');
   pmApply(r);
 }
 $('pmReload').addEventListener('click', () => pmLoad());

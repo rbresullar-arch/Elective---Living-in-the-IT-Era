@@ -140,6 +140,11 @@ function doPost(e) {
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
       if (action === 'adminPermits') return json_(adminPermits_(as));
+      if (action === 'adminPermitBatch') {
+        var bl = LockService.getScriptLock();
+        try { bl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminPermitBatch_(as, req)); } finally { bl.releaseLock(); }
+      }
       if (action === 'adminPermitDecide') {
         var pl = LockService.getScriptLock();
         try { pl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
@@ -467,6 +472,25 @@ function adminPermits_(ss) {
     else if (counts[st.toLowerCase()] != null) counts[st.toLowerCase()]++;
   });
   return { ok: true, pending: pending, counts: counts };
+}
+/* Many decisions in one request: [{ code, exam, allow }]. Only Pending rows change; their photos are deleted. */
+function adminPermitBatch_(ss, req) {
+  var list = Array.isArray(req.decisions) ? req.decisions.slice(0, 300) : [];
+  var sh = ss.getSheetByName(PERMIT_TAB);
+  if (!sh || sh.getLastRow() < 2 || !list.length) { var e = adminPermits_(ss); e.applied = 0; return e; }
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getDisplayValues(), rowOf = {};
+  v.forEach(function (r, i) { rowOf[String(r[0]).trim().toUpperCase() + '|' + r[1]] = { row: i + 2, st: String(r[3]) }; });
+  var when = phNow_(), applied = 0, allowed = [], denied = [];
+  list.forEach(function (d) {
+    var id = codeNorm_(d && d.code), exam = String(d && d.exam || '');
+    var hit = id && PERMIT_EXAMS.indexOf(exam) >= 0 ? rowOf[id + '|' + exam] : null;
+    if (!hit || hit.st !== 'Pending') return;
+    var st = d.allow ? 'Allowed' : 'Denied';
+    sh.getRange(hit.row, 4, 1, 3).setNumberFormat('@').setValues([[st, when, '']]);   // photo deleted
+    hit.st = st; applied++; (d.allow ? allowed : denied).push(id);
+  });
+  if (applied) log_(ss, 'ADMIN', 'permits', 'allowed ' + allowed.length + (allowed.length ? ' (' + allowed.join(', ') + ')' : '') + ' · denied ' + denied.length + (denied.length ? ' (' + denied.join(', ') + ')' : ''));
+  var out = adminPermits_(ss); out.applied = applied; return out;
 }
 function adminPermitDecide_(ss, req) {
   var id = codeNorm_(req.code), exam = String(req.exam || '');
