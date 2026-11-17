@@ -41,6 +41,8 @@ p{margin:0 0 10px}
 .permit-prev{display:block;margin:10px auto;max-width:100%;border-radius:8px}
 .pick{position:relative;overflow:hidden}
 .pick input{position:absolute;inset:0;opacity:0}
+.pickrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pickrow .pick{display:flex;align-items:center;justify-content:center}
 /* exam */
 .clock{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border-radius:12px;padding:10px 14px}
 .clock .s{font-size:13px;color:var(--muted);font-weight:700}
@@ -294,14 +296,16 @@ function vPermit(st, note){
   }
   view().innerHTML = `<section class="card">${head}
     ${st === 'denied' ? '<div class="state bad"><b>Permit not accepted</b><span class="muted">send a new photo</span></div><p class="muted">Your instructor did not accept the photo. Take a clear photo of your own examination permit and send it again.</p>' :
-      '<div class="state"><b>Step 1 · Examination permit</b></div><p class="muted">Take a clear photo of your examination permit. When your instructor allows it, the Finals is unlocked for you: take it any time while it is open, once. The photo is deleted right after your instructor decides.</p>'}
-    <div class="ghost pick" role="button">Open camera<input type="file" id="pfile" accept="image/*" capture="environment" aria-label="Take a photo of your permit"></div>
+      '<div class="state"><b>Step 1 · Examination permit</b></div><p class="muted">Take a clear photo of your examination permit, or upload one from your gallery. When your instructor allows it, the Finals is unlocked for you: take it any time while it is open, once. The photo is deleted right after your instructor decides.</p>'}
+    <div class="pickrow"><div class="ghost pick" role="button">Open camera<input type="file" id="pfile" accept="image/*" capture="environment" aria-label="Take a photo of your permit"></div>
+      <div class="ghost pick" role="button">Upload from gallery<input type="file" id="pfile2" accept="image/*" aria-label="Choose a photo of your permit"></div></div>
     <img id="pprev" class="permit-prev" alt="Permit photo preview" hidden>
     <p class="msg" id="perr">${esc(note || '')}</p>
     <button type="button" class="btn" id="psend" disabled>Send to my instructor</button></section>`;
   permitImg = '';
-  $('pfile').onchange = async e => {
+  $('pfile').onchange = $('pfile2').onchange = async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
+    e.target.value = '';   // the same photo can be picked again
     $('perr').textContent = 'Preparing the photo…'; $('psend').disabled = true;
     try {
       permitImg = await toPermitJpeg(f);
