@@ -157,6 +157,12 @@
     <div class="list" id="list"></div>
     <button class="btn danger" id="resetBtn" type="button" disabled>Reset</button>
     <p class="msg" id="resetMsg"></p>
+    <div class="edit-box" id="finBox">
+      <strong class="edit-h">Finals attempt</strong>
+      <p class="exam-state" id="finState" style="margin:0 0 10px"></p>
+      <button class="btn danger" id="finReset" type="button" hidden>Reset Finals attempt</button>
+      <p class="msg" id="finMsg"></p>
+    </div>
     <div class="edit-box">
       <strong class="edit-h">Edit score</strong>
       <select id="editAct" aria-label="Activity"></select>
@@ -311,7 +317,7 @@ async function find() {
   $('findBtn').disabled = false;
   if (!r.ok) { if (!authFail(r)) setMsg($('findMsg'), ERR[r.error] || 'Lookup failed.', 'err'); return; }
   setMsg($('findMsg'), '');
-  render(r); setMsg($('resetMsg'), '');
+  render(r); setMsg($('resetMsg'), ''); setMsg($('finMsg'), '');
 }
 
 function render(r) {
@@ -338,7 +344,28 @@ function render(r) {
   });
   if (keep) ea.value = keep;
   fillEdit();
+  paintFinals(r.finals);
   $('resultCard').hidden = false; updateBtn();
+}
+const FIN_TEXT = { none: 'No permit sent yet.', pending: 'Permit sent · waiting for your decision.', denied: 'Permit denied.',
+  allowed: 'Permit allowed · not started.', started: 'Started', submitted: 'Submitted' };
+function paintFinals(f) {
+  f = f || { status: 'none' };
+  let t = FIN_TEXT[f.status] || f.status;
+  if (f.status === 'started') t = `Started ${f.started ? f.started.slice(11, 16) : ''} · not submitted yet.`;
+  if (f.status === 'submitted') t = `Started ${f.started ? f.started.slice(11, 16) : ''} · submitted ${f.finished ? f.finished.slice(11, 16) : ''}.`;
+  $('finState').textContent = t;
+  $('finReset').hidden = !(f.status === 'started' || f.status === 'submitted');
+}
+async function finalsReset() {
+  if (!current) return;
+  if (!confirm(`Reset the Finals for ${current.id}?\n\nTheir current attempt and any Finals score are removed. They keep their allowed permit and can start again on any phone, once.`)) return;
+  $('finReset').disabled = true; setMsg($('finMsg'), 'Resetting…');
+  const r = await call({ action: 'adminFinalsReset', id: current.id });
+  $('finReset').disabled = false;
+  if (!r.ok) { if (!authFail(r)) setMsg($('finMsg'), r.error === 'nopermit' ? 'This student has no Finals permit yet.' : r.error === 'notallowed' ? 'The permit is not allowed yet.' : (ERR[r.error] || 'Reset failed.'), 'err'); return; }
+  render(r);
+  setMsg($('finMsg'), `Done. ${r.id} can start the Finals again. Their old phone clears itself when it goes online.`, 'ok');
 }
 function fillEdit() {
   const a = current && current.activities.find(x => x.n === Number($('editAct').value));
@@ -525,6 +552,7 @@ $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 $('findBtn').addEventListener('click', find);
 $('code').addEventListener('keydown', e => { if (e.key === 'Enter') find(); });
 $('resetBtn').addEventListener('click', askReset);
+$('finReset').addEventListener('click', finalsReset);
 $('editAct').addEventListener('change', () => { fillEdit(); setMsg($('editMsg'), ''); });
 $('editBtn').addEventListener('click', saveEdit);
 $('editPct').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });

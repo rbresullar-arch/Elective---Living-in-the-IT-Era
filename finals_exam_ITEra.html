@@ -282,7 +282,7 @@ function vPermit(st, note){
   $('topTag').textContent = 'Finals Examination';
   const head = `<span class="tag">GEEL 1 · Living in the IT Era</span><h1>Finals Examination</h1><p class="muted" style="margin:0 0 14px">Class code ${esc(ACCT.id)}</p>`;
   if (st === 'allowed') { vRules(head); return; }
-  if (st === 'started') { message('Already started', 'You already started the Finals Examination on another phone or browser. There is one attempt only. Tell your instructor.'); return; }
+  if (st === 'started') { message('Already started', 'You already started the Finals Examination on another phone or browser. There is one attempt only. If your connection failed, ask your instructor to reset your attempt, then open this page again.'); return; }
   if (st === 'submitted') { message('Already submitted', 'Your Finals Examination was already submitted. There is one attempt only. Your score is on the phone you took it on, and with your instructor.'); return; }
   if (st === 'pending') {
     view().innerHTML = `<section class="card">${head}
@@ -374,13 +374,13 @@ async function serverStart(){
   const btn = $('start'); if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
   const r = await call({ action: 'finalsStart' }, 20000);
   starting = false;
-  if (r.ok) { startExam(); return; }
+  if (r.ok) { startExam(r.attempt); return; }
   if (r.error === 'started' || r.error === 'submitted') { vPermit(r.error); return; }
   if (r.error === 'closed' || r.error === 'permit') { checkPermit(); return; }
   if (btn) { btn.disabled = false; btn.textContent = 'Start the examination'; }
   ask(errText(r), 'OK', () => {});
 }
-function startExam(){
+function startExam(attempt){
   const order = shuffle(BLOCKS.map(b => b.id));
   const gen = {
     bin: (() => { const s = new Set(); while (s.size < 5) s.add(rnd(20, 50)); return [...s]; })(),
@@ -389,7 +389,7 @@ function startExam(){
   const ans = {};
   BLOCKS.forEach(b => { ans[b.id] = Array(itemCount(b)).fill(null); });
   S = { v: 1, id: ACCT.id, startAt: Date.now(), order, gen, ans, pos: { b: 0, i: 0, intro: false }, itemEnds: 0,
-    abaDigits: [0, 0, 0], blocked: [], flags: { leave: 0, copy: 0, capture: 0 }, submitted: false, total: TOTAL, cur: 0, items: TOTAL };
+    attempt: attempt || '', abaDigits: [0, 0, 0], blocked: [], flags: { leave: 0, copy: 0, capture: 0 }, submitted: false, total: TOTAL, cur: 0, items: TOTAL };
   clearInterval(tickT); tickT = setInterval(tick, 500);
   enterBlock(0);
 }
@@ -567,7 +567,7 @@ function submit(auto){
   BLOCKS.forEach(b => { parts[b.id] = scoreBlock(b); score += parts[b.id]; });
   R = { v: 1, score, total: TOTAL, percentage: Math.round(score / TOTAL * 100), parts, order: S.order,
     blocked: S.blocked, flags: (S.flags.leave || 0) + (S.flags.copy || 0) + (S.flags.capture || 0), flagDetail: S.flags,
-    startAt: S.startAt, endAt: Date.now(), auto: !!auto, uploaded: false };
+    startAt: S.startAt, endAt: Date.now(), auto: !!auto, attempt: S.attempt || '', uploaded: false };
   S.submitted = true; S.cur = TOTAL; save();
   put(K_R, R, true);
   vDone(); upload(0);
@@ -651,18 +651,41 @@ function inApp(){
   $('gate').innerHTML = '<h2>Open this page in your browser</h2><p class="muted">This page is open inside an app (Messenger, Facebook, Instagram, TikTok, Line or X), where your answers cannot be saved. Tap the ⋮ or ••• menu and choose “Open in Browser”.</p>';
   return true;
 }
+/* This phone's attempt was reset by the instructor (or replaced by a newer start on another phone):
+   clear it here and go back to the permit / start screen. Works only when online; offline it keeps going. */
+async function verifyAttempt(local){
+  if (!local) return;
+  const r = await call({ action: 'permitStatus', exam: 'finals' }, 15000);
+  if (!r.ok) return;
+  const att = String(r.attempt || ''), mine = String(local.attempt || '');
+  const reset = r.status === 'allowed' || r.status === 'none' || ((r.status === 'started' || r.status === 'submitted') && att && att !== mine);
+  if (!reset) return;
+  clearInterval(tickT); Object.values(idbLater).forEach(clearTimeout);
+  S = null; R = null; $('confirm').hidden = true;
+  try { [localStorage, sessionStorage].forEach(st => { st.removeItem(K_S); st.removeItem(K_R); }); } catch (e) {}
+  try { const d = await db(); await new Promise(res => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').delete(K_S); t.objectStore('kv').delete(K_R); t.oncomplete = res; t.onerror = res; }); } catch (e) {}
+  gateOpen = !!r.open;
+  vPermit(r.status === 'none' ? 'none' : r.status,
+    r.status === 'allowed' ? 'Your instructor reset your Finals attempt. You can start again.' : '');
+  if (r.status === 'allowed') {
+    const box = document.createElement('div'); box.className = 'state wait'; box.style.margin = '0';
+    box.innerHTML = '<b>Your attempt was reset</b> — your instructor gave you a fresh start. Your earlier answers on this phone were cleared.';
+    view().prepend(box);
+  }
+}
 (async function init(){
   if (inApp()) return;
   if (!ACCT) { message('Log in first', 'Log in on the hub with your class code and PIN, then open the Finals Examination again.'); return; }
   R = await get(K_R);
-  if (R) { vDone(); if (!R.uploaded) upload(0); return; }
+  if (R) { vDone(); if (!R.uploaded) upload(0); verifyAttempt(R); return; }
   S = await get(K_S);
-  if (S && S.submitted && S.order) { S.submitted = false; submit(true); return; }   // result copy lost: score again
+  if (S && S.submitted && S.order) { S.submitted = false; submit(true); verifyAttempt(R); return; }   // result copy lost: score again
   if (S && S.order && S.id === ACCT.id) {
     clearInterval(tickT); tickT = setInterval(tick, 500);
     if (S.pos.intro) renderIntro();
     else if (S.itemEnds && Date.now() >= S.itemEnds) next();   // the item ran out while the page was closed
     else render();
+    verifyAttempt(S);
     return;
   }
   S = null;

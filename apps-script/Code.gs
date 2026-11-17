@@ -140,6 +140,11 @@ function doPost(e) {
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
       if (action === 'adminPermits') return json_(adminPermits_(as));
+      if (action === 'adminFinalsReset') {
+        var fl = LockService.getScriptLock();
+        try { fl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminFinalsReset_(as, req)); } finally { fl.releaseLock(); }
+      }
       if (action === 'adminPermitBatch') {
         var bl = LockService.getScriptLock();
         try { bl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
@@ -265,6 +270,7 @@ function saveRestore_(ss, req, pin, action) {
   }
   var incoming = cleanIncoming_(req.data);
   incoming.sched = id.slice(0, 5);
+  finalsFilter_(ss, id, incoming);
   var merged = merge_(stored || {}, incoming);
   writeDoc_(ss, id, merged);
   writeScores_(ss, id, merged);
@@ -382,9 +388,10 @@ function attend_(ss, req, pin) {
    An allowed permit unlocks the examination: the student may start it any time the exam gate is open, once.
    Permits tab: Code | Exam | Sent | Status | Decided | Image | Started | Finished
    Status: Pending → Allowed / Denied → Started (finalsStart) → Submitted (the result reached the Sheet).
-   To give a student a fresh attempt, set Status back to Allowed (their phone must not still hold the old result). */
+   A fresh attempt: master console → look up the code → Reset Finals (adminFinalsReset). Each start gets an
+   Attempt number; uploads from an older (reset) attempt are ignored, and that phone clears itself. */
 var PERMIT_TAB = 'Permits', PERMIT_EXAMS = ['finals'], PERMIT_IMG_MAX = 45000;
-var PERMIT_HEAD = ['Code', 'Exam', 'Photo sent (PH)', 'Status', 'Decided (PH)', 'Image (deleted after the decision)', 'Started (PH)', 'Finished (PH)'];
+var PERMIT_HEAD = ['Code', 'Exam', 'Photo sent (PH)', 'Status', 'Decided (PH)', 'Image (deleted after the decision)', 'Started (PH)', 'Finished (PH)', 'Attempt'];
 function permitSheet_(ss) {
   var sh = ss.getSheetByName(PERMIT_TAB);
   if (!sh) { sh = ss.insertSheet(PERMIT_TAB); sh.setFrozenRows(1); }
@@ -431,8 +438,8 @@ function permitStatus_(ss, req, pin) {
   var sh = ss.getSheetByName(PERMIT_TAB);
   var row = sh ? permitRow_(sh, a.id, a.exam) : 0;
   if (!row) return { ok: true, status: 'none', open: gateOpen_(PERMIT_GATE[a.exam]) };
-  var v = sh.getRange(row, 1, 1, 8).getDisplayValues()[0];
-  return { ok: true, status: String(v[3]).toLowerCase() || 'pending', sent: v[2], decided: v[4], started: v[6], open: gateOpen_(PERMIT_GATE[a.exam]) };
+  var v = sh.getRange(row, 1, 1, 9).getDisplayValues()[0];
+  return { ok: true, status: String(v[3]).toLowerCase() || 'pending', sent: v[2], decided: v[4], started: v[6], attempt: v[8], open: gateOpen_(PERMIT_GATE[a.exam]) };
 }
 /* The student taps Start: allowed permit + open gate → Started (one attempt). */
 function finalsStart_(ss, req, pin) {
@@ -444,8 +451,10 @@ function finalsStart_(ss, req, pin) {
   if (st !== 'Allowed') return { ok: false, error: 'permit', status: (st || 'none').toLowerCase() };
   if (!gateOpen_('examFinals')) return { ok: false, error: 'closed' };
   permitMark_(ss, a.id, a.exam, 'Started', 7);
+  var attempt = String(Date.now());
+  sh.getRange(row, 9).setNumberFormat('@').setValue(attempt);
   log_(ss, a.id, 'finals', 'started');
-  return { ok: true, status: 'started', now: Date.now() };
+  return { ok: true, status: 'started', attempt: attempt, now: Date.now() };
 }
 function permitSubmit_(ss, req, pin) {
   var a = permitAuth_(ss, req, pin); if (a.err) return a.err;
@@ -977,6 +986,44 @@ function adminCheck_(hash) {
   try { log_(SpreadsheetApp.openById(SHEET_ID), 'ADMIN', 'admin', 'wrong password'); } catch (e) {}
   return { ok: false, error: fails + 1 >= ADMIN_MAX_FAILS ? 'locked' : 'auth' };
 }
+/* Drop Finals data that belongs to a reset attempt: after a reset (Status Allowed) nothing is taken until
+   the next start; after a start only records carrying that start's Attempt number are taken.
+   Rows without an Attempt number (started before attempts existed) accept anything. */
+function finalsFilter_(ss, id, incoming) {
+  var f = incoming.exams && incoming.exams.examFinals;
+  if (!f) return;
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, 'finals') : 0;
+  if (!row) return;
+  var v = sh.getRange(row, 1, 1, 9).getDisplayValues()[0], st = String(v[3]), att = String(v[8] || '');
+  if (st === 'Allowed' || st === 'Pending' || st === 'Denied') { delete incoming.exams.examFinals; return; }
+  if (!att) return;
+  ['result', 'session'].forEach(function (k) { if (f[k] && String(f[k].attempt || '') !== att) delete f[k]; });
+  if (!f.result && !f.session) delete incoming.exams.examFinals;
+}
+/* Master console: give a student a fresh Finals attempt (keeps the allowed permit). */
+function adminFinalsReset_(ss, req) {
+  var id = codeNorm_(req.id);
+  if (!id) return { ok: false, error: 'code' };
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, 'finals') : 0;
+  if (!row) return { ok: false, error: 'nopermit' };
+  var before = String(sh.getRange(row, 4).getDisplayValue());
+  if (before === 'Pending' || before === 'Denied') return { ok: false, error: 'notallowed' };
+  sh.getRange(row, 4).setValue('Allowed');
+  sh.getRange(row, 7, 1, 3).setNumberFormat('@').setValues([['', '', '']]);
+  var doc = readDoc_(ss, id);
+  if (doc && doc.exams && doc.exams.examFinals) {
+    delete doc.exams.examFinals; doc.updatedAt = new Date().toISOString();
+    writeDoc_(ss, id, doc); writeScores_(ss, id, doc);
+  }
+  log_(ss, id, 'finals reset', before + ' → Allowed');
+  return adminLookup_(ss, { id: id });
+}
+function finalsInfo_(ss, id) {
+  var sh = ss.getSheetByName(PERMIT_TAB), row = sh ? permitRow_(sh, id, 'finals') : 0;
+  if (!row) return { status: 'none' };
+  var v = sh.getRange(row, 1, 1, 9).getDisplayValues()[0];
+  return { status: String(v[3]).toLowerCase(), started: v[6], finished: v[7] };
+}
 function adminLookup_(ss, req) {
   var id = codeNorm_(req.id);
   if (!id) return { ok: false, error: 'code' };
@@ -987,7 +1034,7 @@ function adminLookup_(ss, req) {
     var r = doc['activity' + n];
     acts.push({ n: n, pct: r ? pct_(r) : null, at: r ? recTime_(r) : '', reset: (doc.resets || {})['activity' + n] || '', edited: !!(r && r.adminEdit) });
   }
-  return { ok: true, id: id, activities: acts };
+  return { ok: true, id: id, activities: acts, finals: finalsInfo_(ss, id) };
 }
 function adminReset_(ss, req) {
   var id = codeNorm_(req.id);
