@@ -256,12 +256,12 @@ const active = () => !!S && !S.submitted && !!S.order;
 
 /* ===================== PERMIT ===================== */
 let pollT = 0, permitImg = '';
-/* A phone photo → JPEG whose short side is 144 px (no blur). Kept under the server's 45,000-character limit. */
+/* A phone photo → JPEG whose short side is 360 px (no blur). Kept under the server's 45,000-character limit. */
 function toPermitJpeg(file){
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(file), im = new Image();
     im.onload = () => {
-      const w = im.naturalWidth, h = im.naturalHeight, k = Math.min(1, 144 / Math.min(w, h));
+      const w = im.naturalWidth, h = im.naturalHeight, k = Math.min(1, 360 / Math.min(w, h));
       const cw = Math.max(1, Math.round(w * k)), ch = Math.max(1, Math.round(h * k));
       const c = document.createElement('canvas'); c.width = cw; c.height = ch;
       const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.drawImage(im, 0, 0, cw, ch);
