@@ -283,7 +283,7 @@ function vPermit(st, note){
   const head = `<span class="tag">GEEL 1 · Living in the IT Era</span><h1>Finals Examination</h1><p class="muted" style="margin:0 0 14px">Class code ${esc(ACCT.id)}</p>`;
   if (st === 'allowed') { vRules(head); return; }
   if (st === 'started') { message('Already started', 'You already started the Finals Examination on another phone or browser. There is one attempt only. Tell your instructor.'); return; }
-  if (st === 'submitted') { message('Already submitted', 'Your Finals Examination was already submitted. There is one attempt only. Your instructor will release the results.'); return; }
+  if (st === 'submitted') { message('Already submitted', 'Your Finals Examination was already submitted. There is one attempt only. Your score is on the phone you took it on, and with your instructor.'); return; }
   if (st === 'pending') {
     view().innerHTML = `<section class="card">${head}
       <div class="state wait"><b>Waiting for approval</b><span class="muted">permit sent</span></div>
@@ -361,7 +361,8 @@ function vRules(head){
       <li>One item at a time. <b>You cannot go back.</b> Leaving an item blank scores 0.</li>
       <li>Binary items: tap the place-value boxes to build the number in binary.</li><li>Abacus: four numbers come one at a time. Add each one on the abacus (it carries by itself, like in the activity); the beads you leave are checked. Then type the sum.</li>
       <li>Copying text or capturing the screen ends that part at once with 0 points. Leaving this page is recorded, and the timer keeps running.</li>
-      <li><b>One attempt only.</b> Your score is not shown; your instructor releases the results.</li>
+      <li><b>Flags:</b> every leave, copy or capture is a flag. <b>Every 3 flags take 1 point off</b> your score.</li>
+      <li><b>One attempt only.</b> Your score is shown when you finish.</li>
     </ul>
     <button type="button" class="btn" id="start">Start the examination</button></section>`;
   $('start').onclick = () => ask('Start now? You have one attempt. The first item’s timer starts at once and items cannot be paused or repeated.', 'Start', serverStart);
@@ -594,7 +595,8 @@ function vDone(){
       <span class="tag">Finals Examination</span>
       <span class="check" aria-hidden="true">✓</span>
       <h2>Submitted</h2>
-      <p class="muted" style="margin:0">Your instructor will release the results.</p>
+      ${((f, d) => `<p style="margin:0;font-size:30px;font-weight:800">${Math.max(0, R.score - d)} / ${R.total}</p>
+      <p class="muted" style="margin:4px 0 0">${d ? `${R.score} correct − ${d} for ${f} flag${f === 1 ? '' : 's'} (1 point per 3 flags)` : `${R.score} correct · ${f} flag${f === 1 ? '' : 's'}, no deduction`}</p>`)(Number(R.flags) || 0, Math.floor((Number(R.flags) || 0) / 3))}
       <dl class="facts">
         <dt>Class code</dt><dd>${esc(ACCT.id)}</dd>
         <dt>Items</dt><dd>${TOTAL}</dd>

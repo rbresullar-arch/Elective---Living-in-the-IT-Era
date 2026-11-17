@@ -570,7 +570,7 @@ function migrate_(ss, req, pin) {
    Header check: once per version of this file (HEAD_SIG), not on every request.
    Reset tab: read at most once a minute.  Schedules: cached 10 minutes.
    setup() clears all three. */
-function headSig_() { return 'v4-nametag|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
+function headSig_() { return 'v5-finalsflags|' + ACTIVITY_COUNT + '|' + EXAMS.map(function (x) { return x.id; }).join(','); }
 function ensureSheetsOnce_(ss) {
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('HEAD_SIG') === headSig_() && ss.getSheetByName(SHEET.sched)) return;
@@ -766,6 +766,7 @@ function ensureSheets_(ss) {
   for (var n = 1; n <= ACTIVITY_COUNT; n++) heads[SHEET.scores].push('A' + n + ' %');
   EXAMS.forEach(function (x) {
     if (x.paper) heads[SHEET.scores].push(x.label + ' set', x.label + ' start', x.label + ' end', x.label + ' flags');
+    else if (x.id === 'examFinals') heads[SHEET.scores].push('Finals', 'Finals raw', 'Finals flags');   // Finals = raw − floor(flags ÷ 3)
     else heads[SHEET.scores].push(x.label);
   });
   heads[SHEET.scores].push('Last sync', 'Flags (review)');
@@ -846,6 +847,13 @@ function writeScores_(ss, id, doc) {
       var ses = e && e.session;
       if (res) vals.push(res.set || '', tsText_(res.startAt), tsText_(res.endAt), res.flags != null ? Number(res.flags) : '');
       else vals.push(ses && ses.set ? ses.set : '', ses ? tsText_(ses.startAt) : '', ses ? 'In progress' : '', '');
+      return;
+    }
+    if (x.id === 'examFinals') {
+      if (res && res.total) {
+        var fl = Number(res.flags) || 0, ded = Math.floor(fl / 3);
+        vals.push(Math.max(0, Number(res.score) - ded) + '/' + res.total, res.score + '/' + res.total, fl + (ded ? ' (−' + ded + ')' : ''));
+      } else vals.push(e && e.session ? 'In progress' : '', '', '');
       return;
     }
     vals.push(res && res.total ? res.score + '/' + res.total : (e && e.session && e.session.submitted ? 'Submitted' : (e && e.session ? 'In progress' : '')));

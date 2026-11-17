@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.17.5';
+const APP_VERSION = '2026.11.17.6';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1361,7 +1361,10 @@ async function refreshExam(e) {
   const result = await loadExamRecord(e.prefix + '_result');
   const session = await loadExamRecord(e.prefix + '_session');
   if (result || (session && session.submitted)) {
-    setRow(e, e.noQR ? { score: '✓', note: 'Submitted · your instructor releases the results', done: true } : { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
+    if (e.noQR && result && result.total) {   // Finals: score shown, 1 point off per 3 flags
+      const f = Number(result.flags) || 0, d = Math.floor(f / 3);
+      setRow(e, { score: Math.max(0, result.score - d) + '/' + result.total, note: d ? `${result.score} correct − ${d} for ${f} flags` : `${result.score} correct · ${f} flag${f === 1 ? '' : 's'}`, done: true });
+    } else setRow(e, e.noQR ? { score: '✓', note: 'Submitted', done: true } : { score: '✓', end: 'QR', note: 'Submitted — tap to view QR', done: true });
     return;
   }
   if (e.noQR && !session) {   // Finals: the permit photo can be sent while the exam is closed
