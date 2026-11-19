@@ -101,6 +101,7 @@ var SCHEDULE_SEED = [
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
   if (action === 'examGate') return json_({ ok: true, gate: gate_(), now: Date.now() });
+  if (action === 'maint') return json_({ ok: true, maint: maint_(), now: Date.now() });
   if (action === 'schedules') {
     try {
       var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -139,6 +140,10 @@ function doPost(e) {
       var as = SpreadsheetApp.openById(SHEET_ID);
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
+      if (action === 'adminMaint') {
+        if (req.maint) { var mm = setMaint_(req.maint); log_(as, 'ADMIN', 'maintenance', mm.on ? 'on' + (mm.from ? ' from ' + mm.from : '') : 'off'); }
+        return json_({ ok: true, maint: maint_(), now: Date.now() });
+      }
       if (action === 'adminPermits') return json_(adminPermits_(as));
       if (action === 'adminFinalsReset') {
         var fl = LockService.getScriptLock();
@@ -1132,6 +1137,21 @@ function gate_() {
     out[x.id] = { open: v.open === true, from: gateIso_(v.from), until: gateIso_(v.until) };
   });
   return out;
+}
+/* ---- Maintenance mask (maint.js on every student page reads GET ?action=maint) ----
+   Script Property MAINT = { on, from }: on + from blank or past → every student page shows only
+   "THIS SITE IS UNDER MAINTENANCE". Set from the master console. Default (no property yet): on from Nov 19, 2026, 10 PM. */
+var MAINT_DEFAULT = { on: true, from: '2026-11-19T14:00:00.000Z' };
+function maint_() {
+  var raw = PropertiesService.getScriptProperties().getProperty('MAINT');
+  var v = MAINT_DEFAULT;
+  if (raw) { try { v = JSON.parse(raw) || MAINT_DEFAULT; } catch (e) {} }
+  return { on: v.on === true, from: gateIso_(v.from) };
+}
+function setMaint_(inc) {
+  var v = { on: inc && inc.on === true, from: gateIso_(inc && inc.from) };
+  PropertiesService.getScriptProperties().setProperty('MAINT', JSON.stringify(v));
+  return v;
 }
 function setGate_(inc) {
   var cur = gate_();
