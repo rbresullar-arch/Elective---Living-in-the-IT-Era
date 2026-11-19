@@ -841,7 +841,7 @@ const EXAMS = [
     paper: true, opensBySched: () => PREFINAL_OPENS },   // questionnaire only: answers go on the bubble sheet; unlock per schedule
   { id: 'examFinals', label: 'Finals', href: 'finals_exam_ITEra.html', prefix: 'itict_finals', noQR: true },   // permit photo first; scored on the phone, no QR
 ];
-/* Special examinations: online, open to every logged-in class code until Nov 17, 2026, 11:59 PM (Philippine time) */
+/* Special examinations: online, open to every logged-in class code until SPX_CLOSES in Code.gs (Philippine time) */
 const SPECIALS = [
   { id: 'spxPrelim',    exam: 'prelim',    label: 'Special Prelim',    href: 'special_exam_ITEra.html?exam=prelim' },
   { id: 'spxMidterm',   exam: 'midterm',   label: 'Special Midterm',   href: 'special_exam_ITEra.html?exam=midterm' },
