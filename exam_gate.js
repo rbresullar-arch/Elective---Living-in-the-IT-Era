@@ -17,10 +17,12 @@
     try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; }
   }
   function entry(g, id) { return (g && g.gate && g.gate[id]) || null; }
+  /* internet time: the server's clock as of the last check (off = server − phone) */
+  function netNow(g) { return Date.now() + ((g && Number(g.off)) || 0); }
   function isOpen(g, id, now) {
     var v = entry(g, id);
     if (!v || v.open !== true) return false;
-    now = now || Date.now();
+    now = now || netNow(g);
     if (v.from && now < Date.parse(v.from)) return false;
     if (v.until && now >= Date.parse(v.until)) return false;
     return true;
@@ -28,14 +30,15 @@
   /* Fetch the gate (timeout ms). Resolves with the fresh record, or the cached one when offline. */
   function fetchGate(ms) {
     return new Promise(function (resolve) {
-      var done = false, ctl = window.AbortController ? new AbortController() : null;
+      var done = false, ctl = window.AbortController ? new AbortController() : null, t0 = Date.now();
       var t = setTimeout(function () { if (ctl) ctl.abort(); finish(read()); }, ms || 8000);
       function finish(rec) { if (done) return; done = true; clearTimeout(t); resolve(rec); }
       fetch(CLOUD_URL + '?action=examGate', ctl ? { signal: ctl.signal, cache: 'no-store' } : { cache: 'no-store' })
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (!j || !j.ok) return finish(read());
-          var rec = { gate: j.gate || {}, at: Date.now() };   // older server without examGate → {} → all closed
+          var t1 = Date.now();
+          var rec = { gate: j.gate || {}, at: t1, off: j.now ? j.now + (t1 - t0) / 2 - t1 : 0 };   // older server without examGate → {} → all closed
           try { localStorage.setItem(KEY, JSON.stringify(rec)); } catch (e) {}
           finish(rec);
         })
@@ -49,13 +52,13 @@
   }
   /* Short text for a closed exam: when it opens, or the general on-hold line. */
   function closedText(g, id) {
-    var v = entry(g, id), now = Date.now();
+    var v = entry(g, id), now = netNow(g);
     if (v && v.open === true && v.from && now < Date.parse(v.from)) return 'Opens ' + fmt(v.from);
     if (v && v.open === true && v.until && now >= Date.parse(v.until)) return 'Closed ' + fmt(v.until);
     return 'Closed · wait for further announcement';
   }
 
-  window.ExamGate = { read: read, isOpen: isOpen, fetch: fetchGate, closedText: closedText, fmt: fmt };
+  window.ExamGate = { read: read, isOpen: isOpen, fetch: fetchGate, closedText: closedText, fmt: fmt, now: netNow };
 
   /* ---- exam page guard ---- */
   var me = document.currentScript;
