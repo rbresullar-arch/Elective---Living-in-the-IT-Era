@@ -856,7 +856,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.17.7';
+const APP_VERSION = '2026.11.19.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1066,7 +1066,7 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: 'Finals Examination — Today', body: 'Have your examination permit with you. Tap <b>Finals</b> under Examination to open the camera and photograph it. When your instructor allows it, the Finals is unlocked: take it any time until <b>8:00 PM today</b> (Philippine time). One attempt only. <span style="opacity:.8">· Special Prelim, Midterm and Prefinals close tonight, 11:59 PM.</span>' };
+const EXAM_NOTICE = { head: 'Announcement', body: 'Last day of the submission of activities.' };
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
