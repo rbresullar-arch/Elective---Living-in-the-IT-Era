@@ -305,6 +305,17 @@
 
 
   /* Exam announcement (front page) */
+  .grade-card { background:var(--surface); color:var(--ink); border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0;
+    display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .grade-card[hidden] { display:none; }
+  /* End of term (2026-11-20): the home screen shows only the student's final grade or missing exams -
+     the menu (Activities, Examination, Reads), the exam notice, the attendance button and the
+     activity progress chip are hidden. Delete this rule to bring them back. */
+  #screen-home .group.menu, #screen-home [data-exam-notice], #screen-home .att-open, #screen-home #homeProg { display:none !important; }
+  .grade-card .gc-h { font-size:13px; font-weight:600; color:var(--muted); margin:0 0 2px; }
+  .grade-card .gc-when { font-size:12px; color:var(--muted); margin:0; }
+  .grade-card .gc-v { font-size:30px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; }
+  .grade-card.missing .gc-v { font-size:16px; color:var(--red); white-space:normal; text-align:right; }
   .exam-notice { background:#FFD9D6; color:#000; border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0; }
   .exam-notice .en-h { font-size:15px; font-weight:700; letter-spacing:.02em; color:#000; margin:0 0 4px; }
   .exam-notice p { margin:0; font-size:15px; line-height:1.45; }
@@ -412,6 +423,7 @@
         <span class="chipbar" id="homeProg"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="rtrack" cx="18" cy="18" r="14" fill="none" stroke-width="6"/><circle class="rfill" cx="18" cy="18" r="14" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="0 88"/></svg><span class="ptext">Activities</span></span></div>
     </div>
     <div class="exam-notice" data-exam-notice></div>
+    <div class="grade-card" id="gradeCard" hidden aria-live="polite"></div>
     <button type="button" class="att-open" data-att-open>SCAN ATTENDANCE</button>
     <div id="cloudStatus" role="status"></div>
 
@@ -857,7 +869,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.19.4';
+const APP_VERSION = '2026.11.20.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -2192,6 +2204,31 @@ function cloudAcct() {
   try { const a = JSON.parse(localStorage.getItem(CLOUD_ACCT_KEY) || 'null'); return a && a.id && a.pin ? a : null; }
   catch (e) { return null; }
 }
+/* ===== My grade (posted by the instructor's grading system) =====
+   The server puts only this account's row in the reply to its own PIN-checked save / log in.
+   It is kept in memory only (never in localStorage, cookies or IndexedDB), shown only while the
+   same class code is logged in, and gone when the page closes or the student logs out. */
+let myGrade = null;
+function setMyGrade(g, code) {
+  myGrade = g && code && (g.grade != null || g.note) ? { code, grade: g.grade, note: g.note || '', posted: g.posted || '' } : null;
+  renderMyGrade();
+}
+function renderMyGrade() {
+  const el = document.getElementById('gradeCard');
+  if (!el) return;
+  const g = myGrade && myGrade.code === cloudCode() ? myGrade : null;
+  el.hidden = !g;
+  el.classList.toggle('missing', !!(g && g.note));
+  el.textContent = '';
+  if (!g) return;
+  const left = document.createElement('div');
+  const h = document.createElement('p'); h.className = 'gc-h'; h.textContent = 'Final grade';
+  left.appendChild(h);
+  if (g.posted) { const w = document.createElement('p'); w.className = 'gc-when'; w.textContent = 'As of ' + g.posted.slice(0, 16); left.appendChild(w); }
+  const v = document.createElement('div'); v.className = 'gc-v';
+  v.textContent = g.note ? g.note : Number(g.grade).toFixed(1);
+  el.append(left, v);
+}
 function cloudIsLegacy(a) { return !!(a && !isCode(a.id)); }
 function cloudCode() { const a = cloudAcct(); return a && isCode(a.id) ? a.id : ''; }
 function cloudSetAcct(a) { try { localStorage.setItem(CLOUD_ACCT_KEY, JSON.stringify(a)); } catch (e) {} }
@@ -2310,6 +2347,7 @@ function cloudSync(opts) {
     const res = await cloudCall({ action: 'save', id: acct.id, pin: acct.pin, data });
     if (res.ok) {
       cloudLastOk = Date.now();
+      setMyGrade(res.grade, acct.id);
       await applyCloud(res.data);
       refreshAll();
       setCloudStatus('Scores backed up · ' + cloudTime());
@@ -2585,6 +2623,7 @@ function idbClearAll(dbName) {
 /* Remove every student record from this device (all four storage layers).
    Keeps only the Terms & Privacy acknowledgement and sound/display settings. */
 async function wipeDevice() {
+  setMyGrade(null);
   const keep = k => KEEP_ON_LOGOUT.includes(k);
   [localStorage, sessionStorage].forEach(st => {
     try {
@@ -2687,6 +2726,7 @@ async function loginSubmit() {
   if (res.ok) {
     await prepareDeviceFor(code);
     await cloudAdopt(code, hash, res.data || {});
+    setMyGrade(res.grade, code);
     knownApply(code, auth.liRemember.checked);
     authOpen(code);
     if (res.pinSet) setCloudStatus('New PIN saved · logged in.');
