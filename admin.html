@@ -55,6 +55,11 @@
   .pm-acts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .btn.deny { background:var(--red, #D70015); }
   .btn.allow { background:#248A3D; }
+  .db-g { margin:0 0 12px; }
+  .db-g b { display:block; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin:0 0 6px; }
+  .db-i { display:flex; align-items:center; gap:10px; padding:7px 2px; margin:0; font-size:15px; font-weight:400; text-transform:none; letter-spacing:normal; color:var(--ink, inherit); border-bottom:1px solid var(--field); cursor:pointer; }
+  .db-i input { width:18px; height:18px; flex:none; }
+  .db-i.off span { color:var(--muted); text-decoration:line-through; }
   .pm-empty { text-align:center; color:var(--muted); padding:30px 10px; }
   .pm-badge { position:absolute; top:10px; left:10px; padding:6px 10px; border-radius:8px; font-weight:700; font-size:14px; color:#fff; }
   .pm-badge.a { background:#248A3D; } .pm-badge.d { background:#D70015; }
@@ -172,6 +177,32 @@
       </div>
       <p class="msg" id="editMsg"></p>
     </div>
+  </section>
+
+  <!-- Announcement on the students' Home screen (Script Property SITE.notice) -->
+  <section class="card" id="anCard" hidden>
+    <div class="head"><strong style="font-family:var(--sans)">Announcement</strong>
+      <div class="tools"><button class="link" id="anReload" type="button">Reload</button></div>
+    </div>
+    <p class="exam-state" id="anState" style="margin:0 0 10px">…</p>
+    <input id="anHead" maxlength="120" placeholder="Title (e.g. Announcement)">
+    <textarea id="anBody" maxlength="2000" rows="4" placeholder="Message shown on every student's Home screen" style="width:100%;margin-top:8px;border:none;background:var(--field);border-radius:10px;padding:12px 14px;font:inherit;resize:vertical"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="anPost" type="button" style="flex:1">Post / Update</button>
+      <button class="btn ghost" id="anClear" type="button">Clear</button>
+    </div>
+    <p class="msg" id="anMsg"></p>
+  </section>
+
+  <!-- What students see on their dashboard (Script Property SITE.hidden) -->
+  <section class="card" id="dbCard" hidden>
+    <div class="head"><strong style="font-family:var(--sans)">Dashboard</strong>
+      <div class="tools"><button class="link" id="dbAll" type="button">Show all</button><button class="link" id="dbReload" type="button">Reload</button></div>
+    </div>
+    <p class="exam-state" style="margin:0 0 10px">Ticked = shown to students. Untick to hide it from their dashboard (the page itself stays reachable by its link). Activities, examinations and reads are only reachable through the Home menu, so keep the menu ticked to show any of them.</p>
+    <div id="dbList"></div>
+    <button class="btn" id="dbSave" type="button" style="margin-top:10px">Save</button>
+    <p class="msg" id="dbMsg"></p>
   </section>
 
   <!-- Maintenance mask: every student page shows only "THIS SITE IS UNDER MAINTENANCE" while on (maint.js) -->
@@ -298,7 +329,8 @@ function authFail(r) {
 }
 
 function showSignedIn(on) {
-  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on; $('examCard').hidden = !on; $('spCard').hidden = !on; $('attCard').hidden = !on; $('pmCard').hidden = !on; $('mtCard').hidden = !on;
+  $('loginCard').hidden = on; $('lookupCard').hidden = !on; $('signOut').hidden = !on; $('examCard').hidden = !on; $('spCard').hidden = !on; $('attCard').hidden = !on; $('pmCard').hidden = !on; $('mtCard').hidden = !on; $('anCard').hidden = !on; $('dbCard').hidden = !on;
+  if (on) siteLoad();
   if (on) mtLoad();
   if (on) pmLoad(); else clearInterval(pmTimer);
   if (!on) $('resultCard').hidden = true;
@@ -577,6 +609,49 @@ $('confirmNo').addEventListener('click', () => { $('confirm').hidden = true; });
 $('selAll').addEventListener('click', () => selectAll(true));
 $('selNone').addEventListener('click', () => selectAll(false));
 $('signOut').addEventListener('click', signOut);
+
+/* ===== Announcement + Dashboard (GET ?action=site on the students' Home) ===== */
+const DB_GROUPS = [
+  { t: 'Home screen', items: [['home:menu', 'Menu: Activities, Examination, Reads'], ['home:attendance', 'SCAN ATTENDANCE button'], ['home:progress', 'Activities progress chip']] },
+  { t: 'Activities', items: NAMES.map((n, i) => ['activity' + (i + 1), `A${i + 1} · ${n}`]) },
+  { t: 'Examinations', items: [['examPrelim', 'Prelim'], ['exam1', 'Midterm'], ['examPrefinal', 'Prefinal'], ['examFinals', 'Finals'],
+      ['spxPrelim', 'Special Prelim'], ['spxMidterm', 'Special Midterm'], ['spxPrefinals', 'Special Prefinals']] },
+  { t: 'Reads', items: [['readPrelim', 'Prelim read'], ['readMidterm', 'Midterm read'], ['readPrefinals', 'Prefinals read'], ['readFinals', 'Finals read']] }
+];
+let siteCur = null;
+function anPaint(n) {
+  $('anHead').value = n.head || ''; $('anBody').value = n.body || '';
+  $('anState').textContent = n.body ? 'Showing on every student’s Home screen.' : 'No announcement is showing.';
+}
+function dbPaint(hidden) {
+  const H = new Set(hidden || []);
+  $('dbList').innerHTML = DB_GROUPS.map(g => `<div class="db-g"><b>${g.t}</b>${g.items.map(([id, label]) =>
+    `<label class="db-i${H.has(id) ? ' off' : ''}"><input type="checkbox" data-id="${id}" ${H.has(id) ? '' : 'checked'}><span>${label.replace(/</g, '&lt;')}</span></label>`).join('')}</div>`).join('');
+  $('dbList').querySelectorAll('input').forEach(c => c.addEventListener('change', () => { c.closest('.db-i').classList.toggle('off', !c.checked); setMsg($('dbMsg'), 'Not saved yet.'); }));
+}
+async function siteLoad() {
+  const r = await call({ action: 'adminSite' });
+  if (!r.ok) { if (!authFail(r)) { setMsg($('anMsg'), ERR[r.error] || 'Could not load.', 'err'); setMsg($('dbMsg'), ERR[r.error] || 'Could not load.', 'err'); } return; }
+  siteCur = r.site; anPaint(r.site.notice); dbPaint(r.site.hidden); setMsg($('anMsg'), ''); setMsg($('dbMsg'), '');
+}
+async function siteSave(part, msgEl, okText) {
+  setMsg(msgEl, 'Saving…');
+  const r = await call({ action: 'adminSite', site: part });
+  if (!r.ok) { if (!authFail(r)) setMsg(msgEl, ERR[r.error] || 'Not saved.', 'err'); return; }
+  siteCur = r.site; anPaint(r.site.notice); dbPaint(r.site.hidden); setMsg(msgEl, okText, 'ok');
+}
+$('anPost').addEventListener('click', () => {
+  const head = $('anHead').value.trim(), body = $('anBody').value.trim();
+  if (!body) { setMsg($('anMsg'), 'Write the message first (or use Clear).', 'err'); return; }
+  siteSave({ notice: { head: head || 'Announcement', body } }, $('anMsg'), 'Posted. Students see it the next time their Home screen loads.');
+});
+$('anClear').addEventListener('click', () => { if (confirm('Remove the announcement from every student’s Home screen?')) siteSave({ notice: { head: '', body: '' } }, $('anMsg'), 'Cleared.'); });
+$('dbSave').addEventListener('click', () => {
+  const hidden = [...$('dbList').querySelectorAll('input')].filter(c => !c.checked).map(c => c.dataset.id);
+  siteSave({ hidden }, $('dbMsg'), hidden.length ? `Saved. ${hidden.length} hidden.` : 'Saved. Everything is shown.');
+});
+$('dbAll').addEventListener('click', () => { $('dbList').querySelectorAll('input').forEach(c => { c.checked = true; c.closest('.db-i').classList.remove('off'); }); setMsg($('dbMsg'), 'Not saved yet.'); });
+$('anReload').addEventListener('click', siteLoad); $('dbReload').addEventListener('click', siteLoad);
 
 /* ===== Maintenance ===== */
 function mtPaint(m) {

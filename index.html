@@ -308,10 +308,9 @@
   .grade-card { background:var(--surface); color:var(--ink); border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0;
     display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .grade-card[hidden] { display:none; }
-  /* End of term (2026-11-20): the home screen shows only the student's final grade or missing exams -
-     the menu (Activities, Examination, Reads), the exam notice, the attendance button and the
-     activity progress chip are hidden. Delete this rule to bring them back. */
-  #screen-home .group.menu, #screen-home [data-exam-notice], #screen-home .att-open, #screen-home #homeProg { display:none !important; }
+  /* Hidden from the dashboard by the instructor (admin.html → Dashboard; GET ?action=site). The end-of-term
+     Home (menu, attendance button and progress chip hidden) is now the default of those settings. */
+  .admin-hidden { display:none !important; }
   .grade-card .gc-h { font-size:13px; font-weight:600; color:var(--muted); margin:0 0 2px; }
   .grade-card .gc-when { font-size:12px; color:var(--muted); margin:0; }
   .grade-card .gc-v { font-size:30px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; }
@@ -869,7 +868,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.20.2';
+const APP_VERSION = '2026.11.20.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -915,6 +914,7 @@ function el(tag, cls, text) {
 
 function buildRow(item, scoreText, tile, title) {
   const wrap = el('div', 'row');
+  wrap.dataset.item = item.id;
   const btn = el('a', 'box pill');
   btn.id = item.id + 'Btn';
   btn.href = item.href;
@@ -952,6 +952,7 @@ function buildExamRow(e, i) {
 function buildRedoRow(a) {
   const wrap = el('div', 'row');
   wrap.id = a.id + 'RedoRow';
+  wrap.dataset.item = a.id;
   wrap.style.display = 'none';
   const btn = el('button', 'box pill');
   btn.type = 'button';
@@ -1042,6 +1043,7 @@ function buildLists() {
   readList.innerHTML = '';
   READS.forEach((r, i) => {
     const row = el('div', 'row');
+    row.dataset.item = 'read' + r.label.replace(/\W/g, '');
     const a = el('a', 'box pill');
     a.href = r.href;
     const txt = el('span', 'pill-text');
@@ -1079,13 +1081,46 @@ function fmtUnlock(iso) {
   return new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(Date.parse(iso));
 }
 /* Front-page announcement. Edit EXAM_NOTICE to change it; '' hides the box. */
-const EXAM_NOTICE = { head: 'Announcement', body: 'Last day of the submission of activities.' };
+const EXAM_NOTICE = { head: '', body: '' };   // set from the instructor's dashboard settings (applySite)
 function renderExamNotice() {
   document.querySelectorAll('[data-exam-notice]').forEach(box => {
     box.hidden = !EXAM_NOTICE.body;
     box.innerHTML = EXAM_NOTICE.body ? `<p class="en-h">${EXAM_NOTICE.head}</p><p>${EXAM_NOTICE.body}</p>` : '';
   });
 }
+/* ===== Dashboard settings from the instructor (admin.html → Announcement / Dashboard) =====
+   GET <CLOUD_URL>?action=site → { site: { notice: { head, body }, hidden: [ids] } }. Plain text, escaped here.
+   The last answer is kept on the phone (itict_site) so the page shows it at once; asked again on load,
+   when the page comes back to the screen, and every 5 minutes. */
+const SITE_KEY = 'itict_site';
+const SITE_DEFAULT = { notice: { head: '', body: '' }, hidden: ['home:menu', 'home:attendance', 'home:progress'] };
+let SITE = (() => { try { const x = JSON.parse(localStorage.getItem(SITE_KEY) || 'null'); return x && Array.isArray(x.hidden) ? x : SITE_DEFAULT; } catch (e) { return SITE_DEFAULT; } })();
+function siteHides(id) { return SITE.hidden.includes(id); }
+const escHtml = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function applySite() {
+  const n = SITE.notice || {};
+  EXAM_NOTICE.head = escHtml(n.head);
+  EXAM_NOTICE.body = escHtml(n.body).replace(/\n/g, '<br>');
+  renderExamNotice();
+  const sec = { 'home:menu': '#screen-home .group.menu', 'home:attendance': '[data-att-open]', 'home:progress': '#homeProg' };
+  Object.keys(sec).forEach(k => document.querySelectorAll(sec[k]).forEach(x => x.classList.toggle('admin-hidden', siteHides(k))));
+  document.querySelectorAll('[data-item]').forEach(x => x.classList.toggle('admin-hidden', siteHides(x.dataset.item)));
+  try { paintTermCounts(); } catch (e) {}
+  if (typeof refreshActivities === 'function' && document.getElementById('activityList').children.length) refreshActivities();
+}
+let siteAt = 0;
+function siteFetch() {
+  if (Date.now() - siteAt < 20000) return;
+  siteAt = Date.now();
+  fetch(CLOUD_URL + '?action=site', { cache: 'no-store' }).then(r => r.json()).then(j => {
+    if (!j || !j.ok || !j.site) return;
+    SITE = j.site;
+    try { localStorage.setItem(SITE_KEY, JSON.stringify(SITE)); } catch (e) {}
+    applySite();
+  }).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) siteFetch(); });
+setInterval(siteFetch, 300000);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderExamNotice); else renderExamNotice();
 setTimeout(() => refreshExamGate(), 0);   // front page too: the notice follows the gate
 
@@ -1101,7 +1136,8 @@ function paintTermCounts() {
   ACT_TERMS.forEach(t => {
     const sec = document.querySelector(`#activityList .term[data-term="${t.label}"]`);
     if (!sec) return;
-    const acts = t.acts.map(n => ACTIVITIES[n - 1]).filter(Boolean);
+    const acts = t.acts.map(n => ACTIVITIES[n - 1]).filter(a => a && !siteHides(a.id));
+    sec.classList.toggle('admin-hidden', !acts.length);   // every activity of the term hidden
     const done = acts.filter(a => { const b = document.getElementById(a.id + 'Btn'); return b && b.classList.contains('done'); }).length;
     const max = acts.reduce((s, a) => s + actPoints(a), 0);
     const got = acts.reduce((s, a) => { const r = actRecs[a.n - 1]; return s + (r ? Math.round(qrScorePct(a, r) / 100 * actPoints(a)) : 0); }, 0);
@@ -1245,7 +1281,8 @@ async function refreshActivities() {
 
 /* Progress ring on Home and Activities (presentation only). */
 function updateProgress(recs) {
-  const done = recs.filter(Boolean).length, total = ACTIVITIES.length;
+  const vis = ACTIVITIES.map((a, i) => !siteHides(a.id) ? i : -1).filter(i => i >= 0);
+  const done = vis.filter(i => recs[i]).length, total = vis.length;
   const dash = total ? (done / total * 88).toFixed(1) + ' 88' : '0 88';
   document.querySelectorAll('#homeProg .rfill, #actSummary .rfill').forEach(c => c.setAttribute('stroke-dasharray', dash));
   const t = `${done} of ${total}`;
@@ -2979,6 +3016,8 @@ lo.cancel.addEventListener('click', logoutClose);
 lo.ok.addEventListener('click', logoutRun);
 
 buildLists();
+applySite();
+siteFetch();
 document.getElementById('appVersion').textContent = 'Version ' + APP_VERSION;
 
 /* Refresh statuses when returning via Back (bfcache restore) */

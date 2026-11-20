@@ -102,6 +102,7 @@ function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
   if (action === 'examGate') return json_({ ok: true, gate: gate_(), now: Date.now() });
   if (action === 'maint') return json_({ ok: true, maint: maint_(), now: Date.now() });
+  if (action === 'site') return json_({ ok: true, site: site_(), now: Date.now() });
   if (action === 'schedules') {
     try {
       var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -140,6 +141,10 @@ function doPost(e) {
       var as = SpreadsheetApp.openById(SHEET_ID);
       ensureSheetsOnce_(as);
       if (action === 'adminLogin') return json_({ ok: true });
+      if (action === 'adminSite') {
+        if (req.site) { var sv = setSite_(req.site); log_(as, 'ADMIN', 'site', (sv.notice.body ? 'announcement: ' + sv.notice.body.slice(0, 60) : 'no announcement') + ' · hidden: ' + (sv.hidden.join(', ') || 'none')); }
+        return json_({ ok: true, site: site_(), now: Date.now() });
+      }
       if (action === 'adminMaint') {
         if (req.maint) { var mm = setMaint_(req.maint); log_(as, 'ADMIN', 'maintenance', mm.on ? 'on' + (mm.from ? ' from ' + mm.from : '') : 'off'); }
         return json_({ ok: true, maint: maint_(), now: Date.now() });
@@ -1197,6 +1202,33 @@ function maint_() {
   var v = MAINT_DEFAULT;
   if (raw) { try { v = JSON.parse(raw) || MAINT_DEFAULT; } catch (e) {} }
   return { on: v.on === true, from: gateIso_(v.from) };
+}
+/* ---- Student dashboard settings (index.html reads GET ?action=site) ----
+   Script Property SITE = { notice: { head, body }, hidden: [ids] }. Plain text only (the page escapes it).
+   ids: activity1…activity13, examPrelim, exam1, examPrefinal, examFinals, spxPrelim, spxMidterm, spxPrefinals,
+   readPrelim, readMidterm, readPrefinals, readFinals, and the Home sections home:menu, home:attendance, home:progress.
+   Default (nothing saved yet) = the end-of-term Home: no announcement, the three Home sections hidden. */
+var SITE_DEFAULT = { notice: { head: '', body: '' }, hidden: ['home:menu', 'home:attendance', 'home:progress'] };
+function cleanSite_(v) {
+  v = v || {};
+  var n = v.notice || {};
+  var hidden = (Array.isArray(v.hidden) ? v.hidden : []).map(String)
+    .filter(function (x, i, a) { return /^[A-Za-z0-9:_-]{1,40}$/.test(x) && a.indexOf(x) === i; }).slice(0, 100);
+  return { notice: { head: String(n.head || '').slice(0, 120), body: String(n.body || '').slice(0, 2000) }, hidden: hidden };
+}
+function site_() {
+  var raw = PropertiesService.getScriptProperties().getProperty('SITE');
+  if (!raw) return cleanSite_(SITE_DEFAULT);
+  try { return cleanSite_(JSON.parse(raw)); } catch (e) { return cleanSite_(SITE_DEFAULT); }
+}
+function setSite_(inc) {
+  var cur = site_(), v = {
+    notice: inc.notice !== undefined ? inc.notice : cur.notice,
+    hidden: inc.hidden !== undefined ? inc.hidden : cur.hidden
+  };
+  v = cleanSite_(v);
+  PropertiesService.getScriptProperties().setProperty('SITE', JSON.stringify(v));
+  return v;
 }
 function setMaint_(inc) {
   var v = { on: inc && inc.on === true, from: gateIso_(inc && inc.from) };
