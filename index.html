@@ -869,7 +869,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.20.1';
+const APP_VERSION = '2026.11.20.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -2216,7 +2216,12 @@ function setMyGrade(g, code) {
 function renderMyGrade() {
   const el = document.getElementById('gradeCard');
   if (!el) return;
-  const g = myGrade && myGrade.code === cloudCode() ? myGrade : null;
+  const g0 = myGrade && myGrade.code === cloudCode() ? myGrade : null;
+  /* Only a missing FINAL exam is shown. A note about other exams (Prelim, Midterm, Prefinal) is not:
+     the grade is shown instead. "Prefinal" / "Pre-final" do not count as the Final. */
+  const missFinal = !!(g0 && g0.note && /(^|[^a-z-])finals?\b/i.test(g0.note));
+  const hasGrade = !!(g0 && g0.grade != null && g0.grade !== '' && isFinite(Number(g0.grade)));
+  const g = g0 && (missFinal || hasGrade) ? { posted: g0.posted, note: missFinal ? 'Missing Final exam' : '', grade: g0.grade } : null;
   el.hidden = !g;
   el.classList.toggle('missing', !!(g && g.note));
   el.textContent = '';
