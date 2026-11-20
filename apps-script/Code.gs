@@ -165,6 +165,11 @@ function doPost(e) {
       if (action === 'adminLookup') return json_(adminLookup_(as, req));
       if (action === 'adminScores') return json_(adminScores_(as));
       if (action === 'adminAttendance') return json_(adminAttendance_(as));
+      if (action === 'adminGrades') {
+        var gl = LockService.getScriptLock();
+        try { gl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminGrades_(as, req)); } finally { gl.releaseLock(); }
+      }
       if (action === 'adminExamGate') {
         if (!req.gate) return json_({ ok: true, gate: gate_(), now: Date.now() });
         var g = setGate_(req.gate);
@@ -271,7 +276,7 @@ function saveRestore_(ss, req, pin, action) {
   if (stored) stored.sched = id.slice(0, 5);            // the code fixes the schedule
   if (action === 'restore') {
     log_(ss, id, 'restore', stored ? (auth.claimed ? 'ok · new PIN set' : 'ok') : 'empty');
-    return { ok: true, data: stored || {}, pinSet: !!auth.claimed };
+    return { ok: true, data: stored || {}, pinSet: !!auth.claimed, grade: gradeFor_(ss, id) };
   }
   var incoming = cleanIncoming_(req.data);
   incoming.sched = id.slice(0, 5);
@@ -284,7 +289,7 @@ function saveRestore_(ss, req, pin, action) {
       if (fr && String(fs.getRange(fr, 4).getDisplayValue()) !== 'Submitted') permitMark_(ss, id, 'finals', 'Submitted', 8); } catch (e) {}
   }
   log_(ss, id, 'save', 'ok');
-  return { ok: true, data: merged };
+  return { ok: true, data: merged, grade: gradeFor_(ss, id) };
 }
 
 /* Profile → change schedule. The first 5 digits of a class code are the schedule, so the
@@ -1063,6 +1068,51 @@ function adminAttendance_(ss) {
   var rows = vals.slice(1).filter(function (r) { return String(r[1] || '').trim(); });
   log_(ss, 'ADMIN', 'attendance export', rows.length + ' rows');
   return { ok: true, head: vals[0], rows: rows, now: Date.now() };
+}
+
+/* ---------------- grades (posted by the instructor's grading system) ----------------
+   The Grades tab holds one row per class code: the final grade, or a note such as
+   "Missing Final exam". Only the instructor writes it (adminGrades, replaces the whole tab).
+   A student gets only the row of their own code, inside the reply to their own PIN-checked
+   save / log in; the page keeps it in memory only. */
+var GRADES_TAB = 'Grades';
+var GRADES_HEAD = ['Code', 'Final grade', 'Note', 'Posted (PH)'];
+function adminGrades_(ss, req) {
+  var rows = Array.isArray(req.rows) ? req.rows : [];
+  var stamp = phNow_(), out = [], seen = {};
+  rows.forEach(function (r) {
+    var code = String(r && r.code || '').trim().toUpperCase();
+    if (!CODE_RE.test(code) || seen[code]) return;
+    seen[code] = true;
+    var g = Number(r.grade);
+    var grade = (r.grade === null || r.grade === '' || isNaN(g) || g < 0 || g > 100) ? '' : Math.round(g * 10) / 10;
+    var note = String(r.note || '').slice(0, 120);
+    if (grade === '' && !note) return;
+    out.push([code, grade, note, stamp]);
+  });
+  var sh = ss.getSheetByName(GRADES_TAB) || ss.insertSheet(GRADES_TAB);
+  sh.clearContents();
+  sh.getRange(1, 1, 1, GRADES_HEAD.length).setValues([GRADES_HEAD]).setFontWeight('bold');
+  if (out.length) {
+    sh.getRange(2, 1, out.length, 1).setNumberFormat('@');
+    sh.getRange(2, 1, out.length, GRADES_HEAD.length).setValues(out);
+  }
+  log_(ss, 'ADMIN', 'grades posted', out.length + ' codes');
+  return { ok: true, posted: out.length, at: stamp };
+}
+function gradeFor_(ss, id) {
+  try {
+    var sh = ss.getSheetByName(GRADES_TAB);
+    if (!sh || sh.getLastRow() < 2) return null;
+    var code = String(id || '').trim().toUpperCase();
+    var vals = sh.getRange(2, 1, sh.getLastRow() - 1, GRADES_HEAD.length).getDisplayValues();
+    for (var i = 0; i < vals.length; i++) {
+      if (String(vals[i][0]).trim().toUpperCase() === code) {
+        return { grade: vals[i][1] === '' ? null : Number(vals[i][1]), note: vals[i][2], posted: vals[i][3] };
+      }
+    }
+  } catch (e) {}
+  return null;
 }
 
 function adminScores_(ss) {
