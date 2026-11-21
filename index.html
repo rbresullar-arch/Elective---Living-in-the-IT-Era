@@ -315,6 +315,31 @@
   .grade-card .gc-when { font-size:12px; color:var(--muted); margin:0; }
   .grade-card .gc-v { font-size:30px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; }
   .grade-card.missing .gc-v { font-size:16px; color:var(--red); white-space:normal; text-align:right; }
+  .grade-card { flex-wrap:wrap; }
+  .grade-card .gc-req { flex-basis:100%; margin:8px 0 0; padding-top:8px; border-top:1px solid var(--sep); font-size:13px; line-height:1.4; color:var(--red); }
+  .dm-card { background:var(--surface); color:var(--ink); border-radius:16px; box-shadow:var(--sh-1); padding:12px 14px; margin:14px 0 0; }
+  .dm-card[hidden] { display:none; }
+  .dm-head { display:flex; align-items:center; justify-content:space-between; }
+  .dm-h { font-size:13px; font-weight:600; color:var(--muted); margin:0; }
+  .dm-list { max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:8px 0; }
+  .dm-msg { max-width:85%; padding:8px 11px; border-radius:14px; background:var(--fill); }
+  .dm-msg.mine { align-self:flex-end; background:var(--blue); color:var(--blue-ink); }
+  .dm-msg.theirs { align-self:flex-start; }
+  .dm-text { margin:0; font-size:15px; line-height:1.4; overflow-wrap:anywhere; white-space:pre-wrap; }
+  .dm-msg img { display:block; max-width:100%; height:auto; border-radius:9px; margin-top:6px; }
+  .dm-meta { margin:3px 0 0; font-size:11px; opacity:.75; }
+  .dm-acts { margin:2px 0 0; }
+  .dm-msg.mine .dm-link { color:var(--blue-ink); }
+  .dm-link { background:none; border:0; padding:2px 6px 2px 0; color:var(--blue); font:inherit; font-size:13px; cursor:pointer; }
+  .dm-note { margin:6px 0; font-size:13px; color:var(--muted); }
+  .dm-comp textarea { width:100%; box-sizing:border-box; resize:none; border-radius:12px; border:1px solid var(--sep); padding:9px 11px; font:inherit; font-size:15px; background:var(--field); color:var(--ink); }
+  .dm-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .dm-row input { flex:1; min-width:0; border-radius:10px; border:1px solid var(--sep); padding:8px 10px; font:inherit; background:var(--field); color:var(--ink); }
+  .dm-count { margin-left:auto; font-size:12px; color:var(--muted); }
+  .dm-send { background:var(--blue); color:var(--blue-ink); border:0; border-radius:10px; padding:8px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  .dm-send:disabled { opacity:.5; }
+  .dm-attach { margin-top:6px; }
+  .dm-attach img { display:block; max-width:160px; border-radius:8px; }
   .exam-notice { background:#FFD9D6; color:#000; border-radius:16px; box-shadow:var(--sh-1); padding:14px 16px; margin:14px 0 0; }
   .exam-notice .en-h { font-size:15px; font-weight:700; letter-spacing:.02em; color:#000; margin:0 0 4px; }
   .exam-notice p { margin:0; font-size:15px; line-height:1.45; }
@@ -423,6 +448,7 @@
     </div>
     <div class="exam-notice" data-exam-notice></div>
     <div class="grade-card" id="gradeCard" hidden aria-live="polite"></div>
+    <div class="dm-card" id="dmCard" hidden></div>
     <button type="button" class="att-open" data-att-open>SCAN ATTENDANCE</button>
     <div id="cloudStatus" role="status"></div>
 
@@ -518,10 +544,13 @@
         <li>Your <b>activity and examination results</b>: scores, answers, and start and finish times.</li>
         <li>A <b>scrambled code made from your PIN</b>. Your 6-digit PIN itself never leaves your device.</li>
         <li>A <b>backup log</b>: the time and result of each backup.</li>
+        <li>Your <b>private messages</b> with your instructor, and any picture you choose to attach to one. They are
+          <b>encrypted on your phone</b> before they are sent: only you and your instructor can read them, not the
+          site or anyone who opens the records. A message you delete is removed.</li>
       </ul>
 
       <h3>What is not collected</h3>
-      <p>No name, student ID, email, phone number, address, location, photos, contacts or device details. Any name typed in an activity or examination is removed before the online backup.</p>
+      <p>No name, student ID, email, phone number, address, location, photos (other than a picture you choose to send in a private message), contacts or device details. Any name typed in an activity or examination is removed before the online backup.</p>
 
       <h3>Your name</h3>
       <p>Your name is never stored online. You type it only when you make <b>My Score QR</b>. It goes into the QR image, which your instructor scans in class to match your class code to your name. That match is kept only on your instructor's own computer, offline.</p>
@@ -868,7 +897,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.20.3';
+const APP_VERSION = '2026.11.21.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -2270,7 +2299,283 @@ function renderMyGrade() {
   const v = document.createElement('div'); v.className = 'gc-v';
   v.textContent = g.note ? g.note : Number(g.grade).toFixed(1);
   el.append(left, v);
+  /* Every requirement with no saved score ("Missing: Prelim exam, Activity 3, ..."), under the grade.
+     A missing Final exam is already the big line, so it is left out here. */
+  const items = String(g0.note || '').replace(/^\s*missing:?\s*/i, '').split(',')
+    .map(x => x.trim()).filter(x => x && !/^finals?( exam)?$/i.test(x));
+  if (items.length) {
+    const r = document.createElement('p'); r.className = 'gc-req';
+    r.textContent = (missFinal ? 'Also missing: ' : 'Missing: ') + items.join(', ');
+    el.appendChild(r);
+  }
 }
+
+/* ===== Direct messages with the instructor: end-to-end encrypted =====
+   Keys: ECDH P-256. The instructor's public key comes from the server (dmKeys / dmList); its private key
+   never leaves the instructor's PC. This phone's private key is made here, kept in IndexedDB on this
+   device (cleared on log out), and stored on the server only *wrapped* with a key derived from the
+   6-digit PIN (PBKDF2, 310,000 rounds) - the PIN itself is never sent anywhere.
+   Message key = HKDF-SHA256(ECDH(this phone, instructor), salt "itict-dm|<code>"), AES-256-GCM.
+   Text (up to 120 characters) and an optional picture (shrunk to 360p) are sealed on this phone; the
+   server stores and passes on ciphertext only. */
+const DM_TEXT_MAX = 120, DM_IMG_BYTES = 33000, DM_PBKDF2 = 310000, DM_POLL_MS = 45000;
+const dmEnc = new TextEncoder(), dmDec = new TextDecoder();
+const dm = { code: '', priv: null, aes: null, admin: '', list: [], img: {}, editing: null, attach: null,
+             busy: false, lastRefresh: 0, needPin: false, status: '' };
+
+function dmB64e(buf) {
+  const u = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function dmB64d(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+async function dmSeal(key, bytes, aad) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: dmEnc.encode(aad) }, key, bytes);
+  return 'v1.' + dmB64e(iv) + '.' + dmB64e(ct);
+}
+async function dmOpen(key, sealed, aad) {
+  const p = String(sealed || '').split('.');
+  if (p.length !== 3 || p[0] !== 'v1') throw new Error('format');
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: dmB64d(p[1]), additionalData: dmEnc.encode(aad) }, key, dmB64d(p[2])));
+}
+async function dmPinKey(pin, code) {
+  const base = await crypto.subtle.importKey('raw', dmEnc.encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: dmEnc.encode('itict-dm-key|' + code), iterations: DM_PBKDF2 },
+                                 base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+const dmCurve = { name: 'ECDH', namedCurve: 'P-256' };
+
+/* With the PIN in hand (log in / create account): unlock this account's key, or make one. */
+async function dmSetupWithPin(code, pin, hash) {
+  try {
+    if (!window.crypto || !crypto.subtle) return false;
+    const res = await cloudCall({ action: 'dmKeys', id: code, pin: hash });
+    if (!res.ok) return res.error === 'pin' ? 'pin' : false;
+    const wk = await dmPinKey(pin, code);
+    let priv = null;
+    if (res.mine && res.mine.wrapped) {
+      try {
+        const pk8 = await dmOpen(wk, res.mine.wrapped, 'key|' + code);
+        priv = await crypto.subtle.importKey('pkcs8', pk8, dmCurve, false, ['deriveBits']);
+      } catch (e) { priv = null; }          // made with an older PIN (PIN was reset): start a new key
+    }
+    if (!priv) {
+      const kp = await crypto.subtle.generateKey(dmCurve, true, ['deriveBits']);
+      const pk8 = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+      const pub = await crypto.subtle.exportKey('raw', kp.publicKey);
+      const r2 = await cloudCall({ action: 'dmSetKey', id: code, pin: hash, pub: dmB64e(pub), wrapped: await dmSeal(wk, pk8, 'key|' + code) });
+      if (!r2.ok) return false;
+      priv = await crypto.subtle.importKey('pkcs8', pk8, dmCurve, false, ['deriveBits']);
+    }
+    await idbSet('dm_priv_' + code, priv);          // a CryptoKey that cannot be exported
+    Object.assign(dm, { code, priv, aes: null, admin: res.admin || '', needPin: false, list: [], img: {} });
+    dmRefresh(true);
+    return true;
+  } catch (e) { return false; }
+}
+async function dmLoadKey() {
+  const code = cloudCode();
+  if (!code) { dmReset(); return; }
+  if (dm.code === code && dm.priv) return;
+  const priv = await idbGet('dm_priv_' + code);
+  Object.assign(dm, { code, priv: priv || null, aes: null, needPin: !priv, list: [], img: {} });
+  dmRender();
+  if (priv) dmRefresh(true);
+}
+function dmReset() {
+  for (const k in dm.img) { try { URL.revokeObjectURL(dm.img[k]); } catch (e) {} }
+  Object.assign(dm, { code: '', priv: null, aes: null, admin: '', list: [], img: {}, editing: null, attach: null, needPin: false, status: '' });
+  dmRender();
+}
+async function dmKey() {
+  if (dm.aes) return dm.aes;
+  if (!dm.priv || !dm.admin) return null;
+  const pub = await crypto.subtle.importKey('raw', dmB64d(dm.admin), dmCurve, false, []);
+  const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: pub }, dm.priv, 256);
+  const hk = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+  dm.aes = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: dmEnc.encode('itict-dm|' + dm.code), info: dmEnc.encode('itict-dm v1') },
+                                         hk, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return dm.aes;
+}
+async function dmRefresh(force) {
+  const acct = cloudAcct();
+  if (!acct || !dm.priv || acct.id !== dm.code || dm.busy) return;
+  if (!force && Date.now() - dm.lastRefresh < 20000) return;
+  dm.lastRefresh = Date.now();
+  const res = await cloudCall({ action: 'dmList', id: acct.id, pin: acct.pin });
+  if (!res.ok) { dm.status = 'Could not load messages (' + (res.error || 'offline') + ').'; dmRender(); return; }
+  if ((res.admin || '') !== dm.admin) { dm.admin = res.admin || ''; dm.aes = null; }
+  const key = await dmKey();
+  const out = [];
+  for (const m of res.messages || []) {
+    let text = null;
+    try { text = key ? dmDec.decode(await dmOpen(key, m.text, dm.code + '|' + m.from)) : null; } catch (e) { text = null; }
+    out.push({ ...m, plain: text });
+  }
+  dm.list = out;
+  dm.status = dm.admin ? '' : 'Messages open once your instructor turns them on.';
+  dmRender();
+}
+async function dmShowImage(m, img) {
+  try {
+    if (!dm.img[m.id]) {
+      const acct = cloudAcct();
+      const res = await cloudCall({ action: 'dmImage', id: acct.id, pin: acct.pin, msg: m.id });
+      if (!res.ok) throw new Error(res.error);
+      const bytes = await dmOpen(await dmKey(), res.image, dm.code + '|' + m.from + '|img');
+      dm.img[m.id] = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+    }
+    img.src = dm.img[m.id];
+  } catch (e) { img.replaceWith(Object.assign(document.createElement('span'), { className: 'dm-note', textContent: 'Picture could not be opened.' })); }
+}
+/* a picture from this phone -> JPEG no larger than 640x360 (360p) and DM_IMG_BYTES */
+async function dmShrink(file) {
+  const bmp = await createImageBitmap(file);
+  const r = Math.min(1, 640 / bmp.width, 360 / bmp.height);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(bmp.width * r)); c.height = Math.max(1, Math.round(bmp.height * r));
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  for (const q of [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25]) {
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', q));
+    if (blob && blob.size <= DM_IMG_BYTES) return { bytes: new Uint8Array(await blob.arrayBuffer()), url: URL.createObjectURL(blob) };
+  }
+  throw new Error('too big');
+}
+async function dmSend() {
+  const box = document.getElementById('dmText');
+  const text = (box.value || '').trim();
+  if (!text) { box.focus(); return; }
+  if (text.length > DM_TEXT_MAX) return;
+  const acct = cloudAcct(), key = await dmKey();
+  if (!acct || !key) return;
+  dm.busy = true; dmRender();
+  try {
+    const sealed = await dmSeal(key, dmEnc.encode(text), dm.code + '|S');
+    let image;                                           // undefined = keep (edit), '' = remove
+    if (dm.attach && dm.attach.bytes) image = await dmSeal(key, dm.attach.bytes, dm.code + '|S|img');
+    else if (dm.attach && dm.attach.remove) image = '';
+    const body = dm.editing
+      ? { action: 'dmEdit', id: acct.id, pin: acct.pin, msg: dm.editing, text: sealed, ...(image !== undefined ? { image } : {}) }
+      : { action: 'dmSend', id: acct.id, pin: acct.pin, text: sealed, ...(image ? { image } : {}) };
+    const res = await cloudCall(body);
+    if (!res.ok) { dm.status = res.error === 'nokey' ? 'Messages are not turned on yet.' : 'Not sent (' + (res.error || 'offline') + '). Try again.'; return; }
+    if (dm.editing) delete dm.img[dm.editing];
+    box.value = ''; dm.editing = null; dm.attach = null; dm.status = '';
+  } finally { dm.busy = false; await dmRefresh(true); }
+}
+async function dmDelete(id) {
+  if (!confirm('Delete this message?')) return;
+  const acct = cloudAcct();
+  const res = await cloudCall({ action: 'dmDelete', id: acct.id, pin: acct.pin, msg: id });
+  if (!res.ok) dm.status = 'Not deleted (' + (res.error || 'offline') + ').';
+  await dmRefresh(true);
+}
+function dmRender() {
+  const el = document.getElementById('dmCard');
+  if (!el) return;
+  const code = cloudCode();
+  el.hidden = !code || !dm.code || dm.code !== code;
+  if (el.hidden) { el.textContent = ''; return; }
+  const prevBox = document.getElementById('dmText');
+  const draft = prevBox ? prevBox.value : '', hadFocus = !!prevBox && document.activeElement === prevBox;
+  el.textContent = '';
+  const head = document.createElement('div'); head.className = 'dm-head';
+  const h = document.createElement('p'); h.className = 'dm-h'; h.textContent = '🔒 Messages with your instructor';
+  const rf = document.createElement('button'); rf.type = 'button'; rf.className = 'dm-link'; rf.textContent = '↻'; rf.title = 'Refresh';
+  rf.onclick = () => dmRefresh(true);
+  head.append(h, rf); el.appendChild(head);
+  if (dm.needPin) {                                     // logged in before messages existed: unlock once
+    const p = document.createElement('p'); p.className = 'dm-note';
+    p.textContent = 'Enter your 6-digit PIN once to open your private messages on this phone.';
+    const row = document.createElement('div'); row.className = 'dm-row';
+    const pin = Object.assign(document.createElement('input'), { type: 'password', inputMode: 'numeric', maxLength: 6, autocomplete: 'current-password', placeholder: 'PIN' });
+    const go = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-send', textContent: 'Open' });
+    go.onclick = async () => {
+      const v = pin.value.trim();
+      if (!/^\d{6}$/.test(v)) { p.textContent = 'Enter your 6-digit PIN.'; return; }
+      go.disabled = true; p.textContent = 'Opening… (this takes a few seconds)';
+      const ok = await dmSetupWithPin(code, v, await cloudPinHash(v));
+      go.disabled = false;
+      p.textContent = ok === 'pin' ? 'Wrong PIN.' : ok ? '' : 'Could not open messages. Try again.';
+    };
+    row.append(pin, go); el.append(p, row);
+    return;
+  }
+  const list = document.createElement('div'); list.className = 'dm-list';
+  if (!dm.list.length) list.appendChild(Object.assign(document.createElement('p'), { className: 'dm-note', textContent: dm.admin ? 'No messages yet. Only you and your instructor can read this chat.' : '' }));
+  dm.list.forEach(m => {
+    const b = document.createElement('div'); b.className = 'dm-msg ' + (m.from === 'S' ? 'mine' : 'theirs');
+    const t = document.createElement('p'); t.className = 'dm-text';
+    t.textContent = m.plain == null ? '🔒 This message can’t be opened (sent before a PIN reset).' : m.plain;
+    b.appendChild(t);
+    if (m.img) {
+      const img = document.createElement('img'); img.alt = 'Picture'; b.appendChild(img);
+      if (m.plain != null) dmShowImage(m, img);
+    }
+    const meta = document.createElement('p'); meta.className = 'dm-meta';
+    meta.textContent = (m.from === 'S' ? 'You' : 'Instructor') + ' · ' + String(m.updated || m.created || '').slice(5, 16)
+      + (m.updated && m.updated !== m.created ? ' · edited' : '');
+    b.appendChild(meta);
+    if (m.from === 'S' && m.plain != null) {
+      const acts = document.createElement('p'); acts.className = 'dm-acts';
+      const ed = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: 'Edit' });
+      ed.onclick = () => { dm.editing = m.id; dm.attach = null; dmRender(); const box = document.getElementById('dmText'); box.value = m.plain; box.focus(); };
+      const del = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: 'Delete' });
+      del.onclick = () => dmDelete(m.id);
+      acts.append(ed, del); b.appendChild(acts);
+    }
+    list.appendChild(b);
+  });
+  el.appendChild(list);
+  requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+  if (dm.status) el.appendChild(Object.assign(document.createElement('p'), { className: 'dm-note', textContent: dm.status }));
+  if (!dm.admin) return;
+  // composer
+  const comp = document.createElement('div'); comp.className = 'dm-comp';
+  if (dm.editing) {
+    const e = document.createElement('p'); e.className = 'dm-note';
+    e.textContent = 'Editing your message · ';
+    const c = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: 'Cancel' });
+    c.onclick = () => { dm.editing = null; dm.attach = null; document.getElementById('dmText').value = ''; dmRender(); };
+    e.appendChild(c); comp.appendChild(e);
+  }
+  const ta = Object.assign(document.createElement('textarea'), { id: 'dmText', maxLength: DM_TEXT_MAX, rows: 2, placeholder: 'Write a private message (up to 120 characters)' });
+  ta.value = draft;
+  if (hadFocus) requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); });
+  const count = document.createElement('span'); count.className = 'dm-count';
+  const upd = () => { count.textContent = ta.value.length + ' / ' + DM_TEXT_MAX; };
+  ta.oninput = upd; upd();
+  const row = document.createElement('div'); row.className = 'dm-row';
+  const file = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*', hidden: true });
+  const pic = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: '📷 Picture' });
+  pic.onclick = () => file.click();
+  file.onchange = async () => {
+    if (!file.files[0]) return;
+    try { dm.attach = await dmShrink(file.files[0]); dm.status = ''; } catch (e) { dm.status = 'That picture could not be used.'; }
+    dmRender();
+  };
+  const send = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-send', textContent: dm.busy ? 'Sending…' : dm.editing ? 'Save' : 'Send', disabled: dm.busy });
+  send.onclick = dmSend;
+  row.append(pic, count, send);
+  comp.append(ta, row, file);
+  if (dm.attach && dm.attach.url) {
+    const a = document.createElement('div'); a.className = 'dm-attach';
+    a.appendChild(Object.assign(document.createElement('img'), { src: dm.attach.url, alt: 'Picture to send' }));
+    const x = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: '✕ Remove picture' });
+    x.onclick = () => { dm.attach = dm.editing ? { remove: true } : null; dmRender(); };
+    a.appendChild(x); comp.appendChild(a);
+  } else if (dm.editing && dm.list.some(m => m.id === dm.editing && m.img) && !(dm.attach && dm.attach.remove)) {
+    const x = Object.assign(document.createElement('button'), { type: 'button', className: 'dm-link', textContent: '✕ Remove the picture' });
+    x.onclick = () => { dm.attach = { remove: true }; dmRender(); };
+    comp.appendChild(x);
+  }
+  el.appendChild(comp);
+}
+setInterval(() => { if (document.visibilityState === 'visible') dmRefresh(false); }, DM_POLL_MS);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') dmRefresh(false); });
+window.addEventListener('load', () => { dmLoadKey(); });
+
 function cloudIsLegacy(a) { return !!(a && !isCode(a.id)); }
 function cloudCode() { const a = cloudAcct(); return a && isCode(a.id) ? a.id : ''; }
 function cloudSetAcct(a) { try { localStorage.setItem(CLOUD_ACCT_KEY, JSON.stringify(a)); } catch (e) {} }
@@ -2390,6 +2695,7 @@ function cloudSync(opts) {
     if (res.ok) {
       cloudLastOk = Date.now();
       setMyGrade(res.grade, acct.id);
+      dmRefresh(false);
       await applyCloud(res.data);
       refreshAll();
       setCloudStatus('Scores backed up · ' + cloudTime());
@@ -2497,6 +2803,7 @@ cp.ok.addEventListener('click', async () => {
   cp.ok.disabled = false;
   if (res.ok) {
     await cloudAdopt(res.code, hash, res.data);
+    dmSetupWithPin(res.code, pin, hash);
     knownAdd(res.code);
     cloudClosePanel();
     document.getElementById('greeting').textContent = greetText(res.code);
@@ -2666,6 +2973,7 @@ function idbClearAll(dbName) {
    Keeps only the Terms & Privacy acknowledgement and sound/display settings. */
 async function wipeDevice() {
   setMyGrade(null);
+  dmReset();
   const keep = k => KEEP_ON_LOGOUT.includes(k);
   [localStorage, sessionStorage].forEach(st => {
     try {
@@ -2769,6 +3077,7 @@ async function loginSubmit() {
     await prepareDeviceFor(code);
     await cloudAdopt(code, hash, res.data || {});
     setMyGrade(res.grade, code);
+    dmSetupWithPin(code, pin, hash);
     knownApply(code, auth.liRemember.checked);
     authOpen(code);
     if (res.pinSet) setCloudStatus('New PIN saved · logged in.');
@@ -2803,6 +3112,7 @@ async function createSubmit() {
     await prepareDeviceFor(res.code);
     localStorage.setItem(DATE_KEY, created);
     await cloudAdopt(res.code, hash, res.data);
+    dmSetupWithPin(res.code, pin, hash);
     knownApply(res.code, auth.caRemember.checked);
     authOpen(res.code);
     setCloudStatus('Account created · scores backed up · ' + cloudTime());
@@ -2833,6 +3143,7 @@ async function convertSubmit() {
   if (res.ok) {
     await prepareDeviceFor(res.code);
     await cloudAdopt(res.code, hash, res.data || {});
+    dmSetupWithPin(res.code, pin, hash);
     knownApply(res.code, auth.cvRemember.checked);
     authOpen(res.code);
     codeShow(res.code);

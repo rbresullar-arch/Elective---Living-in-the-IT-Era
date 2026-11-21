@@ -175,6 +175,12 @@ function doPost(e) {
         try { gl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
         try { return json_(adminGrades_(as, req)); } finally { gl.releaseLock(); }
       }
+      if (action.indexOf('adminDm') === 0) {
+        if (ADMIN_DM_READS.indexOf(action) >= 0) return json_(adminDm_(as, req, action));
+        var adl = LockService.getScriptLock();
+        try { adl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+        try { return json_(adminDm_(as, req, action)); } finally { adl.releaseLock(); }
+      }
       if (action === 'adminExamGate') {
         if (!req.gate) return json_({ ok: true, gate: gate_(), now: Date.now() });
         var g = setGate_(req.gate);
@@ -202,6 +208,19 @@ function doPost(e) {
     }
   }
 
+  /* Direct messages (end-to-end encrypted; see dm_ functions): reads skip the queue, writes queue. */
+  if (action.indexOf('dm') === 0) {
+    try {
+      var ds = SpreadsheetApp.openById(SHEET_ID);
+      if (DM_READS.indexOf(action) >= 0) return json_(dm_(ds, req, pin, action));
+      var dl = LockService.getScriptLock();
+      try { dl.waitLock(28000); } catch (err) { return json_({ ok: false, error: 'busy' }); }
+      try { return json_(dm_(ds, req, pin, action)); } finally { dl.releaseLock(); }
+    } catch (err) {
+      return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
+    }
+  }
+
   /* Special Exams: each student writes only its own rows, so no queue */
   if (action.indexOf('special') === 0) {
     try {
@@ -222,6 +241,7 @@ function doPost(e) {
       return json_({ ok: false, error: 'server', detail: String(err).slice(0, 200) });
     }
   }
+
 
   /* Log in (restore) only reads: it skips the queue so a class signing in together is not serialized. */
   if (action === 'restore') {
@@ -1091,7 +1111,7 @@ function adminGrades_(ss, req) {
     seen[code] = true;
     var g = Number(r.grade);
     var grade = (r.grade === null || r.grade === '' || isNaN(g) || g < 0 || g > 100) ? '' : Math.round(g * 10) / 10;
-    var note = String(r.note || '').slice(0, 120);
+    var note = String(r.note || '').slice(0, 300);     // e.g. "Missing: Prelim exam, Activity 3, Activity 7"
     if (grade === '' && !note) return;
     out.push([code, grade, note, stamp]);
   });
@@ -1105,6 +1125,153 @@ function adminGrades_(ss, req) {
   log_(ss, 'ADMIN', 'grades posted', out.length + ' codes');
   return { ok: true, posted: out.length, at: stamp };
 }
+/* ---------------- direct messages: instructor <-> one student, end-to-end encrypted ----------------
+   The server only ever stores and passes on ciphertext; it cannot read a message.
+   Keys (ECDH P-256): the instructor's public key is the Script Property DM_ADMIN_PUB (its private key
+   stays on the instructor's PC, in the grading system). Each student's phone makes its own key pair;
+   tab "DM Keys" holds the public key and the private key *wrapped* (AES-GCM) with a key that the phone
+   derives from the student's PIN (PBKDF2) - the PIN itself never reaches the server.
+   A message = AES-GCM(key from ECDH(instructor, student) + HKDF), done on the sender's device.
+   Tab "Direct Messages": Id | Code | From (T = teacher, S = student) | Text | Image | Created (PH) | Updated (PH)
+   Text: cipher of up to 120 characters. Image: cipher of a JPEG shrunk to 360p (one cell). */
+var DM_TAB = 'Direct Messages', DMKEY_TAB = 'DM Keys';
+var DM_HEAD = ['Id', 'Code', 'From', 'Text', 'Image', 'Created (PH)', 'Updated (PH)'];
+var DMKEY_HEAD = ['Code', 'Public key', 'Wrapped key', 'Updated (PH)'];
+var DM_CIPHER_RE = /^v1\.[A-Za-z0-9+\/=]{16}\.[A-Za-z0-9+\/=]+$/;
+var DM_TEXT_MAX = 600, DM_IMG_MAX = 45000, DM_KEEP = 300;    // cipher sizes; messages kept per class code
+var DM_PUB_RE = /^[A-Za-z0-9+\/=]{80,100}$/, DM_WRAP_RE = /^v1\.[A-Za-z0-9+\/=]{16}\.[A-Za-z0-9+\/=]{100,400}$/;
+var DM_READS = ['dmKeys', 'dmList', 'dmImage'];
+var ADMIN_DM_READS = ['adminDmKeys', 'adminDmList', 'adminDmImage'];
+
+function dmSheet_(ss, name, head) {
+  var sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold');
+  }
+  return sh;
+}
+function dmRows_(ss) {
+  var sh = ss.getSheetByName(DM_TAB);
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, DM_HEAD.length).getDisplayValues().map(function (v, i) {
+    return { row: i + 2, id: String(v[0]), code: String(v[1]).toUpperCase(), from: String(v[2]), text: String(v[3]),
+             image: String(v[4] || ''), created: String(v[5]), updated: String(v[6]) };
+  }).filter(function (m) { return m.id; });
+}
+function dmPublic_(m) {   // what a list returns: the text cipher, not the picture
+  return { id: m.id, code: m.code, from: m.from, text: m.text, img: !!m.image, created: m.created, updated: m.updated };
+}
+function dmKeyRow_(ss, code) {
+  var sh = ss.getSheetByName(DMKEY_TAB);
+  if (!sh || sh.getLastRow() < 2) return null;
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, DMKEY_HEAD.length).getDisplayValues();
+  for (var i = 0; i < v.length; i++) if (String(v[i][0]).toUpperCase() === code) return { row: i + 2, pub: v[i][1], wrapped: v[i][2], updated: v[i][3] };
+  return null;
+}
+function dmAdminPub_() { return PropertiesService.getScriptProperties().getProperty('DM_ADMIN_PUB') || ''; }
+function dmCheck_(text, image) {
+  if (!DM_CIPHER_RE.test(text || '') || text.length > DM_TEXT_MAX) return 'text';
+  if (image && (!DM_CIPHER_RE.test(image) || image.length > DM_IMG_MAX)) return 'image';
+  return '';
+}
+function dmAdd_(ss, code, from, text, image) {
+  var sh = dmSheet_(ss, DM_TAB, DM_HEAD), now = phNow_(), id = Utilities.getUuid().slice(0, 12);
+  sh.getRange(sh.getLastRow() + 1, 1, 1, DM_HEAD.length).setNumberFormat('@')
+    .setValues([[id, code, from, text, image || '', now, now]]);
+  var mine = dmRows_(ss).filter(function (m) { return m.code === code; });      // keep the newest DM_KEEP
+  mine.slice(0, Math.max(0, mine.length - DM_KEEP)).reverse().forEach(function (m) { sh.deleteRow(m.row); });
+  return { ok: true, id: id, created: now };
+}
+function dmEdit_(ss, m, text, image) {
+  var now = phNow_(), img = image === undefined || image === null ? m.image : String(image);
+  ss.getSheetByName(DM_TAB).getRange(m.row, 4, 1, 4).setNumberFormat('@').setValues([[text, img, m.created, now]]);
+  return { ok: true, id: m.id, updated: now };
+}
+
+/* student side: every action is PIN-checked and touches only this class code's messages */
+function dm_(ss, req, pin, action) {
+  var code = String(req.id || '').trim().toUpperCase();
+  if (!CODE_RE.test(code)) return { ok: false, error: 'bad' };
+  var auth = checkPin_(ss, code, hashFor_(code, pin));
+  if (auth === 'nouser') return { ok: false, error: 'nouser' };
+  if (auth.locked) return { ok: false, error: 'locked', until: auth.until };
+  if (auth.bad) return { ok: false, error: 'pin', left: auth.left };
+  if (action === 'dmKeys') {
+    var k = dmKeyRow_(ss, code);
+    return { ok: true, admin: dmAdminPub_(), mine: k ? { pub: k.pub, wrapped: k.wrapped } : null };
+  }
+  if (action === 'dmSetKey') {
+    var pub = String(req.pub || ''), wrapped = String(req.wrapped || '');
+    if (!DM_PUB_RE.test(pub) || !DM_WRAP_RE.test(wrapped)) return { ok: false, error: 'bad' };
+    var sh = dmSheet_(ss, DMKEY_TAB, DMKEY_HEAD), kr = dmKeyRow_(ss, code), row = kr ? kr.row : sh.getLastRow() + 1;
+    sh.getRange(row, 1, 1, DMKEY_HEAD.length).setNumberFormat('@').setValues([[code, pub, wrapped, phNow_()]]);
+    log_(ss, code, 'dm key', kr ? (kr.pub === pub ? 'key re-locked with a new PIN' : 'new key') : 'first key');
+    return { ok: true };
+  }
+  var mine = dmRows_(ss).filter(function (m) { return m.code === code; });
+  if (action === 'dmList') return { ok: true, admin: dmAdminPub_(), messages: mine.slice(-100).map(dmPublic_) };
+  var m = req.msg ? mine.filter(function (x) { return x.id === String(req.msg); })[0] : null;
+  if (action === 'dmImage') return m && m.image ? { ok: true, image: m.image } : { ok: false, error: 'gone' };
+  if (action === 'dmSend') {
+    if (!dmAdminPub_()) return { ok: false, error: 'nokey' };
+    var bad = dmCheck_(String(req.text || ''), req.image ? String(req.image) : '');
+    if (bad) return { ok: false, error: bad };
+    return dmAdd_(ss, code, 'S', String(req.text), req.image ? String(req.image) : '');
+  }
+  if (!m || m.from !== 'S') return { ok: false, error: 'gone' };                  // only their own messages
+  if (action === 'dmDelete') { ss.getSheetByName(DM_TAB).deleteRow(m.row); return { ok: true }; }
+  if (action === 'dmEdit') {
+    var bad2 = dmCheck_(String(req.text || ''), req.image ? String(req.image) : '');
+    if (bad2) return { ok: false, error: bad2 };
+    return dmEdit_(ss, m, String(req.text), req.image === undefined ? null : String(req.image || ''));
+  }
+  return { ok: false, error: 'bad' };
+}
+
+/* instructor side (admin PIN already checked) */
+function adminDm_(ss, req, action) {
+  if (action === 'adminDmSetKey') {
+    var pub = String(req.pub || '');
+    if (!DM_PUB_RE.test(pub)) return { ok: false, error: 'bad' };
+    var cur = dmAdminPub_();
+    if (cur && cur !== pub && req.replace !== true) return { ok: false, error: 'haskey' };
+    PropertiesService.getScriptProperties().setProperty('DM_ADMIN_PUB', pub);
+    log_(ss, 'ADMIN', 'dm key', cur ? 'replaced' : 'set');
+    return { ok: true };
+  }
+  if (action === 'adminDmKeys') {
+    var sh = ss.getSheetByName(DMKEY_TAB), keys = [];
+    if (sh && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 2).getDisplayValues().forEach(function (v) {
+      if (v[0]) keys.push({ code: String(v[0]).toUpperCase(), pub: v[1] });
+    });
+    return { ok: true, admin: dmAdminPub_(), keys: keys };
+  }
+  var all = dmRows_(ss);
+  if (action === 'adminDmList') {
+    var code = String(req.code || '').toUpperCase();
+    return { ok: true, messages: all.filter(function (m) { return !code || m.code === code; }).map(dmPublic_) };
+  }
+  var m = req.msg ? all.filter(function (x) { return x.id === String(req.msg); })[0] : null;
+  if (action === 'adminDmImage') return m && m.image ? { ok: true, image: m.image } : { ok: false, error: 'gone' };
+  if (action === 'adminDmSend') {
+    var to = String(req.code || '').toUpperCase();
+    if (!CODE_RE.test(to) || !dmKeyRow_(ss, to)) return { ok: false, error: 'nokey' };
+    var bad = dmCheck_(String(req.text || ''), req.image ? String(req.image) : '');
+    if (bad) return { ok: false, error: bad };
+    return dmAdd_(ss, to, 'T', String(req.text), req.image ? String(req.image) : '');
+  }
+  if (!m) return { ok: false, error: 'gone' };
+  if (action === 'adminDmDelete') { ss.getSheetByName(DM_TAB).deleteRow(m.row); return { ok: true }; }   // any message
+  if (action === 'adminDmEdit') {
+    if (m.from !== 'T') return { ok: false, error: 'gone' };                     // only your own messages
+    var bad2 = dmCheck_(String(req.text || ''), req.image ? String(req.image) : '');
+    if (bad2) return { ok: false, error: bad2 };
+    return dmEdit_(ss, m, String(req.text), req.image === undefined ? null : String(req.image || ''));
+  }
+  return { ok: false, error: 'bad' };
+}
+
 function gradeFor_(ss, id) {
   try {
     var sh = ss.getSheetByName(GRADES_TAB);
