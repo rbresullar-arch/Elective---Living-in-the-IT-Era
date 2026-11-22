@@ -865,7 +865,8 @@ const ACTIVITIES = [
     note: r => `${r.score}/${r.maxScore || 60} pts · Reputation ${r.reputation != null ? r.reputation : '—'}% · Locked` },
   { label: 'Activity 10', href: 'ecommerce_week.html',
     note: r => `${r.days || '—'} days · ₱${(r.profit || 0).toLocaleString('en-PH')} profit · ${r.rating != null ? (+r.rating).toFixed(1) : '—'}★ · ${r.score}/${r.maxScore} right calls · Locked` },
-  { label: 'Activity 11', href: 'cyber_defense_ops.html',
+  { label: 'Activity 11', href: 'cyber_defense_ops.html', requires: [],
+    window: ['2026-11-23T07:00:00+08:00', '2026-11-23T10:30:00+08:00'],   // open to all, shown only in this window (internet time)
     note: r => `${r.blocked || 0} blocked · ${r.handled || 0} handled · ${(r.wrong || 0) + (r.missed || 0)} missed · CIA ${r.ciaPct != null ? r.ciaPct : '—'}% · Locked` },
   { label: 'Summative · 500 points', href: 'prefinals_summative.html', requires: [], tile: 'S', points: 500,
     score: r => (r.percentage || 0) + '%',
@@ -897,7 +898,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.21.1';
+const APP_VERSION = '2026.11.23.1';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1124,7 +1125,18 @@ function renderExamNotice() {
 const SITE_KEY = 'itict_site';
 const SITE_DEFAULT = { notice: { head: '', body: '' }, hidden: ['home:menu', 'home:attendance', 'home:progress'] };
 let SITE = (() => { try { const x = JSON.parse(localStorage.getItem(SITE_KEY) || 'null'); return x && Array.isArray(x.hidden) ? x : SITE_DEFAULT; } catch (e) { return SITE_DEFAULT; } })();
-function siteHides(id) { return SITE.hidden.includes(id); }
+function itemOutOfWindow(id) {   // an activity with a time window is hidden outside it (internet time)
+  const a = ACTIVITIES.find(x => x.id === id);
+  if (!a || !a.window) return false;
+  const now = window.ExamGate && ExamGate.now ? ExamGate.now(ExamGate.read()) : Date.now();
+  return now < Date.parse(a.window[0]) || now >= Date.parse(a.window[1]);
+}
+function siteHides(id) { return SITE.hidden.includes(id) || itemOutOfWindow(id); }
+let winState = '';
+setInterval(() => {   // re-apply when a window opens or closes
+  const st = ACTIVITIES.filter(a => a.window).map(a => itemOutOfWindow(a.id) ? 0 : 1).join('');
+  if (st !== winState) { winState = st; try { applySite(); } catch (e) {} }
+}, 30000);
 const escHtml = t => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function applySite() {
   const n = SITE.notice || {};

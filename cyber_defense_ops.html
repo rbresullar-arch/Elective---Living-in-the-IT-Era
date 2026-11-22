@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
 <script src="maint.js"></script>
+<script>/* Activity 11 window: Nov 23, 2026, 7:00–10:30 AM (Philippine time), checked with internet time when known */
+(function () {
+  var FROM = Date.parse('2026-11-23T07:00:00+08:00'), UNTIL = Date.parse('2026-11-23T10:30:00+08:00');
+  var off = 0;
+  try { var g = JSON.parse(localStorage.getItem('itict_exam_gate') || 'null'); if (g && g.off) off = Number(g.off) || 0; } catch (e) {}
+  try { var m = JSON.parse(localStorage.getItem('itict_maint') || 'null'); if (!off && m && m.off) off = Number(m.off) || 0; } catch (e) {}
+  var now = Date.now() + off;
+  if (now >= FROM && now < UNTIL) return;
+  try { if (window.stop) window.stop(); } catch (e) {}
+  document.documentElement.innerHTML = '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Activity 11</title></head><body style="font:17px/1.5 -apple-system,Arial,sans-serif;padding:24px;max-width:480px;margin:auto"><h2>Activity 11 is closed</h2><p>It is open on Nov 23, 2026, from 7:00 to 10:30 AM (Philippine time).</p><p><a href="index.html">Back to Home</a></p></body>';
+})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Cyber Defense Ops</title>
