@@ -1232,12 +1232,15 @@ function dm_(ss, req, pin, action) {
 /* instructor side (admin PIN already checked) */
 function adminDm_(ss, req, action) {
   if (action === 'adminDmSetKey') {
-    var pub = String(req.pub || '');
-    if (!DM_PUB_RE.test(pub)) return { ok: false, error: 'bad' };
-    var cur = dmAdminPub_();
+    var pub = String(req.pub || ''), wrapped = String(req.wrapped || '');
+    if (!DM_PUB_RE.test(pub) || (wrapped && !DM_WRAP_RE.test(wrapped))) return { ok: false, error: 'bad' };
+    var cur = dmAdminPub_(), props = PropertiesService.getScriptProperties();
     if (cur && cur !== pub && req.replace !== true) return { ok: false, error: 'haskey' };
-    PropertiesService.getScriptProperties().setProperty('DM_ADMIN_PUB', pub);
-    log_(ss, 'ADMIN', 'dm key', cur ? 'replaced' : 'set');
+    props.setProperty('DM_ADMIN_PUB', pub);
+    /* master console: the private key, wrapped with the instructor's message passphrase (PBKDF2 on the
+       device; the passphrase never reaches the server), so any device can unlock it */
+    if (wrapped) props.setProperty('DM_ADMIN_WRAPPED', wrapped); else if (cur !== pub) props.deleteProperty('DM_ADMIN_WRAPPED');
+    log_(ss, 'ADMIN', 'dm key', cur ? (cur === pub ? 'passphrase changed' : 'replaced') : 'set');
     return { ok: true };
   }
   if (action === 'adminDmKeys') {
@@ -1245,12 +1248,21 @@ function adminDm_(ss, req, action) {
     if (sh && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 2).getDisplayValues().forEach(function (v) {
       if (v[0]) keys.push({ code: String(v[0]).toUpperCase(), pub: v[1] });
     });
-    return { ok: true, admin: dmAdminPub_(), keys: keys };
+    var tags = {}, sc = ss.getSheetByName(SHEET.scores);   // name tags (e.g. JUDUZ), to tell students apart
+    if (sc && sc.getLastRow() > 1) sc.getRange(2, 1, sc.getLastRow() - 1, 3).getDisplayValues().forEach(function (v) {
+      if (v[0] && v[2]) tags[String(v[0]).toUpperCase()] = v[2];
+    });
+    return { ok: true, admin: dmAdminPub_(), wrapped: PropertiesService.getScriptProperties().getProperty('DM_ADMIN_WRAPPED') || '', keys: keys, tags: tags };
   }
   var all = dmRows_(ss);
   if (action === 'adminDmList') {
-    var code = String(req.code || '').toUpperCase();
-    return { ok: true, messages: all.filter(function (m) { return !code || m.code === code; }).map(dmPublic_) };
+    /* since (optional, "yyyy-MM-dd HH:mm:ss" from the last reply): only messages created or edited since then,
+       plus the ids of every message so the device can drop deleted ones. */
+    var code = String(req.code || '').toUpperCase(), since = String(req.since || '');
+    var mine = all.filter(function (m) { return !code || m.code === code; });
+    return { ok: true, now: phNow_(), delta: !!since,
+             messages: mine.filter(function (m) { return !since || m.updated >= since; }).map(dmPublic_),
+             ids: since ? mine.map(function (m) { return m.id; }) : undefined };
   }
   var m = req.msg ? all.filter(function (x) { return x.id === String(req.msg); })[0] : null;
   if (action === 'adminDmImage') return m && m.image ? { ok: true, image: m.image } : { ok: false, error: 'gone' };
