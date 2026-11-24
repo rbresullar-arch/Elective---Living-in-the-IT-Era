@@ -898,7 +898,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.24.1';
+const APP_VERSION = '2026.11.24.2';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -1131,7 +1131,11 @@ function itemOutOfWindow(id) {   // an activity with a time window is hidden out
   const now = window.ExamGate && ExamGate.now ? ExamGate.now(ExamGate.read()) : Date.now();
   return now < Date.parse(a.window[0]) || now >= Date.parse(a.window[1]);
 }
-function siteHides(id) { return SITE.hidden.includes(id) || itemOutOfWindow(id); }
+function siteHides(id) {   // an activity with a time window follows the window only (it overrides the Dashboard tick)
+  const a = ACTIVITIES.find(x => x.id === id);
+  if (a && a.window) return itemOutOfWindow(id);
+  return SITE.hidden.includes(id);
+}
 let winState = '';
 setInterval(() => {   // re-apply when a window opens or closes
   const st = ACTIVITIES.filter(a => a.window).map(a => itemOutOfWindow(a.id) ? 0 : 1).join('');
