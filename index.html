@@ -898,7 +898,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.24.2';
+const APP_VERSION = '2026.11.24.3';
 
 /* ======================= END OF CONFIG ======================= */
 
@@ -922,7 +922,7 @@ ACTIVITIES.forEach((a, i) => {
   a.key = a.key || `itict_${a.id}_result`;
   a.cookie = a.cookie || a.key;
   a.idbKey = a.idbKey || `${a.id}_result`;
-  a.requires = (a.requires || (n > 1 ? [n - 1] : [])).filter(r => r >= 1 && r <= ACTIVITIES.length && r !== n);
+  a.requires = [];   // Nov 24, 2026: no activity waits for another (the order rule was removed)
   if (a.redo) {
     a.redo.label = a.redo.label || `Redo ${a.label}`;
     a.redo.flagKey = a.redo.flagKey || `itict_${a.id}_redo_used`;

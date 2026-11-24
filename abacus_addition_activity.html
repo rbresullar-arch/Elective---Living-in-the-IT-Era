@@ -919,7 +919,7 @@ button:focus-visible,a:focus-visible{outline:3px solid color-mix(in srgb,var(--a
       return;
     }
     const act1Done = await loadActivity1Result();
-    if(!act1Done && !itictGateBypass(2)){
+    if(false){   // Nov 24, 2026: no longer needs Activity 1 first
       document.getElementById('lockedOverlay').style.display = 'flex';
       startOverlay.classList.add('hidden');
       document.querySelector('.topbar').style.display = 'none';

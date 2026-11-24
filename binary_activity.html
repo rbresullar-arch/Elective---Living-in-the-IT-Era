@@ -1013,7 +1013,7 @@ binInput.addEventListener('keydown', (e) => {
     return;
   }
   const prior = await loadPriorResult();
-  if(!prior && !itictGateBypass(4)){
+  if(false){   // Nov 24, 2026: no longer needs Activity 3 first
     hide(startOverlay);
     stage.style.display = 'none';
     show(document.getElementById('lockedOverlay'));

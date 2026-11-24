@@ -1625,7 +1625,7 @@ window.PR6 = (() => {
   /* ===== init: gate behind Activity 5 ===== */
   (async () => {
     const prev5 = await load(PREV_KEY, PREV_IDB_KEY, false);
-    if (!prev5 && !itictGateBypass(6)) { document.body.classList.add('locked'); return; }
+    /* Nov 24, 2026: no longer needs Activity 5 first */
     const mine = await load(RESULT_KEY, IDB_KEY, true);
     st = E.create(rng); buildBoard(); resetFile(); render();
     const best = mine ? 'Best time ' + (mine.bestTimeText || '–') + (mine.bestTime ? ' (' + pct(mine.bestTime) + '%)' : '') + ' over ' + (mine.runs || 1) + (mine.runs === 1 ? ' run' : ' runs') + '. Beat it!' : 'Deliver all ' + E.GOAL + ' packets. ' + fmt(PERFECT) + ' or faster scores 100%.';

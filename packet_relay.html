@@ -712,7 +712,7 @@ button:focus-visible,a:focus-visible{outline:3px solid color-mix(in srgb,var(--a
   }
   (async () => {
     if (inApp) { hide('startOverlay'); show('blockOverlay'); bar.hidden = true; return; }
-    if (!(await activity4Done()) && !itictGateBypass(5)) { hide('startOverlay'); show('lockedOverlay'); bar.hidden = true; return; }
+    /* Nov 24, 2026: no longer needs Activity 4 first */
     const prev = await loadRecord();
     if (prev && prev.score != null) {
       const p = document.getElementById('prevLine');
