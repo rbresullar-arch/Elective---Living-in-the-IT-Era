@@ -866,7 +866,6 @@ const ACTIVITIES = [
   { label: 'Activity 10', href: 'ecommerce_week.html',
     note: r => `${r.days || '—'} days · ₱${(r.profit || 0).toLocaleString('en-PH')} profit · ${r.rating != null ? (+r.rating).toFixed(1) : '—'}★ · ${r.score}/${r.maxScore} right calls · Locked` },
   { label: 'Activity 11', href: 'cyber_defense_ops.html', requires: [],
-    window: ['2026-11-24T08:00:00+08:00', '2026-11-24T20:00:00+08:00'],   // open to all, shown only in this window (internet time)
     note: r => `${r.blocked || 0} blocked · ${r.handled || 0} handled · ${(r.wrong || 0) + (r.missed || 0)} missed · CIA ${r.ciaPct != null ? r.ciaPct : '—'}% · Locked` },
   { label: 'Summative · 500 points', href: 'prefinals_summative.html', requires: [], tile: 'S', points: 500,
     score: r => (r.percentage || 0) + '%',
@@ -898,7 +897,7 @@ const READS = [
 ];
 
 /* Version shown at the bottom of every screen. Bump on each release. */
-const APP_VERSION = '2026.11.24.4';
+const APP_VERSION = '2026.11.24.5';
 
 /* ======================= END OF CONFIG ======================= */
 
